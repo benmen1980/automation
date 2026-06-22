@@ -1,0 +1,154 @@
+// Prisma schema for the user-based automation platform.
+//
+// Local dev uses SQLite (zero setup, file-based) via DATABASE_URL="file:..."
+// SQLite's Prisma connector does not support native `enum` types (confirmed
+// the hard way: P1012 "the current connector does not support enums" on the
+// first real `prisma generate` run, against an EB instance — this schema had
+// never actually been generated before that). So every field that is
+// conceptually an enum (per CLAUDE.md's role/status/type fields) is declared
+// here as a plain `String` with a quoted default instead. The allowed value
+// sets are unchanged and still enforced at the application layer (routes/
+// middleware), not at the DB level, for this schema.
+//
+// `prisma/schema.postgres.prisma` is the AWS/production counterpart — Postgres
+// *does* support native enums, so that file keeps the real `enum` blocks.
+// Keep the allowed value lists in the two files in sync if they ever change.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  // Stable, human-readable slug (e.g. "user_001"). Used as :userSlug in the
+  // webhook URL and as the folder name under src/integrations/. Decoupled
+  // from the internal cuid `id` on purpose, per the folder convention in
+  // CLAUDE.md section 7 (e.g. src/integrations/user_001/whatsapp-order).
+  slug         String   @unique
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("user")
+  status       String   @default("active")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  integrations Integration[]
+  executions   Execution[]
+  logs         Log[]
+}
+
+model Integration {
+  id               String            @id @default(cuid())
+  userId           String
+  name             String
+  description      String?
+  slug             String
+  type             String
+  status           String            @default("active")
+  codeFolder       String
+  definitionFile   String            @default("integration.js")
+  handlerFile      String            @default("handler.js")
+  manualRunEnabled Boolean           @default(true)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  user             User               @relation(fields: [userId], references: [id])
+  credentials      Credential[]
+  executions       Execution[]
+  logs             Log[]
+  webhookSettings  WebhookSettings?
+  scheduleSettings ScheduleSettings?
+
+  @@unique([userId, slug])
+}
+
+model Credential {
+  id             String   @id @default(cuid())
+  userId         String
+  integrationId  String
+  key            String
+  // For non-secret values: the literal value is stored here (JSON-encoded).
+  // For secret values: this stores a reference name; the actual encrypted
+  // value lives in the secrets store (local-data/secrets.local.json in dev,
+  // AWS Secrets Manager in production) and is never returned to the client.
+  valueReference String
+  type           String
+  isSecret       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  integration    Integration @relation(fields: [integrationId], references: [id])
+
+  @@unique([integrationId, key])
+}
+
+model WebhookSettings {
+  id                    String   @id @default(cuid())
+  integrationId         String   @unique
+  webhookUrl            String
+  secretTokenReference  String?
+  allowedMethod         String   @default("POST")
+  active                Boolean  @default(true)
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  integration           Integration @relation(fields: [integrationId], references: [id])
+}
+
+model ScheduleSettings {
+  id             String    @id @default(cuid())
+  integrationId  String    @unique
+  cronExpression String
+  timezone       String    @default("UTC")
+  active         Boolean   @default(true)
+  lastRunAt      DateTime?
+  nextRunAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  integration    Integration @relation(fields: [integrationId], references: [id])
+}
+
+model Execution {
+  id                String          @id @default(cuid())
+  userId            String
+  integrationId     String
+  triggerType       String
+  executionMode     String
+  status            String          @default("pending")
+  startedAt         DateTime?
+  finishedAt        DateTime?
+  inputPayload      String?
+  outputPayload     String?
+  errorMessage      String?
+  sourceExecutionId String?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  user              User        @relation(fields: [userId], references: [id])
+  integration       Integration @relation(fields: [integrationId], references: [id])
+  logs              Log[]
+}
+
+model Log {
+  id            String        @id @default(cuid())
+  userId        String
+  integrationId String
+  executionId   String?
+  level         String        @default("info")
+  message       String
+  metadata      String?
+  executionMode String?
+  isTest        Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+
+  user          User         @relation(fields: [userId], references: [id])
+  integration   Integration  @relation(fields: [integrationId], references: [id])
+  execution     Execution?   @relation(fields: [executionId], references: [id])
+}
