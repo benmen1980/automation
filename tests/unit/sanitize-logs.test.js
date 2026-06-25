@@ -4,12 +4,31 @@ describe('sanitize-logs', () => {
   test('redacts a Bearer token embedded in a message string', () => {
     const { message } = sanitizeLogEntry({ message: 'Calling API with Authorization: Bearer abc123XYZ' });
     expect(message).not.toContain('abc123XYZ');
-    expect(message).toContain('Bearer [REDACTED]');
+    expect(message).toContain('Bearer ***REDACTED***');
+  });
+
+  test('redacts a bare Bearer token in a message string', () => {
+    const { message } = sanitizeLogEntry({ message: 'Calling upstream with Bearer abc123XYZ' });
+    expect(message).not.toContain('abc123XYZ');
+    expect(message).toContain('Bearer ***REDACTED***');
   });
 
   test('redacts token/key/secret/password query params in a message string', () => {
-    const { message } = sanitizeLogEntry({ message: 'GET /callback?token=supersecret&other=1' });
+    const { message } = sanitizeLogEntry({ message: 'GET /callback?token=supersecret&api_key=abc&other=1' });
     expect(message).not.toContain('supersecret');
+    expect(message).toContain('api_key=***REDACTED***');
+  });
+
+  test('redacts authorization and api key header values in strings', () => {
+    const { message, metadata } = sanitizeLogEntry({
+      message: 'Authorization: Basic abc123, X-API-Key: secret-key',
+      metadata: { header: 'Authorization: ApiKey abc123', query: '/x?api_key=secret&ok=1' },
+    });
+
+    expect(message).toContain('Authorization: Basic ***REDACTED***');
+    expect(message).toContain('X-API-Key: ***REDACTED***');
+    expect(metadata.header).toContain('Authorization: ApiKey ***REDACTED***');
+    expect(metadata.query).toContain('api_key=***REDACTED***');
   });
 
   test('does not mangle a message that merely mentions a sensitive word', () => {
@@ -27,9 +46,9 @@ describe('sanitize-logs', () => {
         count: 3,
       },
     });
-    expect(metadata.password).toBe('[REDACTED]');
-    expect(metadata.apiKey).toBe('[REDACTED]');
-    expect(metadata.nested.authToken).toBe('[REDACTED]');
+    expect(metadata.password).toBe('***REDACTED***');
+    expect(metadata.apiKey).toBe('***REDACTED***');
+    expect(metadata.nested.authToken).toBe('***REDACTED***');
     expect(metadata.nested.safe).toBe('ok');
     expect(metadata.count).toBe(3);
   });

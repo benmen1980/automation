@@ -65,6 +65,112 @@ function validateIntegrationFiles(codeFolder, definitionFile = 'integration.js',
   return { definitionPath, handlerPath };
 }
 
+function validateIntegrationContract(definition, { strict = true } = {}) {
+  const errors = [];
+  const requiredTextFields = ['name', 'description', 'type'];
+  for (const field of requiredTextFields) {
+    if (typeof definition?.[field] !== 'string' || definition[field].trim() === '') {
+      errors.push(`integration.js must define a non-empty ${field}.`);
+    }
+  }
+
+  if (!['webhook', 'scheduled'].includes(definition?.type)) {
+    errors.push('integration.js type must be "webhook" or "scheduled".');
+  }
+
+  if (!Array.isArray(definition?.connectors)) {
+    errors.push('integration.js must define connectors as an array, even when empty.');
+  }
+  if (!Array.isArray(definition?.credentialTests)) {
+    errors.push('integration.js must define credentialTests as an array, even when empty.');
+  }
+
+  const logging = definition?.logging;
+  if (!logging || typeof logging !== 'object') {
+    errors.push('integration.js must define logging metadata.');
+  } else {
+    if (!['INBOUND', 'OUTBOUND', 'BIDIRECTIONAL'].includes(logging.direction)) {
+      errors.push('logging.direction must be INBOUND, OUTBOUND, or BIDIRECTIONAL.');
+    }
+    if (logging.reviewRequired !== true) {
+      errors.push('logging.reviewRequired must be true so every integration receives a log-review step.');
+    }
+    if (typeof logging.cloudWatchLogGroup !== 'string' || logging.cloudWatchLogGroup.trim() === '') {
+      errors.push('logging.cloudWatchLogGroup must identify the per-integration CloudWatch/log group.');
+    }
+    if (!Array.isArray(logging.steps) || logging.steps.length === 0) {
+      errors.push('logging.steps must list the important user-readable log steps.');
+    } else {
+      const hasDirectionStep = logging.steps.some(
+        (step) => typeof step === 'string' && /\b(Received from|Sent to)\b/i.test(step)
+      );
+      if (!hasDirectionStep) {
+        errors.push('logging.steps must include at least one directional step such as "Received from WhatsApp" or "Sent to Priority".');
+      }
+      for (const step of logging.steps) {
+        if (typeof step !== 'string' || step.trim() === '') {
+          errors.push('Every logging.steps item must be a non-empty plain-language string.');
+        }
+      }
+    }
+  }
+
+  if (definition?.type === 'webhook') {
+    if (!definition.webhook || typeof definition.webhook !== 'object') {
+      errors.push('Webhook integrations must define webhook settings.');
+    } else {
+      if (!definition.webhook.method) errors.push('Webhook integrations must define webhook.method.');
+      if (typeof definition.webhook.requiresToken !== 'boolean') {
+        errors.push('Webhook integrations must define webhook.requiresToken as true or false.');
+      }
+    }
+  }
+
+  const testing = definition?.testing;
+  if (!testing || typeof testing !== 'object') {
+    errors.push('integration.js must define testing metadata.');
+  } else {
+    const modes = Array.isArray(testing.modes) ? testing.modes : [];
+    if (modes.length === 0) errors.push('testing.modes must list the allowed test/run modes.');
+    if (!testing.defaultMode) errors.push('testing.defaultMode must be set to the safest default mode.');
+    if (testing.defaultMode && modes.length > 0 && !modes.includes(testing.defaultMode)) {
+      errors.push('testing.defaultMode must be included in testing.modes.');
+    }
+    for (const mode of modes) {
+      if (!testing.modeDescriptions?.[mode]) {
+        errors.push(`testing.modeDescriptions.${mode} must explain that mode in plain language.`);
+      }
+    }
+  }
+
+  const credentials = Array.isArray(definition?.credentials) ? definition.credentials : [];
+  if (!Array.isArray(definition?.credentials)) errors.push('integration.js must define credentials as an array.');
+  for (const field of credentials) {
+    if (!field.key) errors.push('Every credential field must define key.');
+    if (!field.label) errors.push(`Credential ${field.key || '<unknown>'} must define a clear label.`);
+    if (!field.type) errors.push(`Credential ${field.key || '<unknown>'} must define type.`);
+    if (!field.helper && !field.helperUrl) {
+      errors.push(`Credential ${field.key || '<unknown>'} must include helper text or a helperUrl.`);
+    }
+  }
+
+  if (strict && !Array.isArray(definition?.testPayloads) && definition?.sampleData === undefined) {
+    errors.push('integration.js must include testPayloads or sampleData for safe local testing.');
+  }
+
+  if (errors.length > 0) {
+    const err = new Error(`Integration contract validation failed:\n- ${errors.join('\n- ')}`);
+    err.validationErrors = errors;
+    throw err;
+  }
+  return true;
+}
+
+function loadDefinitionFromPath(definitionPath, { bypassCache = true } = {}) {
+  if (bypassCache) delete require.cache[require.resolve(definitionPath)];
+  return require(definitionPath);
+}
+
 function loadDefinition(integration, { bypassCache = false } = {}) {
   const definitionPath = resolveSafeFile(integration.codeFolder, integration.definitionFile || 'integration.js');
   if (bypassCache) delete require.cache[require.resolve(definitionPath)];
@@ -102,6 +208,8 @@ module.exports = {
   resolveSafeFolder,
   resolveSafeFile,
   validateIntegrationFiles,
+  validateIntegrationContract,
+  loadDefinitionFromPath,
   loadDefinition,
   loadHandler,
   clearCache,

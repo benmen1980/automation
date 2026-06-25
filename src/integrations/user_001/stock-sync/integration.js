@@ -3,6 +3,14 @@ module.exports = {
   description: "Checks stock levels on a schedule and emails a low-stock alert.",
   type: "scheduled",
   manualRun: true,
+  connectors: ["genericRest", "email"],
+  credentialTests: ["genericRest", "email"],
+  logging: {
+    direction: "OUTBOUND",
+    reviewRequired: true,
+    cloudWatchLogGroup: "integration-stock-sync",
+    steps: ["Received from inventory API", "Detected low-stock rows", "Sent to email provider", "Received from email provider"]
+  },
 
   schedule: {
     defaultCron: "0 2 * * *",
@@ -14,7 +22,13 @@ module.exports = {
     allowDryRun: true,
     allowMockOutput: true,
     allowReplay: true,
-    defaultMode: "dry_run"
+    defaultMode: "dry_run",
+    modes: ["dry_run", "mock_output", "live"],
+    modeDescriptions: {
+      dry_run: "Checks the configured thresholds and explains the planned stock sync without calling external systems.",
+      mock_output: "Uses mock inventory/email connector responses so no real provider is called.",
+      live: "Calls the real inventory API and sends a real low-stock alert through the configured email provider."
+    }
   },
 
   credentials: [

@@ -6,6 +6,12 @@
 
   connectors: ['priority'],
   credentialTests: ['priority'],
+  logging: {
+    direction: 'INBOUND',
+    reviewRequired: true,
+    cloudWatchLogGroup: 'integration-priority-inventory-to-file',
+    steps: ['Sent inventory request to Priority', 'Received from Priority', 'Validated local output path', 'Wrote inventory JSON file'],
+  },
 
   schedule: {
     defaultCron: '*/10 * * * *',

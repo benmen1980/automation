@@ -43,7 +43,9 @@ router.post('/', async (req, res) => {
   }
 
   try {
-    integrationLoader.validateIntegrationFiles(codeFolder, definitionFile, handlerFile);
+    const { definitionPath } = integrationLoader.validateIntegrationFiles(codeFolder, definitionFile, handlerFile);
+    const definition = integrationLoader.loadDefinitionFromPath(definitionPath);
+    integrationLoader.validateIntegrationContract(definition, { strict: true });
   } catch (err) {
     return res.status(400).json({ error: `Integration code is invalid: ${err.message}` });
   }

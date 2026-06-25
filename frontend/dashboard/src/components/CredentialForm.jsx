@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-const SAVED_SECRET_MASK = '••••••••••••';
+const SAVED_SECRET_MASK = '•••••••• saved';
 
 function defaultInputFor(field) {
   if (field.isSecret) return field.saved ? SAVED_SECRET_MASK : '';
@@ -29,7 +29,7 @@ function CredentialHelper({ field }) {
 function SecretSavedBadge({ saved }) {
   return (
     <span className={`ml-2 rounded-full px-2.5 py-0.5 text-xs font-semibold ${saved ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100' : 'bg-amber-50 text-amber-700 ring-1 ring-amber-100'}`}>
-      {saved ? 'configured' : 'not set'}
+      {saved ? '•••••••• saved' : 'not set'}
     </span>
   );
 }

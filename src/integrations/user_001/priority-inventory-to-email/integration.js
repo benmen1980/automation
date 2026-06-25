@@ -6,6 +6,12 @@ module.exports = {
 
   connectors: ['priority', 'gmail', 'ses'],
   credentialTests: ['priority', 'gmail', 'ses'],
+  logging: {
+    direction: 'OUTBOUND',
+    reviewRequired: true,
+    cloudWatchLogGroup: 'integration-priority-inventory-to-email',
+    steps: ['Sent inventory request to Priority', 'Received from Priority', 'Sent email through selected provider', 'Received email provider response'],
+  },
 
   schedule: {
     defaultCron: '*/10 * * * *',

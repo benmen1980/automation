@@ -46,4 +46,42 @@ describe('integration-loader', () => {
       integrationLoader.validateIntegrationFiles('src/integrations/test_fixtures/does-not-exist', 'integration.js', 'handler.js')
     ).toThrow();
   });
+
+  test('validateIntegrationContract rejects incomplete integration metadata', () => {
+    expect(() =>
+      integrationLoader.validateIntegrationContract({
+        name: 'Bad Integration',
+        type: 'webhook',
+        credentials: [{ key: 'API_TOKEN', type: 'secret' }],
+      })
+    ).toThrow(/Integration contract validation failed/);
+  });
+
+  test('validateIntegrationContract requires log-review metadata', () => {
+    expect(() =>
+      integrationLoader.validateIntegrationContract({
+        name: 'Bad Logging Integration',
+        description: 'Missing the required logging review contract.',
+        type: 'scheduled',
+        connectors: [],
+        credentialTests: [],
+        credentials: [],
+        testing: {
+          defaultMode: 'test',
+          modes: ['test'],
+          modeDescriptions: { test: 'Uses local sample data only.' },
+        },
+        sampleData: {},
+      })
+    ).toThrow(/logging metadata/);
+  });
+
+  test('validateIntegrationContract accepts a complete metadata contract', () => {
+    const definition = integrationLoader.loadDefinition({
+      id: 'loader-test-file-webhook',
+      codeFolder: 'src/integrations/user_001/user-001-whatsapp',
+      definitionFile: 'integration.js',
+    });
+    expect(() => integrationLoader.validateIntegrationContract(definition)).not.toThrow();
+  });
 });

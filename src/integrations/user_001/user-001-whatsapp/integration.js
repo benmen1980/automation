@@ -6,6 +6,12 @@ module.exports = {
 
   connectors: [],
   credentialTests: [],
+  logging: {
+    direction: 'INBOUND',
+    reviewRequired: true,
+    cloudWatchLogGroup: 'integration-user-001-whatsapp',
+    steps: ['Received from WhatsApp webhook', 'Validated local output path', 'Wrote webhook body to local file'],
+  },
 
   webhook: {
     method: 'POST',

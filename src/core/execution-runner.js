@@ -8,6 +8,7 @@ const credentialsService = require('./credentials');
 const integrationLoader = require('./integration-loader');
 const { createLogger } = require('./logger');
 const { getConnectors } = require('../connectors');
+const { summarizePayload } = require('../utils/payload-summary');
 
 function parseJson(value, fallback) {
   if (!value) return fallback;
@@ -40,9 +41,15 @@ async function runExecutionJob(executionId) {
   try {
     await executionService.markRunning(execution.id);
     await logger.info('Execution started.', {
+      integrationName: integration.name,
+      integrationSlug: integration.slug,
+      jobId: execution.id,
       triggerType: execution.triggerType,
       executionMode: execution.executionMode,
+      status: 'running',
+      startedAt: new Date().toISOString(),
       sourceExecutionId: execution.sourceExecutionId || undefined,
+      requestPayloadSummary: summarizePayload(payload),
     });
 
     if (integration.status !== 'active') {
@@ -65,14 +72,30 @@ async function runExecutionJob(executionId) {
     });
 
     await executionService.markSuccess(execution.id, result);
-    await logger.info('Execution finished successfully.');
+    await logger.info('Execution finished successfully.', {
+      integrationName: integration.name,
+      integrationSlug: integration.slug,
+      jobId: execution.id,
+      triggerType: execution.triggerType,
+      executionMode: execution.executionMode,
+      status: 'success',
+      endedAt: new Date().toISOString(),
+      responsePayloadSummary: summarizePayload(result),
+    });
   } catch (err) {
     const failureDetails = {
       error: err.message,
       errorName: err.name,
       stack: err.stack,
+      integrationName: integration.name,
+      integrationSlug: integration.slug,
+      jobId: execution.id,
       triggerType: execution.triggerType,
       executionMode: execution.executionMode,
+      status: 'failed',
+      endedAt: new Date().toISOString(),
+      requestPayloadSummary: summarizePayload(payload),
+      responsePayloadSummary: err.providerError ? summarizePayload(err.providerError) : undefined,
       integration: {
         id: integration.id,
         name: integration.name,

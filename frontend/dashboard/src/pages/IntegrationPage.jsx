@@ -8,6 +8,25 @@ import LogsViewer from '../components/LogsViewer.jsx';
 
 const FALLBACK_EXECUTION_MODES = ['dummy', 'test', 'dry_run', 'mock_output', 'mock_input', 'live'];
 const DEFAULT_TIMEZONE = 'Asia/Jerusalem';
+const EXECUTION_MODE_LABELS = {
+  dummy: 'Dummy data only',
+  test: 'Safe test',
+  dry_run: 'Preview only',
+  mock_output: 'Mock provider response',
+  mock_input: 'Mock input',
+  replay: 'Replay previous run',
+  email_test: 'Send test email',
+  live: 'Live run',
+};
+const CONNECTOR_LABELS = {
+  email: 'Email account',
+  genericRest: 'Inventory API',
+  gmail: 'Gmail',
+  priority: 'Priority ERP',
+  ses: 'AWS SES email',
+  shopify: 'Shopify',
+  whatsapp: 'WhatsApp',
+};
 
 function Card({ title, description, children, aside }) {
   return (
@@ -221,6 +240,14 @@ function getModeDescription(definition, executionMode) {
     mock_input: 'Uses mock input behavior where the integration supports it.',
     live: 'Uses saved live credentials and may call real external systems.',
   }[executionMode];
+}
+
+function executionModeLabel(definition, mode) {
+  return definition?.testing?.modeLabels?.[mode] || EXECUTION_MODE_LABELS[mode] || mode.replace(/_/g, ' ');
+}
+
+function connectorLabel(definition, connector) {
+  return definition?.credentialTestLabels?.[connector] || CONNECTOR_LABELS[connector] || connector.replace(/([a-z])([A-Z])/g, '$1 $2');
 }
 
 function Stat({ label, value }) {
@@ -458,14 +485,14 @@ export default function IntegrationPage() {
 
             <div className="flex flex-wrap items-center gap-2">
               <select value={executionMode} onChange={(e) => setExecutionMode(e.target.value)} className="rounded-md border border-slate-300 px-3 py-2 text-sm">
-                {allowedModes.map((m) => <option key={m} value={m}>{m}</option>)}
+                {allowedModes.map((m) => <option key={m} value={m}>{executionModeLabel(definition, m)}</option>)}
               </select>
               <button onClick={handleRunTest} disabled={running || !integration.manualRunEnabled} className="rounded-md bg-[#306cb4] px-4 py-2 text-sm font-semibold text-white hover:bg-[#028baa] disabled:opacity-50">
-                {running ? 'Running...' : `Run ${executionMode}`}
+                {running ? 'Running...' : `Run ${executionModeLabel(definition, executionMode)}`}
               </button>
             </div>
 
-            {modeDescription && <p className={`mt-3 rounded-md border px-3 py-2 text-xs leading-5 ${executionMode === 'live' ? 'border-red-200 bg-red-50 text-red-700' : 'border-slate-200 bg-slate-50 text-slate-600'}`}><strong>{executionMode}</strong>: {modeDescription}</p>}
+            {modeDescription && <p className={`mt-3 rounded-md border px-3 py-2 text-xs leading-5 ${executionMode === 'live' ? 'border-red-200 bg-red-50 text-red-700' : 'border-slate-200 bg-slate-50 text-slate-600'}`}><strong>{executionModeLabel(definition, executionMode)}</strong>: {modeDescription}</p>}
 
             {testResult && (
               <div className="mt-4 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm">
@@ -482,15 +509,20 @@ export default function IntegrationPage() {
 
         <aside className="space-y-6">
           {connectorOptions.length > 0 && (
-            <Card title="Credential test" description="Only relevant connector tests are available here.">
+            <Card title="Credential test" description="Choose which external account to verify. The test checks saved credentials without showing secret values.">
               <div className="flex items-center gap-2">
                 <select value={activeConnector || ''} onChange={(e) => setConnector(e.target.value)} className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm">
-                  {connectorOptions.map((c) => <option key={c} value={c}>{c}</option>)}
+                  {connectorOptions.map((c) => <option key={c} value={c}>{connectorLabel(definition, c)}</option>)}
                 </select>
                 <button onClick={() => handleTestConnector(activeConnector)} disabled={connectorTesting || !activeConnector} className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
                   {connectorTesting ? 'Testing...' : 'Test'}
                 </button>
               </div>
+              {activeConnector && (
+                <FieldHint>
+                  Testing {connectorLabel(definition, activeConnector)} uses the saved credentials for this integration and keeps secrets hidden.
+                </FieldHint>
+              )}
               <ConnectorResult result={connectorResult} />
             </Card>
           )}

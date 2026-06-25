@@ -3,6 +3,14 @@ module.exports = {
   description: "Receives order data and sends a WhatsApp message.",
   type: "webhook",
   manualRun: true,
+  connectors: ["whatsapp"],
+  credentialTests: ["whatsapp"],
+  logging: {
+    direction: "INBOUND",
+    reviewRequired: true,
+    cloudWatchLogGroup: "integration-user-001-whatsapp-order",
+    steps: ["Received order webhook", "Validated recipient phone", "Sent to WhatsApp", "Received from WhatsApp"]
+  },
 
   webhook: {
     method: "POST",
@@ -14,7 +22,14 @@ module.exports = {
     allowDryRun: true,
     allowMockOutput: true,
     allowReplay: true,
-    defaultMode: "dry_run"
+    defaultMode: "dry_run",
+    modes: ["dry_run", "test", "mock_output", "live"],
+    modeDescriptions: {
+      dry_run: "Validates the payload and reports the WhatsApp message that would be sent without calling WhatsApp.",
+      test: "Uses saved credentials and the sample payload to exercise the handler in a controlled local test.",
+      mock_output: "Uses the mock WhatsApp connector so no real WhatsApp message is sent.",
+      live: "Sends a real WhatsApp message using the saved WhatsApp API credentials."
+    }
   },
 
   credentials: [

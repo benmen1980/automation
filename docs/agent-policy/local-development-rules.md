@@ -27,6 +27,45 @@ Invoke-WebRequest -UseBasicParsing http://localhost:3002/health
 
 Expected result: both return HTTP `200`, and `/health` through port `3002` should proxy to the backend.
 
+## Mandatory Integration Delivery Gate
+
+Before creating or modifying an integration, run the project integration checklist in `C:\gpt\automation\AGENTS.md`. Do not build from a vague request alone when the provider, auth method, trigger, data mapping, test modes, logging plan, or credentials are unclear.
+
+Every integration change must include:
+
+- Contract validation: run `npm run validate:integrations`.
+- UI/UX review: confirm fields, helper text, saved feedback, test controls, and secret masking are clear to a non-technical user.
+- Log review: confirm logs are structured, useful for debugging, directional, and sanitized.
+- Security review: confirm no tokens, passwords, API keys, authorization headers, refresh tokens, or sensitive personal data are exposed in UI, logs, console output, or screenshots.
+- Deployment review: confirm integration logic belongs in its own worker/queue/log stream/deployment path and does not require redeploying the main API/dashboard.
+
+If a UI/UX or log-review agent is available, use it. If not, perform the review directly and report it in the final response.
+
+## Integration Logging Review Rule
+
+Each integration must define and satisfy a logging plan. Logs must be readable to a human and useful for debugging without exposing secrets.
+
+Required log behavior:
+
+- Log each important process step.
+- Log direction clearly, using phrases such as `Received from WhatsApp`, `Sent to Priority`, `Received from Priority`, or `Sent to Salesforce`.
+- Include integration name, job ID, trigger type, start time, end time, status, request payload summary, response payload summary, and safe error message.
+- When an API call fails, show which API failed, the endpoint/action name, HTTP status when available, safe response body when available, and a clear explanation.
+- Redact secrets, passwords, tokens, API keys, refresh tokens, authorization headers, connection strings, and sensitive personal information.
+- Use per-integration CloudWatch log groups or clearly identifiable log streams.
+- Show simple user-facing job status/logs in the dashboard; keep detailed technical logs in CloudWatch.
+
+Every `integration.js` must include logging metadata:
+
+```js
+logging: {
+  direction: 'INBOUND',
+  reviewRequired: true,
+  cloudWatchLogGroup: 'integration-provider-purpose',
+  steps: ['Received from Provider', 'Sent to Target'],
+}
+```
+
 ## Priority ERP Credentials Rule
 
 For any Priority ERP integration, credentials must follow the official Priority ERP REST API documentation and naming/shape expected by that API.

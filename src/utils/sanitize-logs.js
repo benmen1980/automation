@@ -7,17 +7,27 @@
  * This is a defense-in-depth measure, not a replacement for never logging
  * `credentials` objects wholesale.
  */
-const SENSITIVE_KEY_PATTERN = /(password|secret|token|api[-_]?key|authorization|auth|credential|connection[-_]?string|private[-_]?key)/i;
+const SENSITIVE_KEY_PATTERN = /(password|secret|token|api[-_]?key|api_key|authorization|auth|credential|connection[-_]?string|private[-_]?key)/i;
 
-const REDACTED = '[REDACTED]';
+const REDACTED = '***REDACTED***';
+
+function sanitizeString(value) {
+  return value
+    .replace(/\bAuthorization\s*:\s*([^\r\n,}]+)/gi, (match, authValue) => {
+      const scheme = String(authValue).trim().match(/^(Bearer|Basic|ApiKey)\b/i)?.[1];
+      return scheme ? `Authorization: ${scheme} ${REDACTED}` : `Authorization: ${REDACTED}`;
+    })
+    .replace(/\b(X-API-Key|Api-Key|API-Key)\s*:\s*[^\r\n,}]+/gi, `$1: ${REDACTED}`)
+    .replace(/\bBearer\s+[A-Za-z0-9\-._~+/]+=*/gi, `Bearer ${REDACTED}`)
+    .replace(/\b(Basic|ApiKey)\s+[A-Za-z0-9\-._~+/=:]+/gi, `$1 ${REDACTED}`)
+    .replace(/([?&](?:token|key|secret|password|api_key|apiKey|access_token|refresh_token)=)([^&\s]+)/gi, `$1${REDACTED}`);
+}
 
 function sanitizeValue(value, seen = new WeakSet()) {
   if (value === null || value === undefined) return value;
 
   if (typeof value === 'string') {
-    // Redact things that look like bearer tokens or long opaque secrets.
-    if (/^Bearer\s+\S+/i.test(value)) return 'Bearer [REDACTED]';
-    return value;
+    return sanitizeString(value);
   }
 
   if (Array.isArray(value)) {
@@ -46,13 +56,11 @@ function sanitizeValue(value, seen = new WeakSet()) {
  */
 function sanitizeLogEntry({ message, metadata }) {
   let safeMessage = message;
-  if (typeof safeMessage === 'string' && SENSITIVE_KEY_PATTERN.test(safeMessage)) {
+  if (typeof safeMessage === 'string') {
     // Don't redact the whole message just because a sensitive word appears
     // (e.g. "Validating WHATSAPP_TOKEN" is fine) — only strip obvious
     // key=value or Bearer-style leaks.
-    safeMessage = safeMessage
-      .replace(/Bearer\s+[A-Za-z0-9\-._~+/]+=*/gi, 'Bearer [REDACTED]')
-      .replace(/([?&](?:token|key|secret|password)=)([^&\s]+)/gi, `$1${REDACTED}`);
+    safeMessage = sanitizeString(safeMessage);
   }
 
   return {
@@ -61,4 +69,4 @@ function sanitizeLogEntry({ message, metadata }) {
   };
 }
 
-module.exports = { sanitizeLogEntry, sanitizeValue, SENSITIVE_KEY_PATTERN };
+module.exports = { sanitizeLogEntry, sanitizeValue, sanitizeString, SENSITIVE_KEY_PATTERN };

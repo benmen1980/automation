@@ -14,6 +14,14 @@ module.exports = {
   description: 'Deterministic fixture integration used by the automated test suite.',
   type: 'webhook',
   manualRun: true,
+  connectors: ['whatsapp'],
+  credentialTests: ['whatsapp'],
+  logging: {
+    direction: 'INBOUND',
+    reviewRequired: true,
+    cloudWatchLogGroup: 'integration-test-echo',
+    steps: ['Received from test fixture webhook', 'Echoed payload summary', 'Optionally called mock connector'],
+  },
 
   webhook: {
     method: 'POST',
@@ -26,6 +34,13 @@ module.exports = {
     allowMockOutput: true,
     allowReplay: true,
     defaultMode: 'dry_run',
+    modes: ['dry_run', 'test', 'mock_output', 'live'],
+    modeDescriptions: {
+      dry_run: 'Skips connector calls and returns what would have happened.',
+      test: 'Runs the deterministic test fixture handler with saved fixture credentials.',
+      mock_output: 'Uses the mock WhatsApp connector for connector-call assertions.',
+      live: 'Runs the fixture handler with the real connector binding for test coverage only.',
+    },
   },
 
   credentials: [
