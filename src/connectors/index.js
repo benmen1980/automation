@@ -10,6 +10,8 @@ const shopifyReal = require('./shopify/real');
 const shopifyMock = require('./shopify/mock');
 const gmailReal = require('./gmail/real');
 const gmailMock = require('./gmail/mock');
+const sesReal = require('./ses/real');
+const sesMock = require('./ses/mock');
 
 const REGISTRY = {
   whatsapp: { real: whatsappReal, mock: whatsappMock },
@@ -18,6 +20,7 @@ const REGISTRY = {
   priority: { real: priorityReal, mock: priorityMock },
   shopify: { real: shopifyReal, mock: shopifyMock },
   gmail: { real: gmailReal, mock: gmailMock },
+  ses: { real: sesReal, mock: sesMock },
 };
 
 const MOCK_MODES = new Set(['dummy', 'mock_output']);

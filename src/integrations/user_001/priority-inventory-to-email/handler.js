@@ -11,7 +11,16 @@ function parseRecipients(value) {
     .filter(Boolean);
 }
 
+function resolveEmailProvider(credentials) {
+  const provider = String(credentials.EMAIL_PROVIDER || process.env.EMAIL_PROVIDER || 'ses').toLowerCase();
+  if (!['ses', 'gmail'].includes(provider)) {
+    throw new Error(`Unsupported EMAIL_PROVIDER: ${provider}. Use "ses" or "gmail".`);
+  }
+  return provider;
+}
+
 function buildDocument({ executionMode, credentials, inventoryResult }) {
+  const provider = resolveEmailProvider(credentials);
   return {
     generatedAt: new Date().toISOString(),
     integration: 'priority-inventory-to-email',
@@ -23,7 +32,7 @@ function buildDocument({ executionMode, credentials, inventoryResult }) {
       requestBody: null,
     },
     delivery: {
-      system: 'Gmail SMTP',
+      system: provider === 'ses' ? 'Amazon SES' : 'Gmail API',
       recipients: parseRecipients(credentials.EMAIL_TO_GROUP),
     },
     inventory: inventoryResult.items || [],
@@ -78,13 +87,15 @@ module.exports = {
       throw new Error(`Unsupported execution mode for this integration: ${executionMode}`);
     }
 
+    const emailProvider = resolveEmailProvider(credentials);
     const document = buildDocument({ executionMode, credentials, inventoryResult });
     const timestamp = safeTimestamp();
     const filename = `priority-inventory-${executionMode}-${timestamp}.json`;
     const subject = buildSubject(credentials, executionMode);
     const text = buildBody({ document, executionMode });
 
-    const emailResult = await connectors.gmail.sendEmail({
+    const emailConnector = emailProvider === 'ses' ? connectors.ses : connectors.gmail;
+    const emailResult = await emailConnector.sendEmail({
       to: recipients,
       subject,
       text,
@@ -102,7 +113,7 @@ module.exports = {
       itemCount: document.inventory.length,
       attachment: filename,
       mockedInventory: inventoryResult.mocked === true,
-      provider: emailResult.provider,
+      provider: emailResult.provider || emailProvider,
     });
 
     return {
@@ -112,7 +123,8 @@ module.exports = {
       itemCount: document.inventory.length,
       attachment: filename,
       mockedInventory: inventoryResult.mocked === true,
-      provider: emailResult.provider || 'gmail',
+      provider: emailResult.provider || emailProvider,
     };
   },
+  _diagnostics: { parseRecipients, resolveEmailProvider, buildDocument },
 };

@@ -6,7 +6,7 @@ Pull inventory from Priority ERP PARTBAL and send the inventory export as a JSON
 
 ## Direction
 
-OUTBOUND: Priority ERP -> Gmail recipients.
+OUTBOUND: Priority ERP -> email recipients.
 
 ## Trigger
 
@@ -16,7 +16,7 @@ Scheduled integration. Default schedule is every 10 minutes:
 */10 * * * *
 ```
 
-The schedule is inactive until Gmail OAuth credentials and recipients are configured.
+The schedule is inactive until email provider credentials and recipients are configured.
 
 ## Source System
 
@@ -30,9 +30,23 @@ Required Priority credentials:
 
 ## Target System
 
-Gmail API using OAuth2 refresh token.
+Amazon SES on AWS, or Gmail API using OAuth2 refresh token when a Gmail/Google Workspace mailbox is required.
 
-Required Gmail credentials:
+Recommended AWS SES credentials:
+
+- `EMAIL_PROVIDER=ses`
+- `SES_FROM_EMAIL`
+- `SES_REGION`
+- `EMAIL_TO_GROUP`
+- optional `EMAIL_SUBJECT_PREFIX`
+
+SES setup notes:
+
+- Verify `SES_FROM_EMAIL` or its domain in Amazon SES in `SES_REGION`.
+- In a new SES account/sandbox, either verify recipients too or request production access.
+- The Elastic Beanstalk instance role needs `ses:SendEmail`, `ses:GetEmailIdentity`, and `ses:GetAccount`.
+
+Optional Gmail credentials:
 
 - `GMAIL_USE_LOCAL_FILES` can be enabled for local development.
 - `GMAIL_USER_EMAIL`
@@ -42,7 +56,7 @@ Required Gmail credentials:
 - `EMAIL_TO_GROUP`
 - optional `EMAIL_SUBJECT_PREFIX`
 
-See `docs/gmail-setup.md` and `scripts/gmail-get-token.js`.
+For Gmail, see `docs/gmail-setup.md` and `scripts/gmail-get-token.js`.
 
 ### Local Gmail token files
 
@@ -65,18 +79,18 @@ Set `GMAIL_USE_LOCAL_FILES=true` in the integration credentials. When enabled, t
 
 - Does not call Priority.
 - Uses embedded dummy inventory from `integration.js`.
-- Sends a real email through Gmail API to `EMAIL_TO_GROUP`.
+- Sends a real email through the selected `EMAIL_PROVIDER` to `EMAIL_TO_GROUP`.
 - Attaches the dummy inventory as JSON.
 
 ### `live`
 
 - Calls the real Priority PARTBAL endpoint.
-- Sends a real email through Gmail API.
+- Sends a real email through the selected `EMAIL_PROVIDER`.
 - Attaches the real Priority response as JSON.
 
 ## Output
 
-No local file is written. The output artifact is the Gmail message with a JSON attachment named like:
+No local file is written. The output artifact is the sent email with a JSON attachment named like:
 
 ```text
 priority-inventory-email_test-YYYY-MM-DDTHH-MM-SS-msZ.json
@@ -84,13 +98,14 @@ priority-inventory-email_test-YYYY-MM-DDTHH-MM-SS-msZ.json
 
 ## Logging
 
-Logs include execution mode, inventory row count, attachment name, recipient count, and Gmail provider message id when available. Logs must not include OAuth secrets, refresh tokens, passwords, or full authorization headers.
+Logs include execution mode, inventory row count, attachment name, recipient count, and provider message id when available. Logs must not include OAuth secrets, refresh tokens, passwords, or full authorization headers.
 
 ## Failure Handling
 
 Common failures:
 
-- Missing Gmail OAuth credentials.
+- Missing SES sender or Gmail OAuth credentials.
+- Unverified SES sender/recipient or SES sandbox restrictions.
 - Invalid/expired refresh token.
 - Gmail API permission/scope error.
 - Priority Basic Auth failure in live mode.
