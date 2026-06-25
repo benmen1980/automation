@@ -16,3 +16,10 @@ frontend/dashboard/dist/
 
 # Local OAuth token helper output
 data/*token*.json
+
+# User credential folders and local provider token/client-secret files.
+# Keep both spellings: "credentials" and the existing local folder name "credentails".
+**/credentials/
+**/credentails/
+**/*token*.json
+**/client_secret*.json
