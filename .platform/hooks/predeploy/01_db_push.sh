@@ -11,7 +11,9 @@ set -euo pipefail
 
 # Load the environment properties set via `eb setenv` (DATABASE_URL, etc.)
 # into this script's shell — they aren't inherited automatically by hooks.
-source /opt/elasticbeanstalk/support/envvars
+while IFS='=' read -r key value; do
+  export "$key=$value"
+done < <(/opt/elasticbeanstalk/bin/get-config environment | jq -r 'to_entries[] | "\(.key)=\(.value)"')
 
 cd /var/app/staging
 
