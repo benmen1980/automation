@@ -6,7 +6,7 @@
  *
  * AWS (Elastic Beanstalk): set the env var
  *   PRISMA_SCHEMA=prisma/schema.postgres.prisma
- * as an EB environment property (see AWS_SETUP.md). `npm install` runs this
+ * as an EB environment property (see docs/ops/aws-testing-environment-runbook.md). `npm install` runs this
  * script during every deploy, so the client generated on the instance always
  * matches the Postgres schema instead of the local SQLite one.
  */

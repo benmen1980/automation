@@ -1,0 +1,20 @@
+version: 0.2
+
+env:
+  variables:
+    INTEGRATION_NAME: gmail-priority
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      - npm ci --ignore-scripts
+  build:
+    commands:
+      - npm --workspace "@automation/${INTEGRATION_NAME}" test
+      - mkdir -p dist
+      - cd "integrations/${INTEGRATION_NAME}" && zip -r "../../dist/${INTEGRATION_NAME}.zip" package.json src fixtures
+artifacts:
+  files:
+    - "dist/${INTEGRATION_NAME}.zip"

@@ -1,5 +1,6 @@
-# FULL SCOPE FOR CLAUDE / VIBE CODING
-# User-Based Automation Platform — Node.js + AWS
+# Product Architecture Specification
+
+User-Based Automation Platform - Node.js + AWS
 
 ## 0. Important Instructions for the AI Coding Agent
 

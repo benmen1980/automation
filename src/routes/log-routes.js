@@ -7,7 +7,7 @@ const { assertOwnsOrAdmin } = require('../core/permissions');
 
 router.use(requireAuth);
 
-// Per CLAUDE.md 5.10: logs are searchable/filterable by level, integration,
+// Per docs/product/product-architecture-spec.md 5.10: logs are searchable/filterable by level, integration,
 // execution, mode, and date.
 router.get('/integrations/:id/logs', loadIntegration(), async (req, res) => {
   const { level, mode, executionId, from, to, take } = req.query;

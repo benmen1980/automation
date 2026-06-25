@@ -1,5 +1,5 @@
 /**
- * Dashboard testing tools (CLAUDE.md 9.2, 9.3, 9.8). The webhook test
+ * Dashboard testing tools (docs/product/product-architecture-spec.md 9.2, 9.3, 9.8). The webhook test
  * path reuses core/webhook-runner.runWebhook — the exact same function
  * the public /webhooks/:userSlug/:integrationSlug route calls — so a test
  * run behaves identically to production except for auth and (by default)

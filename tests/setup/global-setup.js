@@ -5,7 +5,7 @@
  *
  * We use `db push` rather than `migrate deploy` because this project has
  * no migration history yet (SQLite is the local-dev datasource; AWS RDS
- * Postgres is intended to get real migrations - see DEPLOYMENT.md).
+ * Postgres is intended to get real migrations - see docs/ops/aws-deployment-plan.md).
  *
  * Requires `npx prisma generate` to have been run at least once (normally
  * part of `npm install` via a postinstall, or `npm run db:generate`) so

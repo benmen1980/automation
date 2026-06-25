@@ -1,11 +1,19 @@
 {
   "name": "user-automation-platform",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "integrations/*",
+    "packages/*"
+  ],
   "description": "User-based automation platform (Node.js + Express + Prisma). Each user owns integrations with their own integration.js + handler.js, executed via a shared runner with webhook, scheduled, and manual triggers.",
   "main": "src/server.js",
   "scripts": {
     "postinstall": "node scripts/prisma-postinstall.js",
+    "dev:api": "npm --workspace @automation/api run dev",
+    "dev:worker:gmail-priority": "npm --workspace @automation/gmail-priority run dev",
+    "dev:worker:shopify-priority": "npm --workspace @automation/shopify-priority run dev",
     "dev": "node src/server.js",
     "start": "node src/server.js",
     "db:generate": "prisma generate",
@@ -15,8 +23,11 @@
     "db:push:aws": "prisma db push --schema=prisma/schema.postgres.prisma --accept-data-loss",
     "db:seed": "node prisma/seed.js",
     "db:reset": "prisma migrate reset --force",
-    "test": "cross-env NODE_ENV=test jest --runInBand",
-    "test:watch": "cross-env NODE_ENV=test jest --watch --runInBand"
+    "test": "cross-env NODE_ENV=test jest --runInBand && npm run test:integration:gmail-priority && npm --workspace @automation/shopify-priority test && npm --workspace @automation/salesforce-priority test",
+    "test:api": "cross-env NODE_ENV=test jest --runInBand",
+    "test:watch": "cross-env NODE_ENV=test jest --watch --runInBand",
+    "test:integration:gmail-priority": "npm --workspace @automation/gmail-priority test",
+    "invoke:gmail-priority": "npm --workspace @automation/gmail-priority run invoke --"
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.600.0",

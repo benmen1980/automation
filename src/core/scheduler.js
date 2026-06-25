@@ -5,7 +5,7 @@
  * EventBridge Scheduler should call back into the app (e.g. an internal
  * /internal/run-scheduled/:integrationId endpoint guarded by an IAM/role
  * check) instead of relying on a long-running in-process timer, per
- * CLAUDE.md 12.4.
+ * docs/product/product-architecture-spec.md 12.4.
  */
 const cron = require('node-cron');
 const prisma = require('../db/client');

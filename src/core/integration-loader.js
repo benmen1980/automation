@@ -1,7 +1,7 @@
 /**
  * Securely loads an integration's integration.js and handler.js.
  *
- * Per CLAUDE.md 10.3, integration code must NEVER be loaded directly from
+ * Per docs/product/product-architecture-spec.md 10.3, integration code must NEVER be loaded directly from
  * URL/route parameters. The only inputs to this module are values already
  * read from the database (integration.codeFolder), and every path is
  * re-validated to live under INTEGRATIONS_ROOT before any `require()` call.
@@ -57,7 +57,7 @@ function resolveSafeFile(folder, fileName) {
 /**
  * Validates that integration.js and handler.js both exist for a given
  * codeFolder. Used when an admin registers/updates an integration
- * (CLAUDE.md 8.3 step 5).
+ * (docs/product/product-architecture-spec.md 8.3 step 5).
  */
 function validateIntegrationFiles(codeFolder, definitionFile = 'integration.js', handlerFile = 'handler.js') {
   const definitionPath = resolveSafeFile(codeFolder, definitionFile);

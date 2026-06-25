@@ -1,7 +1,7 @@
 /**
  * Shared "load this integration and verify the caller owns it (or is
  * admin)" middleware, used by integration/execution/log/test routes so
- * the ownership check (CLAUDE.md 10.1) is implemented exactly once.
+ * the ownership check (docs/product/product-architecture-spec.md 10.1) is implemented exactly once.
  */
 const prisma = require('../db/client');
 const { assertOwnsOrAdmin } = require('../core/permissions');

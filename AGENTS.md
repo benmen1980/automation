@@ -876,3 +876,9 @@ Instead:
 3. Leave placeholders where customer-specific values are required.
 4. Document exactly what the user must provide.
 5. Keep the code modular so the provider details can be corrected easily.
+
+
+Architecture rule:
+The main API process must never directly run integration code.
+All integration execution must happen through a queue and an independent worker.
+If an integration fails, the failure must be isolated to that integration.

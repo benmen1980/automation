@@ -1,0 +1,19 @@
+{
+  "id": "local-gmail-priority-001",
+  "mode": "test",
+  "status": "queued",
+  "payload": {
+    "email": "lead@example.com",
+    "subject": "Quote for SKU-QUOTE-1",
+    "body": "Please send a quote for one unit of SKU-QUOTE-1."
+  },
+  "credentials": {
+    "PRIORITY_BASE_URL": "https://priority.example.test"
+  },
+  "mocks": {
+    "priorityCreateQuote": {
+      "mocked": true,
+      "priorityQuoteId": "mock-quote-001"
+    }
+  }
+}

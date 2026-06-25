@@ -1,0 +1,20 @@
+{
+  "id": "local-salesforce-priority-001",
+  "mode": "test",
+  "status": "queued",
+  "payload": {
+    "opportunityId": "006-test",
+    "accountName": "Example Account",
+    "amount": 1500,
+    "stage": "Proposal"
+  },
+  "credentials": {
+    "PRIORITY_BASE_URL": "https://priority.example.test"
+  },
+  "mocks": {
+    "priorityCreateQuote": {
+      "mocked": true,
+      "priorityQuoteId": "mock-salesforce-quote-001"
+    }
+  }
+}

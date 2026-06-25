@@ -2,7 +2,7 @@
  * Centralized ownership checks. Every route that touches a user-scoped
  * resource (integration, execution, log, credential) must go through one
  * of these instead of trusting the request body/query for userId.
- * Per CLAUDE.md 10.1: never rely only on frontend filtering.
+ * Per docs/product/product-architecture-spec.md 10.1: never rely only on frontend filtering.
  */
 
 function isAdmin(user) {

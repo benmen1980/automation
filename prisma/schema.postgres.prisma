@@ -3,7 +3,7 @@
 // Kept as a separate file rather than swapping the provider in schema.prisma
 // in place, so local dev keeps working against SQLite while this one targets
 // the RDS instance. The models are identical and provider-agnostic (no
-// SQLite-only or Postgres-only features used) — see DEPLOYMENT.md / AWS_SETUP.md
+// SQLite-only or Postgres-only features used) — see docs/ops/aws-deployment-plan.md / docs/ops/aws-testing-environment-runbook.md
 // for how this gets selected (PRISMA_SCHEMA env var + the `:aws` npm scripts).
 //
 // Keep this file's models in sync with schema.prisma whenever the data model
@@ -73,7 +73,7 @@ model User {
   // Stable, human-readable slug (e.g. "user_001"). Used as :userSlug in the
   // webhook URL and as the folder name under src/integrations/. Decoupled
   // from the internal cuid `id` on purpose, per the folder convention in
-  // CLAUDE.md section 7 (e.g. src/integrations/user_001/whatsapp-order).
+  // docs/product/product-architecture-spec.md section 7 (e.g. src/integrations/user_001/whatsapp-order).
   slug         String   @unique
   email        String   @unique
   passwordHash String

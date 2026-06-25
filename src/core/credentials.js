@@ -2,7 +2,7 @@
  * Bridges integration.js's declared `credentials` field schema with the
  * Credential DB rows and the secrets store.
  *
- * Rules enforced here (CLAUDE.md 5.4, 5.6, 10.2):
+ * Rules enforced here (docs/product/product-architecture-spec.md 5.4, 5.6, 10.2):
  *   - secret-type values are never stored in the DB and never returned to
  *     the frontend after saving — only a "saved: true/false" flag is.
  *   - non-secret values are stored directly in the DB (JSON-encoded so any
@@ -157,7 +157,7 @@ async function listCredentialsForDisplay(integration) {
 
     // Secret fields must never expose a value over the API — not the saved
     // value, and not a defaultValue either (integration.js shouldn't put
-    // real secrets in defaultValue per CLAUDE.md 5.3, but we don't trust
+    // real secrets in defaultValue per docs/product/product-architecture-spec.md 5.3, but we don't trust
     // that and mask defensively regardless of save-state).
     if (isSecretField(field)) {
       return { ...base, saved: !!row, value: null };

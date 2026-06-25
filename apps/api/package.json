@@ -1,0 +1,12 @@
+{
+  "name": "@automation/api",
+  "version": "0.1.4",
+  "private": true,
+  "description": "Automation platform API and dashboard backend workspace.",
+  "main": "../../src/server.js",
+  "scripts": {
+    "dev": "node ../../src/server.js",
+    "start": "node ../../src/server.js",
+    "test": "cd ../.. && npm run test:api"
+  }
+}

@@ -1,13 +1,13 @@
-# AWS Setup Runbook — `testing` Elastic Beanstalk Environment
+# AWS Testing Environment Runbook
 
 This is the concrete, ordered command list to stand up the `testing` environment
-described in `DEPLOYMENT.md` (`develop → testing` branch mapping): one
+described in the [AWS deployment plan](./aws-deployment-plan.md) (`develop` -> `testing` branch mapping): one
 single-instance Elastic Beanstalk environment running this app, backed by a
 real RDS PostgreSQL instance, secrets in AWS Secrets Manager.
 
 Region: **eu-west-1**. Everything below assumes that region unless noted.
 
-You run every command in this file yourself — Claude has no AWS credentials
+You run every command in this file yourself - Codex has no AWS credentials
 and cannot call AWS on your behalf. This doc exists so you don't have to
 figure out the sequencing yourself. Every step below explains *what the
 command actually does*, *why it's the right call here*, and *how to verify
@@ -69,7 +69,7 @@ resulting files over, or get an IT exception for
 This step creates *your* credentials for running AWS CLI/EB CLI commands.
 It's separate from — and shouldn't be confused with — the EB **instance
 role** the running app uses (set up in step 5), which is the thing
-CLAUDE.md's least-privilege rule (§10/§12.8) is actually about. This IAM user
+the [product architecture spec](../product/product-architecture-spec.md) least-privilege rule is actually about. This IAM user
 is just you, at a keyboard, provisioning infrastructure.
 
 In the AWS Console → IAM → Users → Create user:
@@ -111,7 +111,7 @@ errors, nothing past this point will work, so don't move on until it's clean.
 
 ## 2. Create the EB application + environment
 
-From the project root (`C:\claude\automation`):
+From the project root (`C:\gpt\automation`):
 
 Elastic Beanstalk groups each OS generation + language runtime combination
 into a "platform branch" (e.g. "Node.js 22 running on 64-bit Amazon Linux
@@ -289,7 +289,7 @@ What each variable actually does, and what breaks if it's wrong:
 | `DATABASE_URL` | Prisma's connection string | App fails to start / every DB query throws |
 | `JWT_SECRET` | Signs/verifies login tokens (`src/core/auth.js`) | Anyone could forge tokens if left at a default/weak value — generate one, don't reuse the dev one in `.env.example` |
 | `SECRETS_MODE=aws` | Routes credential secrets to Secrets Manager instead of a local file (`src/core/secrets.js`) | With `local`, saved integration secrets would silently vanish on the next deploy/instance replacement — EB's local disk doesn't persist across those |
-| `QUEUE_MODE` / `SCHEDULER_MODE` (`local`) | Run jobs/cron in-process on the one EB instance | Setting these to `sqs`/`aws` right now would just throw — `src/core/queue.js` and `src/core/scheduler.js` deliberately aren't wired to real AWS services yet (see `DEPLOYMENT.md`) |
+| `QUEUE_MODE` / `SCHEDULER_MODE` (`local`) | Run jobs/cron in-process on the one EB instance | Setting these to `sqs`/`aws` right now would just throw — `src/core/queue.js` and `src/core/scheduler.js` deliberately aren't wired to real AWS services yet (see [AWS deployment plan](./aws-deployment-plan.md)) |
 
 Generate `JWT_SECRET` with:
 ```powershell
@@ -443,7 +443,7 @@ the seed users before this environment is reachable by anyone but you.**
 
 ## 8. What's still local-only after this
 
-Per `DEPLOYMENT.md`'s rollout checklist, this gets you RDS + Secrets Manager
+Per the [AWS deployment plan](./aws-deployment-plan.md) rollout checklist, this gets you RDS + Secrets Manager
 + EB only. Still not wired for this environment:
 
 - Cognito (still `AUTH_MODE=mock` — real JWTs, no Cognito)

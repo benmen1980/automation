@@ -3,8 +3,17 @@
 A Node.js automation platform where each user owns multiple **integrations**. Each
 integration is a custom automation (webhook-triggered or scheduled) with its own
 `integration.js` definition, `handler.js` business logic, credentials, executions,
-and logs. The full product/architecture spec is in [`CLAUDE.md`](./CLAUDE.md) — this
+and logs. The full product/architecture spec is in the [documentation suite](./docs/README.md) - this
 file covers how to actually run the thing.
+
+## Documentation Suite
+
+- [Product architecture spec](./docs/product/product-architecture-spec.md)
+- [Agent and code policy](./docs/agent-policy/local-development-rules.md)
+- [Windows local setup](./docs/developer/local-setup-windows.md)
+- [AWS deployment plan](./docs/ops/aws-deployment-plan.md)
+- [AWS testing runbook](./docs/ops/aws-testing-environment-runbook.md)
+- [Integration platform roadmap](./docs/roadmap/integration-platform-roadmap.md)
 
 ## Stack
 
@@ -63,7 +72,7 @@ npm test
 Local environment modes (`.env`): `AUTH_MODE=mock` (real JWTs, no Cognito),
 `QUEUE_MODE=local` (jobs run in-process), `SECRETS_MODE=local` (AES-256-GCM file
 at `local-data/secrets.local.json`), `SCHEDULER_MODE=local` (node-cron in-process),
-`CONNECTOR_MODE=mock`. See [`DEPLOYMENT.md`](./DEPLOYMENT.md) for the AWS-mode
+`CONNECTOR_MODE=mock`. See the [AWS deployment plan](./docs/ops/aws-deployment-plan.md) for the AWS-mode
 equivalents.
 
 ## Frontend — local setup
@@ -81,7 +90,7 @@ No `.env` needed by default — the Vite dev server proxies API calls to
 
 ## Adding a new integration
 
-Per `CLAUDE.md` 10.3, integration code is never uploaded or loaded from a URL
+Per the [product architecture spec](./docs/product/product-architecture-spec.md), integration code is never uploaded or loaded from a URL
 parameter — it must already exist on disk before it's registered:
 
 1. Create `src/integrations/<user_slug>/<integration-slug>/integration.js` +
@@ -94,7 +103,7 @@ parameter — it must already exist on disk before it's registered:
 
 ## Testing tools available in the dashboard
 
-Per `CLAUDE.md` section 9: every integration page supports Run (with execution mode
+Per the [product architecture spec](./docs/product/product-architecture-spec.md): every integration page supports Run (with execution mode
 test/dry_run/mock_output/mock_input/live), a dedicated Dry Run button, sample
 payloads pulled from `integration.js`'s `testPayloads`, a Test Credentials panel
 (calls the connector's `testConnection`), and per-execution Replay. Webhook tests
@@ -106,7 +115,7 @@ connector modules with the integration's saved credentials; `dry_run` executes
 handler logic but skips connector calls without logging request arguments; and
 `mock_output`/`dummy` use mock connector modules.
 
-## Acceptance criteria (CLAUDE.md §17)
+## Acceptance Criteria
 
 Every line item, with where it's enforced:
 
@@ -128,7 +137,7 @@ Every line item, with where it's enforced:
 | User cannot see another user's logs | `tests/integration/log-isolation.test.js` |
 | Failed integration marked failed | `execution-flow.test.js` ("failed handler marks execution failed") |
 | Replay reruns a previous payload as test | `execution-flow.test.js` ("replay copies the original payload") + `ExecutionPage.jsx` Replay button |
-| Automated tests pass before deployment | gated in CI per `DEPLOYMENT.md`; **not yet run** in this environment — see Known limitations below |
+| Automated tests pass before deployment | gated in CI per the [AWS deployment plan](./docs/ops/aws-deployment-plan.md); **not yet run** in this environment — see Known limitations below |
 
 ## Known limitations / what's not done here
 
@@ -136,9 +145,9 @@ Every line item, with where it's enforced:
   access, so `npm install` and `npm test` were never actually executed here — run
   them on your machine before deploying. Every test assertion was verified by
   re-reading the route/core source it exercises, not by running the suite.
-- No AWS resources have been created. `DEPLOYMENT.md` documents the target
+- No AWS resources have been created. The [AWS deployment plan](./docs/ops/aws-deployment-plan.md) documents the target
   architecture and the exact swap points in the code (`SECRETS_MODE=aws`,
   `QUEUE_MODE=sqs`, `SCHEDULER_MODE=aws`, Cognito) but none of it has been deployed
   or load-tested.
-- Per CLAUDE.md scope: no drag-and-drop builder, no code upload from the dashboard,
+- Per the [product architecture spec](./docs/product/product-architecture-spec.md) scope: no drag-and-drop builder, no code upload from the dashboard,
   no billing, no marketplace.

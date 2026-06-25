@@ -1,7 +1,7 @@
 /**
  * Verifies the Bearer JWT on protected routes and attaches req.user.
  * Does NOT apply to /webhooks/* (those use their own token/signature
- * check inside webhook-runner.js, per CLAUDE.md 5.7).
+ * check inside webhook-runner.js, per docs/product/product-architecture-spec.md 5.7).
  */
 const { verifyToken } = require('../core/auth');
 const prisma = require('../db/client');

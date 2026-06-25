@@ -1,6 +1,6 @@
 # AWS Deployment Plan
 
-This describes the target production architecture per `CLAUDE.md` sections 12-13
+This describes the target production architecture per the [product architecture spec](../product/product-architecture-spec.md) sections 12-13
 and the exact code change required at each swap point. No AWS resources have been
 created — this is the design + migration checklist, to be executed when ready to
 deploy.
@@ -26,7 +26,7 @@ Cognito ◀───────────── App (login)
 | EventBridge Scheduler | Triggers scheduled integrations by cron/rate, replacing the in-process node-cron |
 | Secrets Manager | Stores credential secret values (never in the DB or code) |
 | Cognito | Production auth — email/password, password reset, optional MFA, JWT |
-| CloudWatch Logs | Infra + technical logs. Application/user-facing logs stay in the DB (per `CLAUDE.md` 12.7) |
+| CloudWatch Logs | Infra + technical logs. Application/user-facing logs stay in the DB (per [product architecture spec](../product/product-architecture-spec.md) 12.7) |
 | IAM Roles | Scoped to only the SQS queues, Secrets Manager paths, CloudWatch log groups, and RDS access this app needs — no hardcoded AWS keys |
 
 ## Code swap points
@@ -44,7 +44,7 @@ SQLite dev keeps working. Selected via `PRISMA_SCHEMA=prisma/schema.postgres.pri
 Postgres yet (no live Postgres was reachable to generate one against). Once
 the schema stabilizes and there's a real Postgres dev workflow, switch to
 `prisma migrate dev` → committed `migrations/` → `db:deploy` in CI/CD, per
-the original plan. See `AWS_SETUP.md` for the exact, run-this-yourself
+the original plan. See the [AWS testing environment runbook](./aws-testing-environment-runbook.md) for the exact, run-this-yourself
 command sequence for the `testing` environment.
 
 **Secrets** — `src/core/secrets.js`. Set `SECRETS_MODE=aws`. The AWS backend is
@@ -67,7 +67,7 @@ real queue. Before flipping this in production:
 already no-ops in this mode rather than starting node-cron (a long-running
 in-process timer doesn't survive EB autoscaling/restarts). Before flipping this:
 1. Add an internal endpoint, e.g. `POST /internal/run-scheduled/:integrationId`,
-   guarded by an IAM/role check (not a user JWT) — per `CLAUDE.md` 12.4.
+   guarded by an IAM/role check (not a user JWT) — per [product architecture spec](../product/product-architecture-spec.md) 12.4.
 2. For each active `ScheduleSettings` row, create an EventBridge Scheduler rule
    with the matching cron expression/timezone that invokes that endpoint (directly,
    or via SQS to reuse the same worker as webhooks).
@@ -108,7 +108,7 @@ Do not deploy to `production` if tests fail or if the migration step
 ## Rollout checklist
 
 - [ ] RDS PostgreSQL instance provisioned, `DATABASE_URL` set, schema applied
-      via `db:push:aws` (see `AWS_SETUP.md`) — move to `db:deploy` once real
+      via `db:push:aws` (see [AWS testing environment runbook](./aws-testing-environment-runbook.md)) — move to `db:deploy` once real
       migrations exist
 - [ ] Secrets Manager paths created, `SECRETS_MODE=aws`,
       `@aws-sdk/client-secrets-manager` installed

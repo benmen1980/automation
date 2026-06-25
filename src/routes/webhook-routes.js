@@ -1,6 +1,6 @@
 /**
  * Public, unauthenticated webhook endpoint: POST /webhooks/:userSlug/:integrationSlug
- * (CLAUDE.md 5.7). Token/signature validation happens inside
+ * (docs/product/product-architecture-spec.md 5.7). Token/signature validation happens inside
  * core/webhook-runner.js, not here — this route is a thin HTTP adapter.
  */
 const express = require('express');

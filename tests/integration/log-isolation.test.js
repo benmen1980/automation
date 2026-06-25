@@ -1,5 +1,5 @@
 /**
- * CLAUDE.md 9.9 / 10.1: a user can only see their own logs; an admin can
+ * docs/product/product-architecture-spec.md 9.9 / 10.1: a user can only see their own logs; an admin can
  * see everyone's. Covers both log routes (by integration, and directly by
  * executionId).
  */

@@ -1,0 +1,15 @@
+{
+  "name": "@automation/salesforce-priority",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Independent Salesforce to Priority integration worker.",
+  "scripts": {
+    "dev": "node ../../scripts/invoke-integration.mjs salesforce-priority --fixture fixtures/sample-job.json",
+    "invoke": "node ../../scripts/invoke-integration.mjs salesforce-priority",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@automation/shared": "file:../../packages/shared"
+  }
+}

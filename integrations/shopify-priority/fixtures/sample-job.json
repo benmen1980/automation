@@ -1,0 +1,26 @@
+{
+  "id": "local-shopify-priority-001",
+  "mode": "test",
+  "status": "queued",
+  "payload": {
+    "id": 12345,
+    "name": "#12345",
+    "customer": {
+      "email": "customer@example.com",
+      "first_name": "Dana",
+      "last_name": "Cohen"
+    },
+    "line_items": [
+      { "sku": "SKU-1", "quantity": 2, "price": "10.00" }
+    ]
+  },
+  "credentials": {
+    "PRIORITY_BASE_URL": "https://priority.example.test"
+  },
+  "mocks": {
+    "priorityCreateOrder": {
+      "mocked": true,
+      "priorityOrderId": "mock-order-001"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@automation/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared utilities for independent automation integration workers.",
+  "exports": {
+    ".": "./src/index.js",
+    "./priorityClient": "./src/priorityClient.js",
+    "./logger": "./src/logger.js",
+    "./configLoader": "./src/configLoader.js",
+    "./errors": "./src/errors.js"
+  }
+}

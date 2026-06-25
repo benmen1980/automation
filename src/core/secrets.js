@@ -9,7 +9,7 @@
  *                               on the deployment target; loaded lazily so
  *                               local dev never needs that package.
  *
- * Per CLAUDE.md 5.6 / 10.2: secret values are never returned to the
+ * Per docs/product/product-architecture-spec.md 5.6 / 10.2: secret values are never returned to the
  * frontend once saved, and a user can overwrite a secret but cannot read
  * its existing value back.
  */

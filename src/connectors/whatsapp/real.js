@@ -1,7 +1,7 @@
 /**
  * Real WhatsApp connector. Uses the integration's own credentials
  * (WHATSAPP_TOKEN, WHATSAPP_API_URL) — never environment variables
- * directly (CLAUDE.md 5.5). Uses Node's built-in fetch (Node 18+), no
+ * directly (docs/product/product-architecture-spec.md 5.5). Uses Node's built-in fetch (Node 18+), no
  * extra HTTP client dependency needed.
  */
 module.exports = {

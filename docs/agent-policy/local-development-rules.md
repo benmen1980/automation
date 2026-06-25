@@ -1,4 +1,4 @@
-﻿# Local Development Rule
+# Local Development Rule
 
 After every code change, restart both local services so the running app picks up the latest backend and frontend files.
 

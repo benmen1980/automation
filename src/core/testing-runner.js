@@ -1,5 +1,5 @@
 /**
- * "Test Credentials" tool (CLAUDE.md 9.8): validates a connector's
+ * "Test Credentials" tool (docs/product/product-architecture-spec.md 9.8): validates a connector's
  * credentials by calling its real testConnection(), without running the
  * full handler or creating an Execution record (this is a lighter-weight
  * check than a full test run).

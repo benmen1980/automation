@@ -1,0 +1,17 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 22
+    commands:
+      - npm ci
+      - npm --prefix frontend/dashboard ci
+  build:
+    commands:
+      - npm run test:api
+      - npm --prefix frontend/dashboard run build
+artifacts:
+  files:
+    - '**/*'
+  discard-paths: no

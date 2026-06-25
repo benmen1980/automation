@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
   res.json({ integrations });
 });
 
-// CLAUDE.md 8.3: admin (or self-service user) registers an integration
+// docs/product/product-architecture-spec.md 8.3: admin (or self-service user) registers an integration
 // that already has integration.js + handler.js on disk under a
 // codeFolder. We validate those files exist before ever saving the row.
 router.post('/', async (req, res) => {
@@ -84,7 +84,7 @@ router.patch('/:id', loadIntegration(), async (req, res) => {
 router.get('/:id/definition', loadIntegration(), (req, res) => {
   try {
     const definition = integrationLoader.loadDefinition(req.integration);
-    // integration.js must never carry real secret values (CLAUDE.md 5.3),
+    // integration.js must never carry real secret values (docs/product/product-architecture-spec.md 5.3),
     // but as a defense-in-depth measure we still strip any defaultValue
     // on secret-type fields before this reaches the frontend.
     const safeCredentials = (definition.credentials || []).map((field) => {

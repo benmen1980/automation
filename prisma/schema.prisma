@@ -5,7 +5,7 @@
 // the hard way: P1012 "the current connector does not support enums" on the
 // first real `prisma generate` run, against an EB instance — this schema had
 // never actually been generated before that). So every field that is
-// conceptually an enum (per CLAUDE.md's role/status/type fields) is declared
+// conceptually an enum (per docs/product/product-architecture-spec.md's role/status/type fields) is declared
 // here as a plain `String` with a quoted default instead. The allowed value
 // sets are unchanged and still enforced at the application layer (routes/
 // middleware), not at the DB level, for this schema.
@@ -28,7 +28,7 @@ model User {
   // Stable, human-readable slug (e.g. "user_001"). Used as :userSlug in the
   // webhook URL and as the folder name under src/integrations/. Decoupled
   // from the internal cuid `id` on purpose, per the folder convention in
-  // CLAUDE.md section 7 (e.g. src/integrations/user_001/whatsapp-order).
+  // docs/product/product-architecture-spec.md section 7 (e.g. src/integrations/user_001/whatsapp-order).
   slug         String   @unique
   email        String   @unique
   passwordHash String

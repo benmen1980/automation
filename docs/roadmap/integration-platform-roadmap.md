@@ -1,4 +1,4 @@
-# Future Features and Architecture Notes
+# Integration Platform Roadmap
 
 ## LLM-Only Integration Creation
 
@@ -7,7 +7,7 @@ Users must not create new integrations directly through the admin UI.
 The intended flow is:
 
 1. The user chats with Codex and describes the integration they need.
-2. Codex asks the required clarification questions, following `LOCAL_DEVELOPMENT.md`.
+2. Codex asks the required clarification questions, following [local development rules](../agent-policy/local-development-rules.md).
 3. Codex receives the API/Postman structures, credentials shape, dummy data, test expectations, and business rules.
 4. Codex generates the integration files, test modes, credential schema, and database registration.
 5. The admin UI displays and manages the generated integration, but does not provide a generic "create integration" form.

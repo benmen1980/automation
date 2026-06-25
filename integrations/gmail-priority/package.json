@@ -1,0 +1,15 @@
+{
+  "name": "@automation/gmail-priority",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Independent Gmail to Priority integration worker.",
+  "scripts": {
+    "dev": "node ../../scripts/invoke-integration.mjs gmail-priority --fixture fixtures/sample-job.json",
+    "invoke": "node ../../scripts/invoke-integration.mjs gmail-priority",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@automation/shared": "file:../../packages/shared"
+  }
+}

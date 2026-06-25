@@ -1,7 +1,7 @@
 /**
  * Logger injected into every handler.execute() call. Handlers must use
  * this instead of writing to the DB directly or calling console.* with
- * raw secret-bearing objects (CLAUDE.md 5.5, 10.4).
+ * raw secret-bearing objects (docs/product/product-architecture-spec.md 5.5, 10.4).
  *
  * Every log line is persisted to the Log table, scoped to user +
  * integration + execution, and sanitized first.

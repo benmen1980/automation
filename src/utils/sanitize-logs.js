@@ -1,6 +1,6 @@
 /**
  * Redacts likely-secret values before they are persisted to the Log table
- * or printed to the console. Per CLAUDE.md section 10.4, logs must never
+ * or printed to the console. Per docs/product/product-architecture-spec.md section 10.4, logs must never
  * expose passwords, API keys, tokens, authorization headers, or connection
  * strings.
  *

@@ -1,5 +1,5 @@
 /**
- * End-to-end coverage of CLAUDE.md 9.9's minimum test list, driven through
+ * End-to-end coverage of docs/product/product-architecture-spec.md 9.9's minimum test list, driven through
  * the real Express app via supertest (not mocked) so route wiring,
  * middleware, and the core engine are all exercised together:
  *

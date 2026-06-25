@@ -1,4 +1,4 @@
-# Running the Platform Locally (Windows)
+# Windows Local Setup
 
 Two long-running processes, two separate PowerShell windows: backend and
 frontend. The single biggest source of errors when running this locally is
@@ -12,7 +12,7 @@ keep them apart.
 Only needed the first time, or after `npm run db:reset`.
 
 ```powershell
-cd C:\claude\automation
+cd C:\gpt\automation
 npm install
 npm run db:migrate      # creates prisma/migrations + local-data/dev.db
 npm run db:seed         # seeds admin + 2 users + sample integrations
@@ -25,7 +25,7 @@ npm run db:seed         # seeds admin + 2 users + sample integrations
 Open a PowerShell window and dedicate it to the backend. Leave it running.
 
 ```powershell
-cd C:\claude\automation
+cd C:\gpt\automation
 npm run dev
 ```
 
@@ -41,7 +41,7 @@ Do not type or paste anything else into this window while it's running.
 Open a **second, separate** PowerShell window for this. Leave it running too.
 
 ```powershell
-cd C:\claude\automation\frontend\dashboard
+cd C:\gpt\automation\frontend\dashboard
 npm install              # first time only
 npm run dev
 ```
