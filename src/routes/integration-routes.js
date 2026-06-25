@@ -3,9 +3,10 @@ const router = express.Router();
 const prisma = require('../db/client');
 const { requireAuth } = require('../middleware/auth-middleware');
 const { loadIntegration } = require('../middleware/load-integration');
-const { scopeToUser, isAdmin } = require('../core/permissions');
+const { isAdmin } = require('../core/permissions');
 const integrationLoader = require('../core/integration-loader');
 const credentialsService = require('../core/credentials');
+const secrets = require('../core/secrets');
 const { slugify } = require('../utils/slugify');
 const webhookRunner = require('../core/webhook-runner');
 const scheduler = require('../core/scheduler');
@@ -15,7 +16,7 @@ router.use(requireAuth);
 const WITH_SETTINGS = { webhookSettings: true, scheduleSettings: true };
 
 router.get('/', async (req, res) => {
-  const where = scopeToUser(req.user);
+  const where = req.query.scope === 'all' && isAdmin(req.user) ? {} : { userId: req.user.id };
   const integrations = await prisma.integration.findMany({
     where,
     orderBy: [{ name: 'asc' }, { codeFolder: 'asc' }],
@@ -66,6 +67,47 @@ router.post('/', async (req, res) => {
   } catch (err) {
     if (err.code === 'P2002') return res.status(409).json({ error: 'An integration with this slug already exists for this user.' });
     res.status(500).json({ error: err.message });
+  }
+});
+
+router.delete('/:id', loadIntegration(), async (req, res) => {
+  try {
+    scheduler.unregisterJob(req.integration.id);
+    await prisma.$transaction(async (tx) => {
+      const credentials = await tx.credential.findMany({ where: { integrationId: req.integration.id } });
+      const secretKeys = credentials.filter((row) => row.isSecret).map((row) => row.key);
+      const executionIds = (
+        await tx.execution.findMany({
+          where: { integrationId: req.integration.id },
+          select: { id: true },
+        })
+      ).map((execution) => execution.id);
+
+      await tx.log.deleteMany({
+        where: {
+          OR: [
+            { integrationId: req.integration.id },
+            executionIds.length ? { executionId: { in: executionIds } } : { executionId: '__never__' },
+          ],
+        },
+      });
+      await tx.credential.deleteMany({ where: { integrationId: req.integration.id } });
+      await tx.webhookSettings.deleteMany({ where: { integrationId: req.integration.id } });
+      await tx.scheduleSettings.deleteMany({ where: { integrationId: req.integration.id } });
+      await tx.execution.deleteMany({ where: { integrationId: req.integration.id } });
+      await tx.integration.delete({ where: { id: req.integration.id } });
+
+      req.deletedSecretKeys = secretKeys;
+    });
+
+    await Promise.all(
+      [...(req.deletedSecretKeys || []), 'WEBHOOK_TOKEN'].map((key) =>
+        secrets.deleteSecret(req.integration.id, key).catch(() => {})
+      )
+    );
+    res.json({ deleted: true });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message });
   }
 });
 

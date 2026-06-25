@@ -96,7 +96,7 @@ export default function AdminPage() {
     setLoading(true);
     setError('');
     try {
-      const [{ users: u }, { integrations: i }] = await Promise.all([api.admin.users.list(), api.integrations.list()]);
+      const [{ users: u }, { integrations: i }] = await Promise.all([api.admin.users.list(), api.integrations.list({ scope: 'all' })]);
       setUsers(u);
       setIntegrations(i);
 

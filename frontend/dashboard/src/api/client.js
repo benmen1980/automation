@@ -72,10 +72,11 @@ export const api = {
     me: () => request('/api/auth/me'),
   },
   integrations: {
-    list: () => request('/api/integrations'),
+    list: (params) => request('/api/integrations', { params }),
     create: (payload) => request('/api/integrations', { method: 'POST', body: payload }),
     get: (id) => request(`/api/integrations/${id}`),
     update: (id, payload) => request(`/api/integrations/${id}`, { method: 'PATCH', body: payload }),
+    delete: (id) => request(`/api/integrations/${id}`, { method: 'DELETE' }),
     definition: (id) => request(`/api/integrations/${id}/definition`),
     credentials: {
       list: (id) => request(`/api/integrations/${id}/credentials`),

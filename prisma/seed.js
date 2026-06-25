@@ -93,6 +93,12 @@ async function saveDummyCredentials(integration) {
   });
 }
 
+async function saveUser001WhatsappFileCredentials(integration) {
+  await credentialsService.saveCredentials(integration, {
+    LOCAL_OUTPUT_DIR: 'local-data/users/user_001/user-001-whatsapp',
+  });
+}
+
 async function main() {
   console.log('Seeding database...');
 
@@ -110,11 +116,13 @@ async function main() {
     { user: user1, name: 'Shopify Orders to Priority', description: 'Receive Shopify order webhooks and create Priority orders.', slug: 'shopify-orders-priority', type: 'webhook', codeFolder: `src/integrations/${user1.slug}/shopify-orders-priority` },
     { user: user1, name: 'Priority Balance to WhatsApp', description: 'Receive customer webhook, read Priority data, and send WhatsApp.', slug: 'priority-whatsapp', type: 'webhook', codeFolder: `src/integrations/${user1.slug}/priority-whatsapp` },
     { user: user1, name: 'Gmail Quote Request to Priority', description: 'Receive Gmail quote request webhook and open a Priority quote.', slug: 'gmail-priority-quote', type: 'webhook', codeFolder: `src/integrations/${user1.slug}/gmail-priority-quote` },
+    { user: user1, name: 'User 001 WhatsApp Webhook', description: 'Receives WhatsApp-style webhook payloads and writes each request body to a local JSON file.', slug: 'user-001-whatsapp', type: 'webhook', codeFolder: `src/integrations/${user1.slug}/user-001-whatsapp` },
   ];
 
   for (const def of definitions) {
     const integration = await upsertIntegration(def.user, def);
-    await saveDummyCredentials(integration);
+    if (def.slug === 'user-001-whatsapp') await saveUser001WhatsappFileCredentials(integration);
+    else await saveDummyCredentials(integration);
     if (def.type === 'webhook') await ensureWebhook(integration, def.user);
     if (def.type === 'scheduled') await ensureSchedule(integration, def.cron);
   }

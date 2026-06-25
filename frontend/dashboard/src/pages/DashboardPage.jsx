@@ -98,6 +98,7 @@ export default function DashboardPage() {
   const [lastExecutions, setLastExecutions] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [deletingId, setDeletingId] = useState('');
 
   async function load() {
     setLoading(true);
@@ -126,6 +127,21 @@ export default function DashboardPage() {
   useEffect(() => {
     load();
   }, []);
+
+  async function handleDelete(integration) {
+    const confirmed = window.confirm(`Delete "${integration.name}" and its executions, logs, credentials, and settings?`);
+    if (!confirmed) return;
+    setError('');
+    setDeletingId(integration.id);
+    try {
+      await api.integrations.delete(integration.id);
+      await load();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setDeletingId('');
+    }
+  }
 
   if (loading) return <p className="text-slate-500">Loading integrations...</p>;
 
@@ -171,12 +187,22 @@ export default function DashboardPage() {
                     )}
                   </div>
                 </div>
-                <Link
-                  to={`/integrations/${integration.id}`}
-                  className="shrink-0 rounded-full border border-[#306cb4]/70 px-4 py-2 text-center text-sm font-semibold text-[#0b5869] transition hover:bg-[#e9faff]"
-                >
-                  Open details
-                </Link>
+                <div className="flex shrink-0 flex-wrap justify-end gap-2">
+                  <Link
+                    to={`/integrations/${integration.id}`}
+                    className="rounded-full border border-[#306cb4]/70 px-4 py-2 text-center text-sm font-semibold text-[#0b5869] transition hover:bg-[#e9faff]"
+                  >
+                    Open details
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(integration)}
+                    disabled={deletingId === integration.id}
+                    className="rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                  >
+                    {deletingId === integration.id ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
               </div>
             );
           })}
