@@ -17,6 +17,10 @@ done < <(/opt/elasticbeanstalk/bin/get-config environment | jq -r 'to_entries[] 
 
 cd /var/app/staging
 
+npm --prefix frontend/dashboard ci --include=dev
+npm --prefix frontend/dashboard run build
+rm -rf frontend/dashboard/node_modules
+
 node_modules/.bin/prisma db push \
   --schema=prisma/schema.postgres.prisma \
   --accept-data-loss \

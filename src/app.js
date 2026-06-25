@@ -1,4 +1,6 @@
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 
@@ -11,6 +13,8 @@ const logRoutes = require('./routes/log-routes');
 const testRoutes = require('./routes/test-routes');
 
 const app = express();
+const dashboardDistPath = path.resolve(__dirname, '..', 'frontend', 'dashboard', 'dist');
+const dashboardIndexPath = path.join(dashboardDistPath, 'index.html');
 
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
@@ -30,6 +34,23 @@ app.use('/api/integrations', testRoutes); // adds /:id/test, /:id/dry-run, /:id/
 app.use('/api', executionRoutes); // defines /integrations/:id/executions, /integrations/:id/run, /executions/:id[/replay]
 app.use('/api', logRoutes); // defines /integrations/:id/logs, /executions/:id/logs
 app.use('/webhooks', webhookRoutes); // public, no auth — see core/webhook-runner.js for token validation
+
+if (fs.existsSync(dashboardIndexPath)) {
+  app.use(express.static(dashboardDistPath));
+
+  app.get('*', (req, res, next) => {
+    const isApiRequest =
+      req.path.startsWith('/api') ||
+      req.path.startsWith('/webhooks') ||
+      req.path === '/health';
+
+    if (isApiRequest || !req.accepts('html')) return next();
+    return res.sendFile(dashboardIndexPath);
+  });
+} else if (process.env.NODE_ENV === 'production') {
+  // eslint-disable-next-line no-console
+  console.warn(`Dashboard build not found at ${dashboardDistPath}. Frontend routes will return 404.`);
+}
 
 app.use((req, res) => res.status(404).json({ error: 'Not found.' }));
 

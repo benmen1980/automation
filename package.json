@@ -1,6 +1,6 @@
 {
   "name": "user-automation-platform",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -16,6 +16,7 @@
     "dev:worker:shopify-priority": "npm --workspace @automation/shopify-priority run dev",
     "dev": "node src/server.js",
     "start": "node scripts/prisma-postinstall.js && node src/server.js",
+    "build:dashboard": "npm --prefix frontend/dashboard run build",
     "db:generate": "prisma generate",
     "db:generate:aws": "prisma generate --schema=prisma/schema.postgres.prisma",
     "db:migrate": "prisma migrate dev --name init",
