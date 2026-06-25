@@ -1,6 +1,6 @@
 {
   "name": "user-automation-platform",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "private": true,
   "description": "User-based automation platform (Node.js + Express + Prisma). Each user owns integrations with their own integration.js + handler.js, executed via a shared runner with webhook, scheduled, and manual triggers.",
   "main": "src/server.js",

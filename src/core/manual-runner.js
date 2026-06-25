@@ -1,39 +1,32 @@
-/**
- * Dashboard-triggered manual runs for both webhook and scheduled
- * integrations ("Run Test" / "Run Now", CLAUDE.md 8.7), plus replay
- * (9.6). Both funnel through execution-runner.runExecution so they create
- * real execution + log records exactly like live triggers do.
- */
-const { runExecution } = require('./execution-runner');
+﻿const executionService = require('./execution-service');
+const { enqueueExecution } = require('./queue');
 
-async function runManual({ integration, user, executionMode = 'test', payload = {}, isTest = true }) {
-  return runExecution({
-    integration,
-    user,
-    triggerType: 'manual',
+async function createAndEnqueue({ integration, triggerType, executionMode = 'test', payload = {}, sourceExecutionId, wait = true }) {
+  const execution = await executionService.createExecution({
+    userId: integration.userId,
+    integrationId: integration.id,
+    triggerType,
     executionMode,
-    payload,
-    isTest,
+    inputPayload: payload ?? {},
+    sourceExecutionId,
   });
+  return enqueueExecution(execution.id, { wait });
 }
 
-/**
- * Replays a previous execution: copies its inputPayload into a NEW
- * execution linked via sourceExecutionId. Always runs as a test-ish mode
- * (defaults to 'test', but caller may force dry_run/mock_output) so a
- * replay never silently re-sends a real message unless explicitly asked.
- */
-async function replayExecution({ sourceExecution, integration, user, executionMode = 'test' }) {
+async function runManual({ integration, executionMode = 'test', payload = {}, wait = true }) {
+  return createAndEnqueue({ integration, triggerType: 'manual', executionMode, payload, wait });
+}
+
+async function replayExecution({ sourceExecution, integration, executionMode = 'test', wait = true }) {
   const payload = sourceExecution.inputPayload ? JSON.parse(sourceExecution.inputPayload) : {};
-  return runExecution({
+  return createAndEnqueue({
     integration,
-    user,
     triggerType: 'manual',
     executionMode,
     payload,
     sourceExecutionId: sourceExecution.id,
-    isTest: true,
+    wait,
   });
 }
 
-module.exports = { runManual, replayExecution };
+module.exports = { runManual, replayExecution, createAndEnqueue };

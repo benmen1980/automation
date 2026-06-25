@@ -12,6 +12,36 @@ function pretty(jsonString) {
   }
 }
 
+function parseMetadata(metadata) {
+  if (!metadata) return null;
+  if (typeof metadata === 'object') return metadata;
+  try {
+    return JSON.parse(metadata);
+  } catch {
+    return { raw: metadata };
+  }
+}
+
+function LogLine({ log }) {
+  const metadata = parseMetadata(log.metadata);
+  const hasError = log.level === 'error';
+
+  return (
+    <div className={`rounded border px-2 py-2 text-xs ${hasError ? 'border-red-100 bg-red-50/50' : 'border-slate-100 bg-white'}`}>
+      <div className="grid gap-2 lg:grid-cols-[9rem_4.5rem_minmax(0,1fr)]">
+        <span className="text-slate-400">{new Date(log.createdAt).toLocaleString()}</span>
+        <span className={`w-fit rounded px-1.5 py-0.5 font-medium ${hasError ? 'bg-red-100 text-red-700' : 'bg-slate-100 text-slate-600'}`}>{log.level}</span>
+        <span className="break-words text-slate-700">{log.message}</span>
+      </div>
+      {metadata && (
+        <pre className="mt-2 max-h-64 overflow-auto rounded border border-slate-200 bg-white p-2 text-[11px] leading-5 text-slate-700">
+          {JSON.stringify(metadata, null, 2)}
+        </pre>
+      )}
+    </div>
+  );
+}
+
 export default function ExecutionPage() {
   const { executionId } = useParams();
   const navigate = useNavigate();
@@ -57,17 +87,17 @@ export default function ExecutionPage() {
     }
   }
 
-  if (loading) return <p className="text-slate-500">Loading…</p>;
+  if (loading) return <p className="text-slate-500">Loading...</p>;
   if (!execution) return <p className="text-red-600">{error || 'Execution not found.'}</p>;
 
   return (
     <div className="space-y-6">
       <div>
         <Link to={`/integrations/${execution.integrationId}`} className="text-sm text-slate-500 hover:underline">
-          ← Back to integration
+          Back to integration
         </Link>
         <div className="flex items-center justify-between mt-2">
-          <h1 className="text-xl font-semibold text-slate-800">Execution {execution.id.slice(0, 10)}…</h1>
+          <h1 className="text-xl font-semibold text-slate-800">Execution {execution.id.slice(0, 10)}...</h1>
           <Badge value={execution.status} />
         </div>
       </div>
@@ -85,11 +115,11 @@ export default function ExecutionPage() {
         </div>
         <div>
           <p className="text-xs text-slate-400">Started</p>
-          <p>{execution.startedAt ? new Date(execution.startedAt).toLocaleString() : '—'}</p>
+          <p>{execution.startedAt ? new Date(execution.startedAt).toLocaleString() : '-'}</p>
         </div>
         <div>
           <p className="text-xs text-slate-400">Finished</p>
-          <p>{execution.finishedAt ? new Date(execution.finishedAt).toLocaleString() : '—'}</p>
+          <p>{execution.finishedAt ? new Date(execution.finishedAt).toLocaleString() : '-'}</p>
         </div>
         {execution.sourceExecutionId && (
           <div className="col-span-2">
@@ -110,18 +140,19 @@ export default function ExecutionPage() {
 
       <section className="bg-white border border-slate-200 rounded-lg p-4">
         <h2 className="font-medium text-slate-800 mb-2">Input payload</h2>
-        <pre className="bg-slate-50 border border-slate-200 rounded p-2 text-xs overflow-x-auto">{pretty(execution.inputPayload) || '—'}</pre>
+        <pre className="bg-slate-50 border border-slate-200 rounded p-2 text-xs overflow-x-auto">{pretty(execution.inputPayload) || '-'}</pre>
       </section>
 
       <section className="bg-white border border-slate-200 rounded-lg p-4">
         <h2 className="font-medium text-slate-800 mb-2">Output payload</h2>
-        <pre className="bg-slate-50 border border-slate-200 rounded p-2 text-xs overflow-x-auto">{pretty(execution.outputPayload) || '—'}</pre>
+        <pre className="bg-slate-50 border border-slate-200 rounded p-2 text-xs overflow-x-auto">{pretty(execution.outputPayload) || '-'}</pre>
       </section>
 
       <section className="bg-white border border-slate-200 rounded-lg p-4">
         <h2 className="font-medium text-slate-800 mb-3">Replay</h2>
         <div className="flex items-center gap-2">
           <select value={replayMode} onChange={(e) => setReplayMode(e.target.value)} className="border border-slate-300 rounded px-2 py-1.5 text-sm">
+            <option value="dummy">dummy</option>
             <option value="test">test</option>
             <option value="dry_run">dry_run</option>
             <option value="mock_output">mock_output</option>
@@ -131,7 +162,7 @@ export default function ExecutionPage() {
             disabled={replaying}
             className="bg-slate-800 text-white rounded px-4 py-1.5 text-sm font-medium hover:bg-slate-700 disabled:opacity-50"
           >
-            {replaying ? 'Replaying…' : 'Replay as test'}
+            {replaying ? 'Replaying...' : 'Replay as test'}
           </button>
         </div>
       </section>
@@ -141,14 +172,8 @@ export default function ExecutionPage() {
         {logs.length === 0 ? (
           <p className="text-sm text-slate-500">No logs for this execution.</p>
         ) : (
-          <div className="space-y-1 max-h-96 overflow-y-auto">
-            {logs.map((log) => (
-              <div key={log.id} className="flex items-start gap-2 text-xs border-b border-slate-100 py-1.5">
-                <span className="text-slate-400 shrink-0 w-36">{new Date(log.createdAt).toLocaleString()}</span>
-                <span className="shrink-0 px-1.5 py-0.5 rounded font-medium bg-slate-100 text-slate-600">{log.level}</span>
-                <span className="text-slate-700 break-words">{log.message}</span>
-              </div>
-            ))}
+          <div className="space-y-2 max-h-96 overflow-y-auto pr-1">
+            {logs.map((log) => <LogLine key={log.id} log={log} />)}
           </div>
         )}
       </section>

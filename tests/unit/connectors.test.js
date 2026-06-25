@@ -46,6 +46,15 @@ describe('connectors - execution mode switching', () => {
     expect(emailResult.mocked).toBe(true);
   });
 
+  test('test, mock_input, and replay modes keep real connector behavior', async () => {
+    for (const executionMode of ['test', 'mock_input', 'replay']) {
+      const connectors = getConnectors({ executionMode, credentials: {} });
+      await expect(connectors.whatsapp.sendMessage({ to: '123', message: 'hi' })).rejects.toThrow(
+        'WhatsApp connector requires WHATSAPP_TOKEN and WHATSAPP_API_URL credentials.'
+      );
+    }
+  });
+
   test('live mode binds the real implementation with the supplied credentials (no network call needed to prove it)', async () => {
     const connectors = getConnectors({ executionMode: 'live', credentials: {} });
     // Missing credentials make real.js throw its own validation error before

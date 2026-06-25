@@ -101,6 +101,11 @@ payloads pulled from `integration.js`'s `testPayloads`, a Test Credentials panel
 go through the exact same runner as the real public webhook endpoint — there is no
 separate fake test path.
 
+Connector mode contract: `live`, `test`, `mock_input`, and `replay` use real
+connector modules with the integration's saved credentials; `dry_run` executes
+handler logic but skips connector calls without logging request arguments; and
+`mock_output`/`dummy` use mock connector modules.
+
 ## Acceptance criteria (CLAUDE.md §17)
 
 Every line item, with where it's enforced:

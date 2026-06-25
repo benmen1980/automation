@@ -27,14 +27,24 @@ async function request(path, { method = 'GET', body, params } = {}) {
   }
 
   const token = getToken();
-  const res = await fetch(url, {
-    method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: body !== undefined ? JSON.stringify(body) : undefined,
-  });
+  let res;
+  try {
+    res = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (err) {
+    const message = err?.message === 'Failed to fetch'
+      ? 'Could not reach the automation backend. Check that the backend is running and the dashboard proxy/API URL is configured.'
+      : `Network request failed: ${err.message}`;
+    const wrapped = new Error(message);
+    wrapped.status = 0;
+    throw wrapped;
+  }
 
   let data = null;
   const text = await res.text();

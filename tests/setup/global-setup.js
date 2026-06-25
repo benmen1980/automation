@@ -15,20 +15,41 @@
  */
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 const { ROOT, LOCAL_DATA_DIR, TEST_DATABASE_URL, TEST_DATABASE_FILE, TEST_SECRETS_PATH } = require('./constants');
+
+function splitSqlStatements(sql) {
+  return sql
+    .split(/;\s*(?:\r?\n|$)/)
+    .map((statement) => statement.trim())
+    .filter(Boolean);
+}
 
 module.exports = async function globalSetup() {
   fs.mkdirSync(LOCAL_DATA_DIR, { recursive: true });
 
   // Start every test run from a clean database and a clean secrets file.
-  for (const file of [TEST_DATABASE_FILE, `${TEST_DATABASE_FILE}-journal`, TEST_SECRETS_PATH]) {
+  for (const file of [
+    TEST_DATABASE_FILE,
+    `${TEST_DATABASE_FILE}-journal`,
+    `${TEST_DATABASE_FILE}-wal`,
+    `${TEST_DATABASE_FILE}-shm`,
+    TEST_SECRETS_PATH,
+  ]) {
     if (fs.existsSync(file)) fs.rmSync(file);
   }
 
-  execSync('npx prisma db push --skip-generate --accept-data-loss', {
-    cwd: ROOT,
-    stdio: 'inherit',
-    env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
-  });
+  process.env.DATABASE_URL = TEST_DATABASE_URL;
+
+  const { PrismaClient } = require('@prisma/client');
+  const prisma = new PrismaClient();
+  const migrationPath = path.join(ROOT, 'prisma', 'migrations', '20260623223422_init', 'migration.sql');
+  const statements = splitSqlStatements(fs.readFileSync(migrationPath, 'utf8'));
+
+  try {
+    for (const statement of statements) {
+      await prisma.$executeRawUnsafe(statement);
+    }
+  } finally {
+    await prisma.$disconnect();
+  }
 };

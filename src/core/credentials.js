@@ -148,6 +148,8 @@ async function listCredentialsForDisplay(integration) {
       type: field.type,
       required: !!field.required,
       helper: field.helper,
+      helperUrl: field.helperUrl,
+      helperUrlLabel: field.helperUrlLabel,
       placeholder: field.placeholder,
       options: field.options,
       isSecret: isSecretField(field),

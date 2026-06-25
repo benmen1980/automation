@@ -1,15 +1,62 @@
 import { useEffect, useState } from 'react';
 
+const SAVED_SECRET_MASK = '••••••••••••';
+
 function defaultInputFor(field) {
-  if (field.isSecret) return '';
+  if (field.isSecret) return field.saved ? SAVED_SECRET_MASK : '';
   if (field.type === 'boolean') return field.value === true;
   if (field.type === 'json') return field.value !== null && field.value !== undefined ? JSON.stringify(field.value, null, 2) : '';
   if (field.value === null || field.value === undefined) return '';
   return String(field.value);
 }
 
+function CredentialHelper({ field }) {
+  if (!field.helper && !field.helperUrl) return null;
+
+  return (
+    <p className="text-xs text-slate-400 mt-1">
+      {field.helper}
+      {field.helper && field.helperUrl ? ' ' : ''}
+      {field.helperUrl && (
+        <a href={field.helperUrl} target="_blank" rel="noreferrer" className="font-medium text-[#306cb4] hover:underline">
+          {field.helperUrlLabel || 'Create/manage token'}
+        </a>
+      )}
+    </p>
+  );
+}
+
+function SecretSavedBadge({ saved }) {
+  return (
+    <span className={`ml-2 rounded-full px-2.5 py-0.5 text-xs font-semibold ${saved ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100' : 'bg-amber-50 text-amber-700 ring-1 ring-amber-100'}`}>
+      {saved ? 'configured' : 'not set'}
+    </span>
+  );
+}
+
+function SecretStateHint({ field, justSaved }) {
+  if (!field.isSecret) return null;
+
+  if (field.saved) {
+    return (
+      <div className="mt-2 rounded-md border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs leading-5 text-emerald-800">
+        <p className="font-semibold">{justSaved ? 'Saved just now.' : 'Saved securely.'}</p>
+        <p>The dots are a secure placeholder, not the actual value. Leave them unchanged to keep the saved secret, or replace them with a new value.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2 rounded-md border border-amber-100 bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-800">
+      This secret is not saved yet. Enter a value and click Save credentials.
+    </div>
+  );
+}
+
 export default function CredentialForm({ fields, onSave }) {
   const [inputs, setInputs] = useState({});
+  const [visibleSecrets, setVisibleSecrets] = useState({});
+  const [lastSavedKeys, setLastSavedKeys] = useState([]);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState('');
@@ -18,16 +65,22 @@ export default function CredentialForm({ fields, onSave }) {
     const next = {};
     for (const field of fields) next[field.key] = defaultInputFor(field);
     setInputs(next);
+    setVisibleSecrets({});
   }, [fields]);
 
   function setValue(key, value) {
     setInputs((prev) => ({ ...prev, [key]: value }));
   }
 
+  function toggleSecret(key) {
+    setVisibleSecrets((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
     setSavedMessage('');
+    setLastSavedKeys([]);
 
     const values = {};
     for (const field of fields) {
@@ -38,9 +91,10 @@ export default function CredentialForm({ fields, onSave }) {
         continue;
       }
 
-      // Secret fields and anything left blank: don't send it, so an
-      // already-saved value is left untouched (CLAUDE.md 5.6 — the user
-      // can overwrite a secret but never reads the existing value).
+      // Saved secrets render as dots. Do not submit the placeholder back as a real secret value.
+      if (field.isSecret && raw === SAVED_SECRET_MASK) continue;
+
+      // Blank fields are not sent, so saved values stay untouched.
       if (raw === '' || raw === undefined) continue;
 
       if (field.type === 'number') {
@@ -59,8 +113,9 @@ export default function CredentialForm({ fields, onSave }) {
 
     setSaving(true);
     try {
-      await onSave(values);
-      setSavedMessage('Credentials saved.');
+      const saved = await onSave(values);
+      setLastSavedKeys(Array.isArray(saved) ? saved : Object.keys(values));
+      setSavedMessage('Credentials saved. Saved secrets are shown as configured, but their values stay hidden.');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -76,18 +131,17 @@ export default function CredentialForm({ fields, onSave }) {
     <form onSubmit={handleSubmit} className="space-y-4">
       {fields.map((field) => (
         <div key={field.key}>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
+          <label htmlFor={`credential-${field.key}`} className="block text-sm font-medium text-slate-700 mb-1">
             {field.label || field.key}
             {field.required && <span className="text-red-500"> *</span>}
-            {field.isSecret && (
-              <span className="ml-2 text-xs font-normal text-slate-400">
-                {field.saved ? '•••••• saved — leave blank to keep' : 'not set'}
-              </span>
-            )}
+            {field.isSecret && <SecretSavedBadge saved={field.saved} />}
           </label>
 
           {field.type === 'boolean' ? (
             <input
+              id={`credential-${field.key}`}
+              name={field.key}
+              data-testid={`credential-${field.key}`}
               type="checkbox"
               checked={!!inputs[field.key]}
               onChange={(e) => setValue(field.key, e.target.checked)}
@@ -95,48 +149,80 @@ export default function CredentialForm({ fields, onSave }) {
             />
           ) : field.type === 'select' ? (
             <select
+              id={`credential-${field.key}`}
+              name={field.key}
+              data-testid={`credential-${field.key}`}
               value={inputs[field.key] ?? ''}
               onChange={(e) => setValue(field.key, e.target.value)}
               className="w-full border border-slate-300 rounded px-3 py-2 text-sm"
             >
-              <option value="">— choose —</option>
+              <option value="">-- choose --</option>
               {(field.options || []).map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
           ) : field.type === 'textarea' || field.type === 'json' ? (
             <textarea
+              id={`credential-${field.key}`}
+              name={field.key}
+              data-testid={`credential-${field.key}`}
               value={inputs[field.key] ?? ''}
               onChange={(e) => setValue(field.key, e.target.value)}
               placeholder={field.placeholder}
               rows={field.type === 'json' ? 4 : 3}
               className="w-full border border-slate-300 rounded px-3 py-2 text-sm font-mono"
             />
+          ) : field.isSecret ? (
+            <div className="flex rounded border border-slate-300 focus-within:ring-2 focus-within:ring-[#97dbf3]">
+              <input
+                id={`credential-${field.key}`}
+                name={field.key}
+                data-testid={`credential-${field.key}`}
+                type={visibleSecrets[field.key] ? 'text' : 'password'}
+                value={inputs[field.key] ?? ''}
+                onFocus={() => {
+                  if (inputs[field.key] === SAVED_SECRET_MASK) setValue(field.key, '');
+                }}
+                onBlur={() => {
+                  if (field.saved && !inputs[field.key]) setValue(field.key, SAVED_SECRET_MASK);
+                }}
+                onChange={(e) => setValue(field.key, e.target.value)}
+                placeholder={field.saved ? 'Saved secret placeholder' : 'Enter secret value'}
+                className="min-w-0 flex-1 rounded-l px-3 py-2 text-sm outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => toggleSecret(field.key)}
+                className="shrink-0 border-l border-slate-300 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
+                aria-label={visibleSecrets[field.key] ? `Hide ${field.label || field.key}` : `Show ${field.label || field.key}`}
+                title={visibleSecrets[field.key] ? 'Hide password' : 'Show password'}
+              >
+                {visibleSecrets[field.key] ? 'Hide' : 'Show'}
+              </button>
+            </div>
           ) : (
             <input
-              type={field.isSecret ? 'password' : field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text'}
+              id={`credential-${field.key}`}
+              name={field.key}
+              data-testid={`credential-${field.key}`}
+              type={field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : field.type === 'email' ? 'email' : 'text'}
               value={inputs[field.key] ?? ''}
               onChange={(e) => setValue(field.key, e.target.value)}
-              placeholder={field.isSecret ? '••••••••' : field.placeholder}
+              placeholder={field.placeholder}
               className="w-full border border-slate-300 rounded px-3 py-2 text-sm"
             />
           )}
 
-          {field.helper && <p className="text-xs text-slate-400 mt-1">{field.helper}</p>}
+          <CredentialHelper field={field} />
+          <SecretStateHint field={field} justSaved={lastSavedKeys.includes(field.key)} />
         </div>
       ))}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
       {savedMessage && <p className="text-sm text-green-600">{savedMessage}</p>}
 
-      <button
-        type="submit"
-        disabled={saving}
-        className="bg-slate-800 text-white rounded px-4 py-2 text-sm font-medium hover:bg-slate-700 disabled:opacity-50"
-      >
-        {saving ? 'Saving…' : 'Save credentials'}
+      <button type="submit" disabled={saving} className="bg-slate-800 text-white rounded px-4 py-2 text-sm font-medium hover:bg-slate-700 disabled:opacity-50">
+        {saving ? 'Saving...' : 'Save credentials'}
       </button>
     </form>
   );

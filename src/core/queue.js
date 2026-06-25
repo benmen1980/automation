@@ -1,34 +1,86 @@
-/**
- * Queue abstraction. QUEUE_MODE=local runs the job in-process immediately
- * (good enough for local dev and for the webhook test path, which must
- * stay synchronous so the dashboard can show the result right away).
- * QUEUE_MODE=sqs would push to AWS SQS and let a worker process pick it
- * up — see CLAUDE.md 12.3. The SQS path is structured but not wired to a
- * real worker in this MVP; flipping QUEUE_MODE=sqs without deploying a
- * worker will just throw, by design (fail loud, not silently drop jobs).
- */
-const QUEUE_MODE = process.env.QUEUE_MODE || 'local';
+﻿const path = require('path');
+const { spawn } = require('child_process');
+const executionService = require('./execution-service');
 
-/**
- * Enqueues an execution job. `runFn` is the function that actually runs
- * the integration (execution-runner.runExecution). In local mode we just
- * await it directly; in sqs mode we'd publish a message instead and a
- * worker would call runFn later.
- */
-async function enqueueExecution(runFn) {
+const QUEUE_MODE = process.env.QUEUE_MODE || 'local';
+const LOCAL_WORKER_TIMEOUT_MS = Number(process.env.LOCAL_WORKER_TIMEOUT_MS || 120000);
+
+function runLocalWorker(executionId, { timeoutMs = LOCAL_WORKER_TIMEOUT_MS } = {}) {
+  return new Promise((resolve, reject) => {
+    const workerPath = path.join(process.cwd(), 'src', 'workers', 'local-execution-worker.js');
+    const child = spawn(process.execPath, [workerPath, executionId], {
+      cwd: process.cwd(),
+      env: process.env,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+    });
+
+    let stdout = '';
+    let stderr = '';
+    let settled = false;
+
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      child.kill('SIGKILL');
+      reject(new Error(`Execution worker timed out after ${timeoutMs}ms.`));
+    }, timeoutMs);
+
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+
+    child.on('error', (err) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      reject(err);
+    });
+
+    child.on('close', (code) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (code === 0) resolve({ stdout, stderr });
+      else reject(new Error(stderr || stdout || `Execution worker exited with code ${code}.`));
+    });
+  });
+}
+
+async function waitForExecution(executionId, { timeoutMs = LOCAL_WORKER_TIMEOUT_MS + 5000, intervalMs = 250 } = {}) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const execution = await executionService.getExecutionById(executionId);
+    if (execution && ['success', 'failed'].includes(execution.status)) return execution;
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+  }
+  throw new Error(`Timed out waiting for execution ${executionId}.`);
+}
+
+async function enqueueExecution(executionId, { wait = false } = {}) {
   if (QUEUE_MODE === 'local') {
-    return runFn();
+    const running = runLocalWorker(executionId).catch(async (err) => {
+      await executionService.markFailed(executionId, err.message).catch(() => {});
+      throw err;
+    });
+
+    if (wait) {
+      await running;
+      return waitForExecution(executionId);
+    }
+
+    running.catch(() => {});
+    return executionService.getExecutionById(executionId);
   }
 
   if (QUEUE_MODE === 'sqs') {
-    throw new Error(
-      'QUEUE_MODE=sqs is not wired to a real SQS worker in this MVP. ' +
-        'Implement publish-to-SQS here and a worker that calls execution-runner.runExecution ' +
-        'with the message body, per CLAUDE.md section 12.3.'
-    );
+    throw new Error('QUEUE_MODE=sqs is not implemented yet. This local queue boundary is ready for SQS publishing.');
   }
 
   throw new Error(`Unknown QUEUE_MODE: ${QUEUE_MODE}`);
 }
 
-module.exports = { enqueueExecution };
+module.exports = { enqueueExecution, waitForExecution };

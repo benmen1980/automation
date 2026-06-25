@@ -19,6 +19,7 @@
 const request = require('supertest');
 const app = require('../../src/app');
 const prisma = require('../../src/db/client');
+const { waitForExecution } = require('../../src/core/queue');
 const { createUser, createIntegration } = require('../helpers/factory');
 const { authHeader } = require('../helpers/auth');
 
@@ -182,10 +183,10 @@ describe('execution flow (echo fixture)', () => {
       expect(res.status).toBe(200);
       expect(res.body.execution.triggerType).toBe('webhook');
       expect(res.body.execution.executionMode).toBe('live');
-      expect(res.body.execution.status).toBe('success');
 
-      const stored = await prisma.execution.findUnique({ where: { id: res.body.execution.id } });
+      const stored = await waitForExecution(res.body.execution.id);
       expect(stored).not.toBeNull();
+      expect(stored.status).toBe('success');
     });
   });
 });

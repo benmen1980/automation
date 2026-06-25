@@ -18,7 +18,7 @@ const LOCAL_DATA_DIR = path.join(ROOT, 'local-data');
 module.exports = {
   ROOT,
   LOCAL_DATA_DIR,
-  TEST_DATABASE_URL: 'file:../local-data/test.db',
-  TEST_DATABASE_FILE: path.join(LOCAL_DATA_DIR, 'test.db'),
+  TEST_DATABASE_URL: 'file:../local-data/automation-test-single.db',
+  TEST_DATABASE_FILE: path.join(LOCAL_DATA_DIR, 'automation-test-single.db'),
   TEST_SECRETS_PATH: path.join(LOCAL_DATA_DIR, 'secrets.test.json'),
 };

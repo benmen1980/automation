@@ -1,5 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import BrandMark from './BrandMark.jsx';
+import packageJson from '../../package.json';
 
 export default function Layout({ children }) {
   const { user, isAdmin, logout } = useAuth();
@@ -11,30 +13,33 @@ export default function Layout({ children }) {
   }
 
   return (
-    <div className="min-h-screen">
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link to="/" className="font-semibold text-slate-800">
-            Automation Dashboard
+    <div className="simplyct-app-shell min-h-screen">
+      <header className="sticky top-0 z-20 border-b border-white/60 bg-white/90 backdrop-blur shadow-sm">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
+          <Link to="/" className="rounded-md focus:outline-none focus:ring-2 focus:ring-[#028baa]/40">
+            <BrandMark />
           </Link>
-          <nav className="flex items-center gap-4 text-sm">
-            <Link to="/" className="text-slate-600 hover:text-slate-900">
+          <nav className="flex flex-wrap items-center justify-end gap-2 text-sm">
+            <Link to="/" className="nav-pill">
               My Integrations
             </Link>
             {isAdmin && (
-              <Link to="/admin" className="text-slate-600 hover:text-slate-900">
+              <Link to="/admin" className="nav-pill">
                 Admin
               </Link>
             )}
-            <span className="text-slate-400">|</span>
-            <span className="text-slate-600">{user?.name}</span>
-            <button onClick={handleLogout} className="text-slate-600 hover:text-red-600">
+            <span className="hidden h-6 w-px bg-slate-200 sm:block" />
+            <span className="max-w-[10rem] truncate text-slate-600">{user?.name}</span>
+            <button onClick={handleLogout} className="nav-pill text-[#4d2f8f] hover:border-red-200 hover:text-red-600">
               Log out
             </button>
           </nav>
         </div>
       </header>
-      <main className="max-w-5xl mx-auto px-4 py-6">{children}</main>
+      <main className="mx-auto max-w-6xl px-4 py-7">{children}</main>
+      <footer className="mx-auto max-w-6xl px-4 pb-5 text-right text-xs text-slate-400">
+        Version {packageJson.version}
+      </footer>
     </div>
   );
 }
