@@ -16,7 +16,11 @@ const WITH_SETTINGS = { webhookSettings: true, scheduleSettings: true };
 
 router.get('/', async (req, res) => {
   const where = scopeToUser(req.user);
-  const integrations = await prisma.integration.findMany({ where, orderBy: { createdAt: 'desc' }, include: WITH_SETTINGS });
+  const integrations = await prisma.integration.findMany({
+    where,
+    orderBy: [{ name: 'asc' }, { codeFolder: 'asc' }],
+    include: WITH_SETTINGS,
+  });
   res.json({ integrations });
 });
 
