@@ -58,6 +58,7 @@ async function runWebhook({
   if (!found) throw httpError('Webhook not found.', 404);
   const { user, integration } = found;
   const logger = createLogger({ userId: user.id, integrationId: integration.id, executionMode, isTest: false });
+  let acceptedWebhookDiagnostics = null;
 
   if (integration.status !== 'active') throw httpError('Integration is not active.', 403);
 
@@ -80,18 +81,32 @@ async function runWebhook({
         });
         throw httpError('Invalid or missing webhook token.', 401);
       }
-      await logger.info('Accepted Priority webhook request; creating execution.', {
+      acceptedWebhookDiagnostics = {
         ...diagnostics,
         integrationName: integration.name,
         integrationSlug: integration.slug,
         triggerType,
         status: 'accepted',
         acceptedHeader: 'Priority-BPM-Token',
-      });
+      };
     }
   }
 
-  return createAndEnqueue({ integration, triggerType, executionMode, payload, wait });
+  const execution = await createAndEnqueue({ integration, triggerType, executionMode, payload, wait });
+  if (acceptedWebhookDiagnostics) {
+    const executionLogger = createLogger({
+      userId: user.id,
+      integrationId: integration.id,
+      executionId: execution.id,
+      executionMode,
+      isTest: executionMode !== 'live',
+    });
+    await executionLogger.info('Accepted Priority webhook request for this execution.', {
+      ...acceptedWebhookDiagnostics,
+      jobId: execution.id,
+    });
+  }
+  return execution;
 }
 
 async function setWebhookToken(integration, token) {

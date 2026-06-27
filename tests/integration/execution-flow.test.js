@@ -241,6 +241,7 @@ describe('execution flow (echo fixture)', () => {
         orderBy: { createdAt: 'desc' },
       });
       expect(acceptedLog).not.toBeNull();
+      expect(acceptedLog.executionId).toBe(res.body.execution.id);
       const metadata = JSON.parse(acceptedLog.metadata);
       expect(metadata.providedHeaderName).toBe('priority-bpm-token');
       expect(metadata.priorityHeaders).toMatchObject({

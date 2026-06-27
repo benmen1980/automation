@@ -1,10 +1,9 @@
 ﻿import { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { api } from '../api/client.js';
+import ActivityPanel from '../components/ActivityPanel.jsx';
 import Badge from '../components/Badge.jsx';
 import CredentialForm from '../components/CredentialForm.jsx';
-import ExecutionsTable from '../components/ExecutionsTable.jsx';
-import LogsViewer from '../components/LogsViewer.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
 const FALLBACK_EXECUTION_MODES = ['dummy', 'test', 'dry_run', 'mock_output', 'mock_input', 'live'];
@@ -398,6 +397,7 @@ export default function IntegrationPage() {
   const [connector, setConnector] = useState('');
   const [connectorResult, setConnectorResult] = useState(null);
   const [connectorTesting, setConnectorTesting] = useState(false);
+  const [selectedActivityExecutionId, setSelectedActivityExecutionId] = useState('');
 
   async function loadAll() {
     setLoading(true);
@@ -431,6 +431,11 @@ export default function IntegrationPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
+  async function refreshExecutions() {
+    const { executions: e } = await api.executions.listForIntegration(id);
+    setExecutions(e);
+  }
+
   async function handleSaveCredentials(values) {
     const { saved } = await api.integrations.credentials.save(id, values);
     const { credentials: c } = await api.integrations.credentials.list(id);
@@ -462,8 +467,8 @@ export default function IntegrationPage() {
     try {
       const { execution } = await api.test.test(id, { payload, executionMode });
       setTestResult(execution);
-      const { executions: e } = await api.executions.listForIntegration(id);
-      setExecutions(e);
+      setSelectedActivityExecutionId(execution.id);
+      await refreshExecutions();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -623,16 +628,13 @@ export default function IntegrationPage() {
             </Card>
           )}
 
-          <Card
-            title="Recent executions"
-            description="Accepted runs only. Token rejections happen before execution and appear in Logs as warnings."
-            aside={<button onClick={loadAll} className="text-xs font-medium text-[#306cb4] hover:underline">Refresh activity</button>}
-          >
-            <ExecutionsTable executions={executions} />
-          </Card>
-
-          <Card title="Logs" description="Webhook attempts, accepted runs, provider steps, and safe error details. Token values are not written to logs.">
-            <LogsViewer integrationId={id} />
+          <Card title="Activity & logs" description="Executions and webhook attempts in one timeline. Select a row to see the cause and complete log.">
+            <ActivityPanel
+              integrationId={id}
+              executions={executions}
+              onRefresh={refreshExecutions}
+              selectedExecutionId={selectedActivityExecutionId}
+            />
           </Card>
         </aside>
       </div>
