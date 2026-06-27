@@ -52,8 +52,8 @@ function buildTemplateBody({ credentials, quoteNumber, quoteDescription }) {
         {
           type: 'body',
           parameters: [
-            { type: 'text', text: quoteNumber },
             { type: 'text', text: quoteDescription },
+            { type: 'text', text: quoteNumber },
           ],
         },
         {
@@ -74,8 +74,8 @@ function safeRequestSummary({ endpoint, body }) {
     templateName: body.template.name,
     languageCode: body.template.language.code,
     recipientPhone: maskPhone(body.to),
-    param1: body.template.components[0].parameters[0].text,
-    param2: { type: 'redacted', reason: 'sensitive personal data', length: body.template.components[0].parameters[1].text.length },
+    param1: { type: 'redacted', reason: 'sensitive personal data', length: body.template.components[0].parameters[0].text.length },
+    param2: body.template.components[0].parameters[1].text,
     buttonParam: body.template.components[1].parameters[0].text,
   };
 }

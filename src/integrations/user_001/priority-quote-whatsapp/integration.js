@@ -98,7 +98,7 @@ module.exports = {
   testPayloads: [
     {
       name: 'Priority quote approved',
-      description: 'Priority quote payload that maps CPROFNUM to parameter 1 and CDES to parameter 2.',
+      description: 'Priority quote payload that maps CDES to parameter 1 and CPROFNUM to parameter 2.',
       payload: {
         CPROF: {
           CPROFNUM: 'PQ26000001',

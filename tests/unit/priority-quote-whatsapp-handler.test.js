@@ -35,7 +35,7 @@ describe('priority quote WhatsApp integration', () => {
     expect(() => validateIntegrationContract(integrationDefinition, { strict: true })).not.toThrow();
   });
 
-  test('dry_run maps CPROFNUM and CDES without calling WhatsApp', async () => {
+  test('dry_run maps CDES to param1 and CPROFNUM to param2 without calling WhatsApp', async () => {
     global.fetch = jest.fn();
     const logger = createLogger();
 
@@ -55,10 +55,10 @@ describe('priority quote WhatsApp integration', () => {
       templateName: 'order_status',
       languageCode: 'he',
       recipientPhone: '********0000',
-      param1: 'PQ26000001',
+      param2: 'PQ26000001',
       buttonParam: 'PQ26000001',
     });
-    expect(result.requestSummary.param2).toMatchObject({ type: 'redacted' });
+    expect(result.requestSummary.param1).toMatchObject({ type: 'redacted' });
     expect(JSON.stringify(logger.info.mock.calls)).not.toContain('test-whatsapp-token');
     expect(JSON.stringify(logger.info.mock.calls)).not.toContain('דניאל');
   });
@@ -106,8 +106,8 @@ describe('priority quote WhatsApp integration', () => {
           {
             type: 'body',
             parameters: [
-              { type: 'text', text: 'PQ26000001' },
               { type: 'text', text: 'דניאל כהן' },
+              { type: 'text', text: 'PQ26000001' },
             ],
           },
           {
