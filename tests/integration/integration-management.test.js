@@ -10,12 +10,13 @@ const { createUser, createIntegration } = require('../helpers/factory');
 const { authHeader } = require('../helpers/auth');
 
 describe('integration management', () => {
-  let admin, user1, user2;
+  let admin, user1, user2, viewer;
 
   beforeAll(async () => {
     admin = await createUser({ slug: 'mgmt_admin', email: 'mgmt-admin@test.local', role: 'admin' });
     user1 = await createUser({ slug: 'mgmt_user_1', email: 'mgmt-user-1@test.local' });
     user2 = await createUser({ slug: 'mgmt_user_2', email: 'mgmt-user-2@test.local' });
+    viewer = await createUser({ slug: 'mgmt_viewer', email: 'mgmt-viewer@test.local', role: 'viewer' });
   });
 
   afterAll(async () => {
@@ -62,6 +63,73 @@ describe('integration management', () => {
     await expect(prisma.integration.findUnique({ where: { id: integration.id } })).resolves.toBeNull();
     await expect(prisma.credential.count({ where: { integrationId: integration.id } })).resolves.toBe(0);
     await expect(prisma.log.count({ where: { integrationId: integration.id } })).resolves.toBe(0);
+  });
+
+  test('only admins can register generated integrations', async () => {
+    const userRes = await request(app)
+      .post('/api/integrations')
+      .set('Authorization', authHeader(user1))
+      .send({
+        name: 'User Created Echo',
+        type: 'webhook',
+        codeFolder: 'src/integrations/test_fixtures/echo',
+      });
+    expect(userRes.status).toBe(403);
+
+    const adminRes = await request(app)
+      .post('/api/integrations')
+      .set('Authorization', authHeader(admin))
+      .send({
+        name: 'Admin Created Echo',
+        type: 'webhook',
+        codeFolder: 'src/integrations/test_fixtures/echo',
+      });
+    expect(adminRes.status).toBe(201);
+  });
+
+  test('admins can register generated integrations for another user', async () => {
+    const adminRes = await request(app)
+      .post('/api/integrations')
+      .set('Authorization', authHeader(admin))
+      .send({
+        name: 'Assigned Echo',
+        type: 'webhook',
+        codeFolder: 'src/integrations/test_fixtures/echo',
+        userId: user1.id,
+      });
+
+    expect(adminRes.status).toBe(201);
+    expect(adminRes.body.integration.userId).toBe(user1.id);
+
+    const userRes = await request(app).get('/api/integrations').set('Authorization', authHeader(user1));
+    expect(userRes.body.integrations.some((item) => item.id === adminRes.body.integration.id)).toBe(true);
+  });
+
+  test('viewer can inspect but cannot mutate or run an owned integration', async () => {
+    const integration = await createIntegration({
+      user: viewer,
+      slug: 'viewer-echo',
+      codeFolder: 'src/integrations/test_fixtures/echo',
+    });
+
+    const listRes = await request(app).get('/api/integrations').set('Authorization', authHeader(viewer));
+    expect(listRes.status).toBe(200);
+    expect(listRes.body.integrations.some((item) => item.id === integration.id)).toBe(true);
+
+    const saveRes = await request(app)
+      .post(`/api/integrations/${integration.id}/credentials`)
+      .set('Authorization', authHeader(viewer))
+      .send({ values: { API_TOKEN: 'viewer-secret' } });
+    expect(saveRes.status).toBe(403);
+
+    const runRes = await request(app)
+      .post(`/api/integrations/${integration.id}/run`)
+      .set('Authorization', authHeader(viewer))
+      .send({ executionMode: 'test', payload: { hello: 'viewer' } });
+    expect(runRes.status).toBe(403);
+
+    const deleteRes = await request(app).delete(`/api/integrations/${integration.id}`).set('Authorization', authHeader(viewer));
+    expect(deleteRes.status).toBe(403);
   });
 });
 

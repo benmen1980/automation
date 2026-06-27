@@ -5,6 +5,7 @@ import Badge from '../components/Badge.jsx';
 import CredentialForm from '../components/CredentialForm.jsx';
 import ExecutionsTable from '../components/ExecutionsTable.jsx';
 import LogsViewer from '../components/LogsViewer.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 
 const FALLBACK_EXECUTION_MODES = ['dummy', 'test', 'dry_run', 'mock_output', 'mock_input', 'live'];
 const DEFAULT_TIMEZONE = 'Asia/Jerusalem';
@@ -47,6 +48,14 @@ function FieldHint({ children }) {
   return <p className="mt-1 text-xs leading-5 text-slate-500">{children}</p>;
 }
 
+function ReadOnlyNotice({ children = 'Your role can inspect this integration, but cannot change settings, credentials, or run tests.' }) {
+  return (
+    <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm leading-5 text-slate-600">
+      {children}
+    </div>
+  );
+}
+
 function parseCron(cronExpression) {
   if (cronExpression === '* * * * *') return { preset: 'everyMinute', interval: 1, minute: 0, hour: 9, custom: cronExpression };
   const everyMatch = cronExpression?.match(/^\*\/(\d+) \* \* \* \*$/);
@@ -78,7 +87,7 @@ function schedulePreview(schedule) {
   return `Uses custom cron: ${schedule.custom || 'not set'}.`;
 }
 
-function WebhookSettingsPanel({ integration, onUpdated }) {
+function WebhookSettingsPanel({ integration, onUpdated, disabled = false }) {
   const [token, setToken] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -117,10 +126,11 @@ function WebhookSettingsPanel({ integration, onUpdated }) {
           type="password"
           value={token}
           onChange={(e) => setToken(e.target.value)}
-          placeholder="New webhook token"
+          placeholder={disabled ? 'Token changes disabled for viewer role' : 'New webhook token'}
+          disabled={disabled}
           className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
         />
-        <button type="submit" disabled={saving || !token} className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+        <button type="submit" disabled={saving || !token || disabled} className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
           Save
         </button>
       </form>
@@ -129,7 +139,7 @@ function WebhookSettingsPanel({ integration, onUpdated }) {
   );
 }
 
-function ScheduleSettingsPanel({ integration, onUpdated }) {
+function ScheduleSettingsPanel({ integration, onUpdated, disabled = false }) {
   const settings = integration.scheduleSettings;
   const [schedule, setSchedule] = useState(() => parseCron(settings?.cronExpression || '*/10 * * * *'));
   const [timezone, setTimezone] = useState(settings?.timezone || DEFAULT_TIMEZONE);
@@ -160,7 +170,7 @@ function ScheduleSettingsPanel({ integration, onUpdated }) {
     <form onSubmit={save} className="space-y-4">
       <div>
         <label className="block text-xs font-medium text-slate-600">How often should it run?</label>
-        <select value={schedule.preset} onChange={(e) => patchSchedule({ preset: e.target.value })} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+        <select value={schedule.preset} onChange={(e) => patchSchedule({ preset: e.target.value })} disabled={disabled} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
           <option value="everyMinute">Every minute</option>
           <option value="everyMinutes">Every X minutes</option>
           <option value="hourly">Every hour</option>
@@ -172,7 +182,7 @@ function ScheduleSettingsPanel({ integration, onUpdated }) {
       {schedule.preset === 'everyMinutes' && (
         <div>
           <label className="block text-xs font-medium text-slate-600">Minutes between runs</label>
-          <input type="number" min="1" max="1440" value={schedule.interval} onChange={(e) => patchSchedule({ interval: e.target.value })} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+          <input type="number" min="1" max="1440" value={schedule.interval} onChange={(e) => patchSchedule({ interval: e.target.value })} disabled={disabled} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
           <FieldHint>Example: 10 means it runs every 10 minutes.</FieldHint>
         </div>
       )}
@@ -180,7 +190,7 @@ function ScheduleSettingsPanel({ integration, onUpdated }) {
       {schedule.preset === 'hourly' && (
         <div>
           <label className="block text-xs font-medium text-slate-600">Minute within each hour</label>
-          <input type="number" min="0" max="59" value={schedule.minute} onChange={(e) => patchSchedule({ minute: e.target.value })} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+          <input type="number" min="0" max="59" value={schedule.minute} onChange={(e) => patchSchedule({ minute: e.target.value })} disabled={disabled} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
         </div>
       )}
 
@@ -188,11 +198,11 @@ function ScheduleSettingsPanel({ integration, onUpdated }) {
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="block text-xs font-medium text-slate-600">Hour</label>
-            <input type="number" min="0" max="23" value={schedule.hour} onChange={(e) => patchSchedule({ hour: e.target.value })} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+            <input type="number" min="0" max="23" value={schedule.hour} onChange={(e) => patchSchedule({ hour: e.target.value })} disabled={disabled} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-600">Minute</label>
-            <input type="number" min="0" max="59" value={schedule.minute} onChange={(e) => patchSchedule({ minute: e.target.value })} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+            <input type="number" min="0" max="59" value={schedule.minute} onChange={(e) => patchSchedule({ minute: e.target.value })} disabled={disabled} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
           </div>
         </div>
       )}
@@ -200,14 +210,14 @@ function ScheduleSettingsPanel({ integration, onUpdated }) {
       {schedule.preset === 'custom' && (
         <div>
           <label className="block text-xs font-medium text-slate-600">Cron expression</label>
-          <input value={schedule.custom} onChange={(e) => patchSchedule({ custom: e.target.value })} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm" />
+          <input value={schedule.custom} onChange={(e) => patchSchedule({ custom: e.target.value })} disabled={disabled} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm" />
           <FieldHint>Use this only when the preset options are not specific enough.</FieldHint>
         </div>
       )}
 
       <div>
         <label className="block text-xs font-medium text-slate-600">Timezone</label>
-        <input value={timezone} onChange={(e) => setTimezone(e.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+        <input value={timezone} onChange={(e) => setTimezone(e.target.value)} disabled={disabled} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
       </div>
 
       <div className="rounded-md border border-[#97dbf3]/60 bg-[#e9faff] px-3 py-2 text-sm text-[#0b5869]">
@@ -216,7 +226,7 @@ function ScheduleSettingsPanel({ integration, onUpdated }) {
       </div>
 
       <label className="flex items-center gap-2 text-sm text-slate-600">
-        <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} />
+        <input type="checkbox" checked={active} onChange={(e) => setActive(e.target.checked)} disabled={disabled} />
         Schedule is active
       </label>
 
@@ -224,7 +234,7 @@ function ScheduleSettingsPanel({ integration, onUpdated }) {
         Last run: {settings?.lastRunAt ? new Date(settings.lastRunAt).toLocaleString() : '-'} | Next run: {settings?.nextRunAt ? new Date(settings.nextRunAt).toLocaleString() : '-'}
       </p>
       {error && <p className="text-sm text-red-600">{error}</p>}
-      <button type="submit" disabled={saving} className="rounded-md bg-[#306cb4] px-4 py-2 text-sm font-semibold text-white hover:bg-[#028baa] disabled:opacity-50">
+      <button type="submit" disabled={saving || disabled} className="rounded-md bg-[#306cb4] px-4 py-2 text-sm font-semibold text-white hover:bg-[#028baa] disabled:opacity-50">
         {saving ? 'Saving...' : 'Save schedule'}
       </button>
     </form>
@@ -298,6 +308,7 @@ function ConnectorResult({ result }) {
 
 export default function IntegrationPage() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [integration, setIntegration] = useState(null);
   const [definition, setDefinition] = useState(null);
   const [credentialFields, setCredentialFields] = useState([]);
@@ -409,6 +420,7 @@ export default function IntegrationPage() {
   const connectorOptions = definition?.credentialTests?.length ? definition.credentialTests : definition?.connectors || [];
   const activeConnector = connectorOptions.includes(connector) ? connector : connectorOptions[0];
   const lastExecution = executions[0];
+  const canManage = user?.role !== 'viewer';
 
   if (loading) return <p className="text-slate-500">Loading...</p>;
   if (!integration) return <p className="text-red-600">{error || 'Integration not found.'}</p>;
@@ -426,16 +438,20 @@ export default function IntegrationPage() {
             </div>
             <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">{integration.description}</p>
           </div>
-          <div className="flex flex-wrap gap-3 text-sm">
-            <label className="flex items-center gap-2 text-slate-600">
-              <input type="checkbox" checked={integration.status === 'active'} onChange={(e) => handleToggleField('status', e.target.checked ? 'active' : 'inactive')} />
-              Active
-            </label>
-            <label className="flex items-center gap-2 text-slate-600">
-              <input type="checkbox" checked={integration.manualRunEnabled} onChange={(e) => handleToggleField('manualRunEnabled', e.target.checked)} />
-              Manual run
-            </label>
-          </div>
+          {canManage ? (
+            <div className="flex flex-wrap gap-3 text-sm">
+              <label className="flex items-center gap-2 text-slate-600">
+                <input type="checkbox" checked={integration.status === 'active'} onChange={(e) => handleToggleField('status', e.target.checked ? 'active' : 'inactive')} />
+                Active
+              </label>
+              <label className="flex items-center gap-2 text-slate-600">
+                <input type="checkbox" checked={integration.manualRunEnabled} onChange={(e) => handleToggleField('manualRunEnabled', e.target.checked)} />
+                Manual run
+              </label>
+            </div>
+          ) : (
+            <Badge value="viewer" />
+          )}
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Stat label="Last status" value={lastExecution?.status} />
@@ -450,21 +466,24 @@ export default function IntegrationPage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">
         <div className="space-y-6">
           <Card title={integration.type === 'webhook' ? 'Webhook settings' : 'Schedule settings'} description={integration.type === 'webhook' ? 'Configure how outside apps trigger this integration.' : 'Choose a human-readable schedule. The app saves cron internally.'}>
-            {integration.type === 'webhook' ? <WebhookSettingsPanel integration={integration} onUpdated={loadAll} /> : <ScheduleSettingsPanel integration={integration} onUpdated={loadAll} />}
+            {!canManage && <ReadOnlyNotice />}
+            {integration.type === 'webhook' ? <WebhookSettingsPanel integration={integration} onUpdated={loadAll} disabled={!canManage} /> : <ScheduleSettingsPanel integration={integration} onUpdated={loadAll} disabled={!canManage} />}
           </Card>
 
           <Card title="Credentials" description="Only fields declared by this integration are shown. Secrets stay masked after saving.">
-            <CredentialForm fields={credentialFields} onSave={handleSaveCredentials} />
+            {!canManage && <ReadOnlyNotice />}
+            <CredentialForm fields={credentialFields} onSave={handleSaveCredentials} disabled={!canManage} />
           </Card>
 
           <Card title="Run and test" description="Use the allowed modes for this integration. Test mode should be safe by default.">
+            {!canManage && <ReadOnlyNotice>Your role can view previous runs and logs, but cannot start new tests or live runs.</ReadOnlyNotice>}
             {allowManualPayload && definition?.testPayloads?.length > 0 && (
               <div className="mb-3">
                 <label className="block text-xs font-medium text-slate-600">Sample payload</label>
                 <select onChange={(e) => {
                   const item = definition.testPayloads[e.target.value];
                   if (item) setPayloadText(JSON.stringify(item.payload, null, 2));
-                }} className="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm" defaultValue="0">
+                }} className="mt-1 rounded-md border border-slate-300 px-3 py-2 text-sm" defaultValue="0" disabled={!canManage}>
                   {definition.testPayloads.map((p, idx) => <option key={idx} value={idx}>{p.name}</option>)}
                 </select>
               </div>
@@ -473,7 +492,7 @@ export default function IntegrationPage() {
             {allowManualPayload ? (
               <div className="mb-3">
                 <label className="block text-xs font-medium text-slate-600">Payload (JSON)</label>
-                <textarea value={payloadText} onChange={(e) => setPayloadText(e.target.value)} rows={8} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm" />
+                <textarea value={payloadText} onChange={(e) => setPayloadText(e.target.value)} rows={8} readOnly={!canManage} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-sm" />
               </div>
             ) : (
               <div className="mb-3 rounded-lg border border-[#97dbf3]/60 bg-[#e9faff] p-3 text-sm text-[#0b5869]">
@@ -484,10 +503,10 @@ export default function IntegrationPage() {
             )}
 
             <div className="flex flex-wrap items-center gap-2">
-              <select value={executionMode} onChange={(e) => setExecutionMode(e.target.value)} className="rounded-md border border-slate-300 px-3 py-2 text-sm">
+              <select value={executionMode} onChange={(e) => setExecutionMode(e.target.value)} disabled={!canManage} className="rounded-md border border-slate-300 px-3 py-2 text-sm">
                 {allowedModes.map((m) => <option key={m} value={m}>{executionModeLabel(definition, m)}</option>)}
               </select>
-              <button onClick={handleRunTest} disabled={running || !integration.manualRunEnabled} className="rounded-md bg-[#306cb4] px-4 py-2 text-sm font-semibold text-white hover:bg-[#028baa] disabled:opacity-50">
+              <button onClick={handleRunTest} disabled={running || !integration.manualRunEnabled || !canManage} className="rounded-md bg-[#306cb4] px-4 py-2 text-sm font-semibold text-white hover:bg-[#028baa] disabled:opacity-50">
                 {running ? 'Running...' : `Run ${executionModeLabel(definition, executionMode)}`}
               </button>
             </div>
@@ -510,11 +529,12 @@ export default function IntegrationPage() {
         <aside className="space-y-6">
           {connectorOptions.length > 0 && (
             <Card title="Credential test" description="Choose which external account to verify. The test checks saved credentials without showing secret values.">
+              {!canManage && <ReadOnlyNotice>Your role can inspect available credential tests, but cannot run them.</ReadOnlyNotice>}
               <div className="flex items-center gap-2">
-                <select value={activeConnector || ''} onChange={(e) => setConnector(e.target.value)} className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm">
+                <select value={activeConnector || ''} onChange={(e) => setConnector(e.target.value)} disabled={!canManage} className="min-w-0 flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm">
                   {connectorOptions.map((c) => <option key={c} value={c}>{connectorLabel(definition, c)}</option>)}
                 </select>
-                <button onClick={() => handleTestConnector(activeConnector)} disabled={connectorTesting || !activeConnector} className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+                <button onClick={() => handleTestConnector(activeConnector)} disabled={connectorTesting || !activeConnector || !canManage} className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">
                   {connectorTesting ? 'Testing...' : 'Test'}
                 </button>
               </div>

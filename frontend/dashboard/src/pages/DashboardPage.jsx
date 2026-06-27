@@ -2,12 +2,26 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../api/client.js';
 import Badge from '../components/Badge.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 
 function NewIntegrationForm({ onCreated }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', type: 'webhook', codeFolder: '' });
+  const [form, setForm] = useState({ name: '', description: '', type: 'webhook', codeFolder: '', userId: '' });
+  const [users, setUsers] = useState([]);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    api.admin.users
+      .list()
+      .then((data) => {
+        const activeUsers = (data.users || []).filter((item) => item.status === 'active');
+        setUsers(activeUsers);
+        setForm((prev) => ({ ...prev, userId: prev.userId || activeUsers[0]?.id || '' }));
+      })
+      .catch((err) => setError(err.message));
+  }, [open]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -15,7 +29,7 @@ function NewIntegrationForm({ onCreated }) {
     setSubmitting(true);
     try {
       await api.integrations.create(form);
-      setForm({ name: '', description: '', type: 'webhook', codeFolder: '' });
+      setForm({ name: '', description: '', type: 'webhook', codeFolder: '', userId: '' });
       setOpen(false);
       onCreated();
     } catch (err) {
@@ -31,7 +45,7 @@ function NewIntegrationForm({ onCreated }) {
         onClick={() => setOpen(true)}
         className="rounded-full border border-[#306cb4] px-4 py-2 text-sm font-semibold text-[#0b5869] transition hover:bg-[#e9faff]"
       >
-        + New integration
+        Register generated integration
       </button>
     );
   }
@@ -43,6 +57,22 @@ function NewIntegrationForm({ onCreated }) {
         under <code>codeFolder</code>.
       </p>
       <div className="grid grid-cols-2 gap-3">
+        <label className="col-span-2 text-xs font-medium text-slate-600">
+          Owner
+          <select
+            required
+            value={form.userId}
+            onChange={(e) => setForm({ ...form, userId: e.target.value })}
+            className="mt-1 w-full border border-slate-300 rounded px-3 py-2 text-sm"
+          >
+            {users.map((item) => (
+              <option key={item.id} value={item.id}>{item.name} ({item.email})</option>
+            ))}
+          </select>
+          <span className="mt-1 block text-xs font-normal text-slate-400">
+            The selected user will see and own this integration.
+          </span>
+        </label>
         <input
           required
           placeholder="Name"
@@ -94,11 +124,13 @@ function shortId(id) {
 }
 
 export default function DashboardPage() {
+  const { user, isAdmin } = useAuth();
   const [integrations, setIntegrations] = useState([]);
   const [lastExecutions, setLastExecutions] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deletingId, setDeletingId] = useState('');
+  const canDelete = user?.role !== 'viewer';
 
   async function load() {
     setLoading(true);
@@ -150,9 +182,19 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-semibold text-[#0b5869]">My Integrations</h1>
-          <p className="mt-1 text-sm text-slate-500">Open an integration to test, configure credentials, or inspect logs.</p>
+          <p className="mt-1 text-sm text-slate-500">
+            {user?.role === 'viewer'
+              ? 'Open an integration to inspect settings, executions, and logs.'
+              : 'Open an integration to test, configure credentials, or inspect logs.'}
+          </p>
         </div>
-        <NewIntegrationForm onCreated={load} />
+        {isAdmin ? (
+          <NewIntegrationForm onCreated={load} />
+        ) : (
+          <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
+            Need a new integration? Ask an admin to register a generated integration after the checklist is complete.
+          </div>
+        )}
       </div>
 
       {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
@@ -194,14 +236,16 @@ export default function DashboardPage() {
                   >
                     Open details
                   </Link>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(integration)}
-                    disabled={deletingId === integration.id}
-                    className="rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
-                  >
-                    {deletingId === integration.id ? 'Deleting...' : 'Delete'}
-                  </button>
+                  {canDelete && (
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(integration)}
+                      disabled={deletingId === integration.id}
+                      className="rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {deletingId === integration.id ? 'Deleting...' : 'Delete'}
+                    </button>
+                  )}
                 </div>
               </div>
             );

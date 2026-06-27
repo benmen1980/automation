@@ -18,9 +18,12 @@ function sanitizeString(value) {
       return scheme ? `Authorization: ${scheme} ${REDACTED}` : `Authorization: ${REDACTED}`;
     })
     .replace(/\b(X-API-Key|Api-Key|API-Key)\s*:\s*[^\r\n,}]+/gi, `$1: ${REDACTED}`)
+    .replace(/"([^"]*(?:authorization|api[-_]?key|api_key|token|secret|password)[^"]*)"\s*:\s*"[^"]*"/gi, `"$1":"${REDACTED}"`)
     .replace(/\bBearer\s+[A-Za-z0-9\-._~+/]+=*/gi, `Bearer ${REDACTED}`)
     .replace(/\b(Basic|ApiKey)\s+[A-Za-z0-9\-._~+/=:]+/gi, `$1 ${REDACTED}`)
-    .replace(/([?&](?:token|key|secret|password|api_key|apiKey|access_token|refresh_token)=)([^&\s]+)/gi, `$1${REDACTED}`);
+    .replace(/((?:^|[?&\s])[^=&\s]*(?:token|key|secret|password|code)[^=&\s]*=)([^&\s]+)/gi, `$1${REDACTED}`)
+    .replace(/(\b(?:password|secret|token|api[-_]?key|api_key|client_secret|access_token|refresh_token|authorization_code|code)\b\s*:\s*)([^\s&,}]+)/gi, `$1${REDACTED}`)
+    .replace(/(\b(?:password|secret|token|api[-_]?key|api_key|client_secret|access_token|refresh_token|authorization_code)\b\s+)([^\s&,}]+)/gi, `$1${REDACTED}`);
 }
 
 function sanitizeValue(value, seen = new WeakSet()) {

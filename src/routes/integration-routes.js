@@ -30,6 +30,9 @@ router.get('/', async (req, res) => {
 // codeFolder. We validate those files exist before ever saving the row.
 router.post('/', async (req, res) => {
   const { name, description, slug, type, codeFolder, userId, definitionFile, handlerFile } = req.body || {};
+  if (!isAdmin(req.user)) {
+    return res.status(403).json({ error: 'Only admins can register generated integrations. Ask an admin to create or assign a new integration.' });
+  }
   if (!name || !type || !codeFolder) {
     return res.status(400).json({ error: 'name, type, and codeFolder are required.' });
   }
@@ -72,7 +75,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.delete('/:id', loadIntegration(), async (req, res) => {
+router.delete('/:id', loadIntegration({ mutate: true }), async (req, res) => {
   try {
     scheduler.unregisterJob(req.integration.id);
     await prisma.$transaction(async (tx) => {
@@ -117,7 +120,7 @@ router.get('/:id', loadIntegration({ include: WITH_SETTINGS }), (req, res) => {
   res.json({ integration: req.integration });
 });
 
-router.patch('/:id', loadIntegration(), async (req, res) => {
+router.patch('/:id', loadIntegration({ mutate: true }), async (req, res) => {
   const { name, description, status, manualRunEnabled } = req.body || {};
   const data = {};
   if (name !== undefined) data.name = name;
@@ -153,7 +156,7 @@ router.get('/:id/credentials', loadIntegration(), async (req, res) => {
   res.json({ credentials });
 });
 
-router.post('/:id/credentials', loadIntegration(), async (req, res) => {
+router.post('/:id/credentials', loadIntegration({ mutate: true }), async (req, res) => {
   const values = req.body && req.body.values;
   if (!values || typeof values !== 'object') {
     return res.status(400).json({ error: '"values" object is required.' });
@@ -166,7 +169,7 @@ router.post('/:id/credentials', loadIntegration(), async (req, res) => {
   }
 });
 
-router.post('/:id/webhook-settings', loadIntegration(), async (req, res) => {
+router.post('/:id/webhook-settings', loadIntegration({ mutate: true }), async (req, res) => {
   if (req.integration.type !== 'webhook') {
     return res.status(400).json({ error: 'Only webhook integrations have webhook settings.' });
   }
@@ -188,7 +191,7 @@ router.post('/:id/webhook-settings', loadIntegration(), async (req, res) => {
   res.json({ webhookSettings: { ...settings, secretTokenReference: settings.secretTokenReference ? '[configured]' : null } });
 });
 
-router.post('/:id/schedule-settings', loadIntegration(), async (req, res) => {
+router.post('/:id/schedule-settings', loadIntegration({ mutate: true }), async (req, res) => {
   if (req.integration.type !== 'scheduled') {
     return res.status(400).json({ error: 'Only scheduled integrations have schedule settings.' });
   }

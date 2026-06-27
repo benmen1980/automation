@@ -3,7 +3,7 @@ const router = express.Router();
 const prisma = require('../db/client');
 const { requireAuth } = require('../middleware/auth-middleware');
 const { loadIntegration } = require('../middleware/load-integration');
-const { assertOwnsOrAdmin } = require('../core/permissions');
+const { assertOwnsOrAdmin, assertCanMutate } = require('../core/permissions');
 const executionService = require('../core/execution-service');
 const { runManual, replayExecution } = require('../core/manual-runner');
 
@@ -30,7 +30,7 @@ router.get('/executions/:executionId', loadExecutionOr404, (req, res) => {
   res.json({ execution: req.execution });
 });
 
-router.post('/integrations/:id/run', loadIntegration(), async (req, res) => {
+router.post('/integrations/:id/run', loadIntegration({ mutate: true }), async (req, res) => {
   if (!req.integration.manualRunEnabled) {
     return res.status(403).json({ error: 'Manual run is disabled for this integration.' });
   }
@@ -48,6 +48,11 @@ router.post('/integrations/:id/run', loadIntegration(), async (req, res) => {
 router.post('/executions/:executionId/replay', loadExecutionOr404, async (req, res) => {
   const integration = await prisma.integration.findUnique({ where: { id: req.execution.integrationId } });
   if (!integration) return res.status(404).json({ error: 'Integration for this execution no longer exists.' });
+  try {
+    assertCanMutate(req.user, integration, 'integration');
+  } catch (err) {
+    return res.status(err.statusCode || 403).json({ error: err.message });
+  }
 
   const { executionMode = 'test' } = req.body || {};
   const execution = await replayExecution({ sourceExecution: req.execution, integration, user: req.user, executionMode });

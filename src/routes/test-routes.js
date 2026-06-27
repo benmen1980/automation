@@ -16,7 +16,7 @@ const { testConnector } = require('../core/testing-runner');
 
 router.use(requireAuth);
 
-router.post('/:id/test', loadIntegration(), async (req, res) => {
+router.post('/:id/test', loadIntegration({ mutate: true }), async (req, res) => {
   const { payload = {}, executionMode = 'test', headers = {}, testTokenValidation = false } = req.body || {};
 
   try {
@@ -48,7 +48,7 @@ router.post('/:id/test', loadIntegration(), async (req, res) => {
   }
 });
 
-router.post('/:id/dry-run', loadIntegration(), async (req, res) => {
+router.post('/:id/dry-run', loadIntegration({ mutate: true }), async (req, res) => {
   const { payload = {} } = req.body || {};
   const execution = await runManual({
     integration: req.integration,
@@ -60,7 +60,7 @@ router.post('/:id/dry-run', loadIntegration(), async (req, res) => {
   res.json({ execution });
 });
 
-router.post('/:id/test-connector', loadIntegration(), async (req, res) => {
+router.post('/:id/test-connector', loadIntegration({ mutate: true }), async (req, res) => {
   const { connector, credentials } = req.body || {};
   if (!connector) return res.status(400).json({ error: '"connector" is required.' });
   try {

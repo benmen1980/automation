@@ -17,6 +17,7 @@ const fs = require('fs');
 const path = require('path');
 
 const INTEGRATIONS_ROOT = path.resolve(process.cwd(), process.env.INTEGRATIONS_ROOT || 'src/integrations');
+const INTEGRATIONS_ROOT_REAL = fs.realpathSync.native(INTEGRATIONS_ROOT);
 
 const definitionCache = new Map();
 const handlerCache = new Map();
@@ -31,14 +32,83 @@ function resolveSafeFolder(relativeFolder) {
     throw new Error('Integration codeFolder is missing or invalid.');
   }
   const resolved = path.resolve(process.cwd(), relativeFolder);
-  const withSep = resolved.endsWith(path.sep) ? resolved : resolved + path.sep;
-  const rootWithSep = INTEGRATIONS_ROOT.endsWith(path.sep) ? INTEGRATIONS_ROOT : INTEGRATIONS_ROOT + path.sep;
+  if (!fs.existsSync(resolved)) {
+    throw new Error(`Integration codeFolder does not exist: ${resolved}`);
+  }
+  const realResolved = fs.realpathSync.native(resolved);
+  const withSep = realResolved.endsWith(path.sep) ? realResolved : realResolved + path.sep;
+  const rootWithSep = INTEGRATIONS_ROOT_REAL.endsWith(path.sep) ? INTEGRATIONS_ROOT_REAL : INTEGRATIONS_ROOT_REAL + path.sep;
   if (!withSep.startsWith(rootWithSep)) {
     throw new Error(
-      `Refusing to load integration code outside of ${INTEGRATIONS_ROOT}: resolved path was ${resolved}`
+      `Refusing to load integration code outside of ${INTEGRATIONS_ROOT_REAL}: resolved path was ${realResolved}`
     );
   }
   return resolved;
+}
+
+function validateLoggingContract(logging, errors, prefix = 'logging') {
+  if (!logging || typeof logging !== 'object') {
+    errors.push(`${prefix} metadata is required.`);
+    return;
+  }
+  if (!['INBOUND', 'OUTBOUND', 'BIDIRECTIONAL'].includes(logging.direction)) {
+    errors.push(`${prefix}.direction must be INBOUND, OUTBOUND, or BIDIRECTIONAL.`);
+  }
+  if (logging.reviewRequired !== true) {
+    errors.push(`${prefix}.reviewRequired must be true so every integration receives a log-review step.`);
+  }
+  if (typeof logging.cloudWatchLogGroup !== 'string' || logging.cloudWatchLogGroup.trim() === '') {
+    errors.push(`${prefix}.cloudWatchLogGroup must identify the per-integration CloudWatch/log group.`);
+  }
+  if (!Array.isArray(logging.steps) || logging.steps.length === 0) {
+    errors.push(`${prefix}.steps must list the important user-readable log steps.`);
+  } else {
+    const hasDirectionStep = logging.steps.some(
+      (step) => typeof step === 'string' && /\b(Received from|Sent to)\b/i.test(step)
+    );
+    if (!hasDirectionStep) {
+      errors.push(`${prefix}.steps must include at least one directional step such as "Received from WhatsApp" or "Sent to Priority".`);
+    }
+    for (const step of logging.steps) {
+      if (typeof step !== 'string' || step.trim() === '') {
+        errors.push(`Every ${prefix}.steps item must be a non-empty plain-language string.`);
+      }
+    }
+  }
+}
+
+function validateTestingContract(testing, errors, prefix = 'testing') {
+  if (!testing || typeof testing !== 'object') {
+    errors.push(`${prefix} metadata is required.`);
+    return;
+  }
+  const modes = Array.isArray(testing.modes) ? testing.modes : [];
+  if (modes.length === 0) errors.push(`${prefix}.modes must list the allowed test/run modes.`);
+  if (!testing.defaultMode) errors.push(`${prefix}.defaultMode must be set to the safest default mode.`);
+  if (testing.defaultMode && modes.length > 0 && !modes.includes(testing.defaultMode)) {
+    errors.push(`${prefix}.defaultMode must be included in ${prefix}.modes.`);
+  }
+  for (const mode of modes) {
+    if (!testing.modeDescriptions?.[mode]) {
+      errors.push(`${prefix}.modeDescriptions.${mode} must explain that mode in plain language.`);
+    }
+  }
+}
+
+function validateCredentialFields(credentials, errors, prefix = 'credentials') {
+  if (!Array.isArray(credentials)) {
+    errors.push(`${prefix} must be an array.`);
+    return [];
+  }
+  for (const field of credentials) {
+    if (!field.key) errors.push(`Every ${prefix} field must define key.`);
+    if (!field.label && prefix === 'credentials') errors.push(`Credential ${field.key || '<unknown>'} must define a clear label.`);
+    if (!field.type) errors.push(`Credential ${field.key || '<unknown>'} must define type.`);
+    if (!field.helper && !field.helperUrl) {
+      errors.push(`Credential ${field.key || '<unknown>'} must include helper text or a helperUrl.`);
+    }
+  }
+  return credentials;
 }
 
 function resolveSafeFile(folder, fileName) {
@@ -85,35 +155,7 @@ function validateIntegrationContract(definition, { strict = true } = {}) {
     errors.push('integration.js must define credentialTests as an array, even when empty.');
   }
 
-  const logging = definition?.logging;
-  if (!logging || typeof logging !== 'object') {
-    errors.push('integration.js must define logging metadata.');
-  } else {
-    if (!['INBOUND', 'OUTBOUND', 'BIDIRECTIONAL'].includes(logging.direction)) {
-      errors.push('logging.direction must be INBOUND, OUTBOUND, or BIDIRECTIONAL.');
-    }
-    if (logging.reviewRequired !== true) {
-      errors.push('logging.reviewRequired must be true so every integration receives a log-review step.');
-    }
-    if (typeof logging.cloudWatchLogGroup !== 'string' || logging.cloudWatchLogGroup.trim() === '') {
-      errors.push('logging.cloudWatchLogGroup must identify the per-integration CloudWatch/log group.');
-    }
-    if (!Array.isArray(logging.steps) || logging.steps.length === 0) {
-      errors.push('logging.steps must list the important user-readable log steps.');
-    } else {
-      const hasDirectionStep = logging.steps.some(
-        (step) => typeof step === 'string' && /\b(Received from|Sent to)\b/i.test(step)
-      );
-      if (!hasDirectionStep) {
-        errors.push('logging.steps must include at least one directional step such as "Received from WhatsApp" or "Sent to Priority".');
-      }
-      for (const step of logging.steps) {
-        if (typeof step !== 'string' || step.trim() === '') {
-          errors.push('Every logging.steps item must be a non-empty plain-language string.');
-        }
-      }
-    }
-  }
+  validateLoggingContract(definition?.logging, errors, 'logging');
 
   if (definition?.type === 'webhook') {
     if (!definition.webhook || typeof definition.webhook !== 'object') {
@@ -126,33 +168,9 @@ function validateIntegrationContract(definition, { strict = true } = {}) {
     }
   }
 
-  const testing = definition?.testing;
-  if (!testing || typeof testing !== 'object') {
-    errors.push('integration.js must define testing metadata.');
-  } else {
-    const modes = Array.isArray(testing.modes) ? testing.modes : [];
-    if (modes.length === 0) errors.push('testing.modes must list the allowed test/run modes.');
-    if (!testing.defaultMode) errors.push('testing.defaultMode must be set to the safest default mode.');
-    if (testing.defaultMode && modes.length > 0 && !modes.includes(testing.defaultMode)) {
-      errors.push('testing.defaultMode must be included in testing.modes.');
-    }
-    for (const mode of modes) {
-      if (!testing.modeDescriptions?.[mode]) {
-        errors.push(`testing.modeDescriptions.${mode} must explain that mode in plain language.`);
-      }
-    }
-  }
+  validateTestingContract(definition?.testing, errors, 'testing');
 
-  const credentials = Array.isArray(definition?.credentials) ? definition.credentials : [];
-  if (!Array.isArray(definition?.credentials)) errors.push('integration.js must define credentials as an array.');
-  for (const field of credentials) {
-    if (!field.key) errors.push('Every credential field must define key.');
-    if (!field.label) errors.push(`Credential ${field.key || '<unknown>'} must define a clear label.`);
-    if (!field.type) errors.push(`Credential ${field.key || '<unknown>'} must define type.`);
-    if (!field.helper && !field.helperUrl) {
-      errors.push(`Credential ${field.key || '<unknown>'} must include helper text or a helperUrl.`);
-    }
-  }
+  validateCredentialFields(definition?.credentials, errors, 'credentials');
 
   if (strict && !Array.isArray(definition?.testPayloads) && definition?.sampleData === undefined) {
     errors.push('integration.js must include testPayloads or sampleData for safe local testing.');
@@ -160,6 +178,48 @@ function validateIntegrationContract(definition, { strict = true } = {}) {
 
   if (errors.length > 0) {
     const err = new Error(`Integration contract validation failed:\n- ${errors.join('\n- ')}`);
+    err.validationErrors = errors;
+    throw err;
+  }
+  return true;
+}
+
+function validateWorkerManifestContract(manifest, { strict = true } = {}) {
+  const errors = [];
+  for (const field of ['name', 'type', 'runtime', 'direction']) {
+    if (typeof manifest?.[field] !== 'string' || manifest[field].trim() === '') {
+      errors.push(`manifest.js must define a non-empty ${field}.`);
+    }
+  }
+  if (manifest?.type !== 'worker') errors.push('manifest.js type must be "worker".');
+  if (!['lambda', 'fargate', 'local'].includes(manifest?.runtime)) {
+    errors.push('manifest.js runtime must be lambda, fargate, or local.');
+  }
+  if (!['INBOUND', 'OUTBOUND', 'BIDIRECTIONAL'].includes(manifest?.direction)) {
+    errors.push('manifest.js direction must be INBOUND, OUTBOUND, or BIDIRECTIONAL.');
+  }
+  if (!Array.isArray(manifest?.triggers) || manifest.triggers.length === 0) {
+    errors.push('manifest.js triggers must list manual, schedule, webhook, file, or queue triggers.');
+  }
+  validateCredentialFields(manifest?.credentials, errors, 'credentials');
+  validateLoggingContract(manifest?.logging, errors, 'logging');
+  validateTestingContract(manifest?.testing, errors, 'testing');
+  const deployment = manifest?.deployment;
+  if (!deployment || typeof deployment !== 'object') {
+    errors.push('manifest.js must define deployment metadata.');
+  } else {
+    for (const field of ['pipelineName', 'queueName', 'dlqName', 'cloudWatchLogGroup']) {
+      if (typeof deployment[field] !== 'string' || deployment[field].trim() === '') {
+        errors.push(`deployment.${field} must be set.`);
+      }
+    }
+  }
+  if (strict && !manifest?.sampleJob && !manifest?.fixtures) {
+    errors.push('manifest.js must reference sampleJob or fixtures for safe local testing.');
+  }
+
+  if (errors.length > 0) {
+    const err = new Error(`Worker manifest validation failed:\n- ${errors.join('\n- ')}`);
     err.validationErrors = errors;
     throw err;
   }
@@ -209,6 +269,7 @@ module.exports = {
   resolveSafeFile,
   validateIntegrationFiles,
   validateIntegrationContract,
+  validateWorkerManifestContract,
   loadDefinitionFromPath,
   loadDefinition,
   loadHandler,

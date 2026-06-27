@@ -10,6 +10,11 @@ function defaultInputFor(field) {
   return String(field.value);
 }
 
+function unchangedInput(field, raw) {
+  if (field.isSecret) return raw === SAVED_SECRET_MASK || raw === '' || raw === undefined;
+  return raw === defaultInputFor(field);
+}
+
 function CredentialHelper({ field }) {
   if (!field.helper && !field.helperUrl) return null;
 
@@ -53,7 +58,7 @@ function SecretStateHint({ field, justSaved }) {
   );
 }
 
-export default function CredentialForm({ fields, onSave }) {
+export default function CredentialForm({ fields, onSave, disabled = false }) {
   const [inputs, setInputs] = useState({});
   const [visibleSecrets, setVisibleSecrets] = useState({});
   const [lastSavedKeys, setLastSavedKeys] = useState([]);
@@ -86,13 +91,12 @@ export default function CredentialForm({ fields, onSave }) {
     for (const field of fields) {
       const raw = inputs[field.key];
 
+      if (unchangedInput(field, raw)) continue;
+
       if (field.type === 'boolean') {
         values[field.key] = !!raw;
         continue;
       }
-
-      // Saved secrets render as dots. Do not submit the placeholder back as a real secret value.
-      if (field.isSecret && raw === SAVED_SECRET_MASK) continue;
 
       // Blank fields are not sent, so saved values stay untouched.
       if (raw === '' || raw === undefined) continue;
@@ -109,6 +113,11 @@ export default function CredentialForm({ fields, onSave }) {
       } else {
         values[field.key] = raw;
       }
+    }
+
+    if (Object.keys(values).length === 0) {
+      setSavedMessage('No credential changes to save. Saved secrets are still configured.');
+      return;
     }
 
     setSaving(true);
@@ -145,6 +154,7 @@ export default function CredentialForm({ fields, onSave }) {
               type="checkbox"
               checked={!!inputs[field.key]}
               onChange={(e) => setValue(field.key, e.target.checked)}
+              disabled={disabled}
               className="h-4 w-4"
             />
           ) : field.type === 'select' ? (
@@ -154,6 +164,7 @@ export default function CredentialForm({ fields, onSave }) {
               data-testid={`credential-${field.key}`}
               value={inputs[field.key] ?? ''}
               onChange={(e) => setValue(field.key, e.target.value)}
+              disabled={disabled}
               className="w-full border border-slate-300 rounded px-3 py-2 text-sm"
             >
               <option value="">-- choose --</option>
@@ -169,6 +180,7 @@ export default function CredentialForm({ fields, onSave }) {
               value={inputs[field.key] ?? ''}
               onChange={(e) => setValue(field.key, e.target.value)}
               placeholder={field.placeholder}
+              disabled={disabled}
               rows={field.type === 'json' ? 4 : 3}
               className="w-full border border-slate-300 rounded px-3 py-2 text-sm font-mono"
             />
@@ -188,11 +200,13 @@ export default function CredentialForm({ fields, onSave }) {
                 }}
                 onChange={(e) => setValue(field.key, e.target.value)}
                 placeholder={field.saved ? 'Saved secret placeholder' : 'Enter secret value'}
+                disabled={disabled}
                 className="min-w-0 flex-1 rounded-l px-3 py-2 text-sm outline-none"
               />
               <button
                 type="button"
                 onClick={() => toggleSecret(field.key)}
+                disabled={disabled}
                 className="shrink-0 border-l border-slate-300 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
                 aria-label={visibleSecrets[field.key] ? `Hide ${field.label || field.key}` : `Show ${field.label || field.key}`}
                 title={visibleSecrets[field.key] ? 'Hide password' : 'Show password'}
@@ -209,6 +223,7 @@ export default function CredentialForm({ fields, onSave }) {
               value={inputs[field.key] ?? ''}
               onChange={(e) => setValue(field.key, e.target.value)}
               placeholder={field.placeholder}
+              disabled={disabled}
               className="w-full border border-slate-300 rounded px-3 py-2 text-sm"
             />
           )}
@@ -221,7 +236,7 @@ export default function CredentialForm({ fields, onSave }) {
       {error && <p className="text-sm text-red-600">{error}</p>}
       {savedMessage && <p className="text-sm text-green-600">{savedMessage}</p>}
 
-      <button type="submit" disabled={saving} className="bg-slate-800 text-white rounded px-4 py-2 text-sm font-medium hover:bg-slate-700 disabled:opacity-50">
+      <button type="submit" disabled={saving || disabled} className="bg-slate-800 text-white rounded px-4 py-2 text-sm font-medium hover:bg-slate-700 disabled:opacity-50">
         {saving ? 'Saving...' : 'Save credentials'}
       </button>
     </form>

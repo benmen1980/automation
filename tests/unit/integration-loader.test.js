@@ -84,4 +84,34 @@ describe('integration-loader', () => {
     });
     expect(() => integrationLoader.validateIntegrationContract(definition)).not.toThrow();
   });
+
+  test('validateWorkerManifestContract accepts worker package metadata', () => {
+    const manifest = {
+      name: 'sample-worker',
+      type: 'worker',
+      runtime: 'lambda',
+      direction: 'INBOUND',
+      triggers: ['manual'],
+      credentials: [{ key: 'API_TOKEN', label: 'API Token', type: 'secret', helper: 'Worker API token.' }],
+      logging: {
+        direction: 'INBOUND',
+        reviewRequired: true,
+        cloudWatchLogGroup: '/automation/integrations/sample-worker',
+        steps: ['Received from Source', 'Sent to Target'],
+      },
+      testing: {
+        defaultMode: 'test',
+        modes: ['test'],
+        modeDescriptions: { test: 'Uses local fixture data only.' },
+      },
+      deployment: {
+        pipelineName: 'integration-sample-worker',
+        queueName: 'sample-worker-queue',
+        dlqName: 'sample-worker-dlq',
+        cloudWatchLogGroup: '/automation/integrations/sample-worker',
+      },
+      sampleJob: 'fixtures/sample-job.json',
+    };
+    expect(() => integrationLoader.validateWorkerManifestContract(manifest)).not.toThrow();
+  });
 });

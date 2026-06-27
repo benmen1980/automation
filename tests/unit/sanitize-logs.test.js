@@ -14,9 +14,18 @@ describe('sanitize-logs', () => {
   });
 
   test('redacts token/key/secret/password query params in a message string', () => {
-    const { message } = sanitizeLogEntry({ message: 'GET /callback?token=supersecret&api_key=abc&other=1' });
+    const { message } = sanitizeLogEntry({ message: 'GET /callback?token=supersecret&client_secret=abc&password=nope&code=AUTHCODE123&other=1' });
     expect(message).not.toContain('supersecret');
-    expect(message).toContain('api_key=***REDACTED***');
+    expect(message).not.toContain('AUTHCODE123');
+    expect(message).toContain('client_secret=***REDACTED***');
+    expect(message).toContain('password=***REDACTED***');
+  });
+
+  test('redacts free-form key value secret strings', () => {
+    const { message } = sanitizeLogEntry({ message: 'provider failed password=hunter2 refresh_token abc123 code: AUTHCODE123' });
+    expect(message).not.toContain('hunter2');
+    expect(message).not.toContain('abc123');
+    expect(message).not.toContain('AUTHCODE123');
   });
 
   test('redacts authorization and api key header values in strings', () => {

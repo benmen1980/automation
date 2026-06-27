@@ -6,13 +6,21 @@ INTEGRATION_NAME="${1:?Usage: create-sqs-for-integration.sh <integration-name>}"
 
 DLQ_NAME="${INTEGRATION_NAME}-dlq"
 QUEUE_NAME="${INTEGRATION_NAME}-queue"
+ENV_SUFFIX="$(echo "${INTEGRATION_NAME}" | tr '[:lower:]-' '[:upper:]_')"
 
 DLQ_URL=$(aws sqs create-queue --queue-name "${DLQ_NAME}" --region "${AWS_REGION}" --query QueueUrl --output text)
 DLQ_ARN=$(aws sqs get-queue-attributes --queue-url "${DLQ_URL}" --attribute-names QueueArn --query 'Attributes.QueueArn' --output text)
 
-aws sqs create-queue \
+QUEUE_URL=$(aws sqs create-queue \
   --queue-name "${QUEUE_NAME}" \
   --region "${AWS_REGION}" \
-  --attributes "{\"RedrivePolicy\":\"{\\\"deadLetterTargetArn\\\":\\\"${DLQ_ARN}\\\",\\\"maxReceiveCount\\\":\\\"3\\\"}\"}"
+  --attributes "{\"RedrivePolicy\":\"{\\\"deadLetterTargetArn\\\":\\\"${DLQ_ARN}\\\",\\\"maxReceiveCount\\\":\\\"3\\\"}\"}" \
+  --query QueueUrl \
+  --output text)
+QUEUE_ARN=$(aws sqs get-queue-attributes --queue-url "${QUEUE_URL}" --attribute-names QueueArn --query 'Attributes.QueueArn' --output text)
 
 echo "Created SQS queue ${QUEUE_NAME} with DLQ ${DLQ_NAME}"
+echo "Queue URL: ${QUEUE_URL}"
+echo "Queue ARN: ${QUEUE_ARN}"
+echo "Configure API with SQS_QUEUE_URL_${ENV_SUFFIX}=${QUEUE_URL}"
+echo "Configure Lambda creation with SQS_QUEUE_ARN=${QUEUE_ARN}"

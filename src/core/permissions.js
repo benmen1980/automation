@@ -9,12 +9,21 @@ function isAdmin(user) {
   return user && user.role === 'admin';
 }
 
+function isViewer(user) {
+  return user && user.role === 'viewer';
+}
+
 /**
  * Returns true if `user` may access a resource owned by `resourceUserId`.
  */
 function canAccessUser(user, resourceUserId) {
   if (!user) return false;
   return isAdmin(user) || user.id === resourceUserId;
+}
+
+function canMutateUser(user, resourceUserId) {
+  if (!canAccessUser(user, resourceUserId)) return false;
+  return isAdmin(user) || !isViewer(user);
 }
 
 /**
@@ -34,6 +43,15 @@ function assertOwnsOrAdmin(user, resource, label = 'resource') {
   }
 }
 
+function assertCanMutate(user, resource, label = 'resource') {
+  assertOwnsOrAdmin(user, resource, label);
+  if (!canMutateUser(user, resource.userId)) {
+    const err = new Error(`Your role can view this ${label}, but cannot change or run it.`);
+    err.statusCode = 403;
+    throw err;
+  }
+}
+
 /**
  * Builds a Prisma `where` filter that scopes a query to the current user
  * unless they're an admin (in which case no filter is applied).
@@ -43,4 +61,4 @@ function scopeToUser(user, extraWhere = {}) {
   return { ...extraWhere, userId: user.id };
 }
 
-module.exports = { isAdmin, canAccessUser, assertOwnsOrAdmin, scopeToUser };
+module.exports = { isAdmin, isViewer, canAccessUser, canMutateUser, assertOwnsOrAdmin, assertCanMutate, scopeToUser };

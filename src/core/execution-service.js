@@ -19,6 +19,17 @@ async function createExecution({ userId, integrationId, triggerType, executionMo
   });
 }
 
+async function markQueued(executionId, queueMetadata = {}) {
+  return prisma.execution.update({
+    where: { id: executionId },
+    data: {
+      status: 'queued',
+      queueMessageId: queueMetadata.messageId || null,
+      queueUrl: queueMetadata.queueUrl || null,
+    },
+  });
+}
+
 async function markRunning(executionId) {
   return prisma.execution.update({
     where: { id: executionId },
@@ -52,6 +63,20 @@ async function getExecutionById(executionId) {
   return prisma.execution.findUnique({ where: { id: executionId } });
 }
 
+async function getExecutionForQueue(executionId) {
+  return prisma.execution.findUnique({
+    where: { id: executionId },
+    include: {
+      integration: {
+        select: { id: true, userId: true, slug: true, name: true, type: true, codeFolder: true },
+      },
+      user: {
+        select: { id: true, slug: true, email: true },
+      },
+    },
+  });
+}
+
 async function listExecutionsForIntegration(integrationId, { take = 50 } = {}) {
   return prisma.execution.findMany({
     where: { integrationId },
@@ -62,9 +87,11 @@ async function listExecutionsForIntegration(integrationId, { take = 50 } = {}) {
 
 module.exports = {
   createExecution,
+  markQueued,
   markRunning,
   markSuccess,
   markFailed,
   getExecutionById,
+  getExecutionForQueue,
   listExecutionsForIntegration,
 };

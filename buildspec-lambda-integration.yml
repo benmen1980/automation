@@ -14,7 +14,11 @@ phases:
     commands:
       - npm --workspace "@automation/${INTEGRATION_NAME}" test
       - mkdir -p dist
-      - cd "integrations/${INTEGRATION_NAME}" && zip -r "../../dist/${INTEGRATION_NAME}.zip" package.json src fixtures
+      - rm -rf "dist/lambda-${INTEGRATION_NAME}"
+      - mkdir -p "dist/lambda-${INTEGRATION_NAME}/node_modules/@automation"
+      - cp -R "integrations/${INTEGRATION_NAME}/package.json" "integrations/${INTEGRATION_NAME}/src" "integrations/${INTEGRATION_NAME}/fixtures" "dist/lambda-${INTEGRATION_NAME}/"
+      - cp -R packages/shared "dist/lambda-${INTEGRATION_NAME}/node_modules/@automation/shared"
+      - cd "dist/lambda-${INTEGRATION_NAME}" && zip -r "../${INTEGRATION_NAME}.zip" .
 artifacts:
   files:
     - "dist/${INTEGRATION_NAME}.zip"

@@ -56,9 +56,12 @@ enum ExecutionMode {
 
 enum ExecutionStatus {
   pending
+  queued
   running
+  retrying
   success
   failed
+  dead_letter
 }
 
 enum LogLevel {
@@ -173,6 +176,12 @@ model Execution {
   outputPayload     String?
   errorMessage      String?
   sourceExecutionId String?
+  retryCount        Int             @default(0)
+  maxAttempts       Int             @default(3)
+  queueMessageId    String?
+  queueUrl          String?
+  cloudWatchLogRef  String?
+  externalRequestId String?
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 

@@ -11,6 +11,7 @@ const webhookRoutes = require('./routes/webhook-routes');
 const executionRoutes = require('./routes/execution-routes');
 const logRoutes = require('./routes/log-routes');
 const testRoutes = require('./routes/test-routes');
+const { sanitizeString } = require('./utils/sanitize-logs');
 
 const app = express();
 const dashboardDistPath = path.resolve(__dirname, '..', 'frontend', 'dashboard', 'dist');
@@ -21,7 +22,7 @@ app.use(express.json({ limit: '2mb' }));
 
 app.use((req, res, next) => {
   // eslint-disable-next-line no-console
-  console.log(`${req.method} ${req.originalUrl}`);
+  console.log(`${req.method} ${sanitizeString(req.originalUrl)}`);
   next();
 });
 

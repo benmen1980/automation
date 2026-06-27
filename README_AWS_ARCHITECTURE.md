@@ -14,7 +14,8 @@ The repository is one monorepo. Services deploy independently based on changed p
 
 ## Deployment Triggers
 
-- `apps/api/**`, `src/**`, `prisma/**`, `frontend/dashboard/**`: deploy API.
+- `apps/api/**`, API runtime files under `src/**` except `src/integrations/**`, `prisma/**`, `frontend/dashboard/**`: deploy API/dashboard.
+- `src/integrations/**`: legacy local integrations only; do not include this path in the API production pipeline while integrations are being migrated to independent workers.
 - `integrations/gmail-priority/**`: deploy Gmail/Priority worker.
 - `integrations/shopify-priority/**`: deploy Shopify/Priority worker.
 - `integrations/salesforce-priority/**`: deploy Salesforce/Priority worker.

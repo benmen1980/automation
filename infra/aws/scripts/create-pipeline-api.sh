@@ -8,7 +8,8 @@ set -euo pipefail
 
 echo "Create a CodePipeline named ${PROJECT_NAME}-api with:"
 echo "- Source: GitHub connection, ${REPO_ID}, branch ${BRANCH}"
-echo "- Path filter: apps/api/**, src/**, prisma/**, frontend/dashboard/**, packages/shared/**"
+echo "- Path filter: apps/api/**, src/** excluding src/integrations/**, prisma/**, frontend/dashboard/**, packages/shared/**"
+echo "- Must NOT trigger for: integrations/** or src/integrations/**"
 echo "- Build: buildspec-api-eb.yml"
 echo "- Deploy: Elastic Beanstalk API environment"
 echo "This script documents the pipeline shape; wire IAM role ARNs and connection ARN per account."

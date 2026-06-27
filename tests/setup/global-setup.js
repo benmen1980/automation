@@ -42,8 +42,14 @@ module.exports = async function globalSetup() {
 
   const { PrismaClient } = require('@prisma/client');
   const prisma = new PrismaClient();
-  const migrationPath = path.join(ROOT, 'prisma', 'migrations', '20260623223422_init', 'migration.sql');
-  const statements = splitSqlStatements(fs.readFileSync(migrationPath, 'utf8'));
+  const migrationsRoot = path.join(ROOT, 'prisma', 'migrations');
+  const migrationFiles = fs
+    .readdirSync(migrationsRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => path.join(migrationsRoot, entry.name, 'migration.sql'))
+    .filter((file) => fs.existsSync(file))
+    .sort();
+  const statements = migrationFiles.flatMap((migrationPath) => splitSqlStatements(fs.readFileSync(migrationPath, 'utf8')));
 
   try {
     for (const statement of statements) {
