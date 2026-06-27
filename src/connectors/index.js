@@ -12,6 +12,8 @@ const gmailReal = require('./gmail/real');
 const gmailMock = require('./gmail/mock');
 const sesReal = require('./ses/real');
 const sesMock = require('./ses/mock');
+const whatsappCloudReal = require('./whatsapp-cloud/real');
+const whatsappCloudMock = require('./whatsapp-cloud/mock');
 
 const REGISTRY = {
   whatsapp: { real: whatsappReal, mock: whatsappMock },
@@ -21,6 +23,7 @@ const REGISTRY = {
   shopify: { real: shopifyReal, mock: shopifyMock },
   gmail: { real: gmailReal, mock: gmailMock },
   ses: { real: sesReal, mock: sesMock },
+  whatsappCloud: { real: whatsappCloudReal, mock: whatsappCloudMock },
 };
 
 const MOCK_MODES = new Set(['dummy', 'mock_output']);

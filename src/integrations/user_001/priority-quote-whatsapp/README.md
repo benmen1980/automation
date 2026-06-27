@@ -1,0 +1,62 @@
+# Priority Quote Notification to WhatsApp
+
+Webhook integration for user_001. It receives a Priority quote payload and sends a WhatsApp Cloud API template message.
+
+## Webhook
+
+When the local ngrok tunnel is running, the dashboard shows the full public URL:
+
+```text
+https://<ngrok-domain>/webhooks/user_001/priority-quote-whatsapp
+```
+
+The webhook requires an authorization header:
+
+```text
+Authorization: Bearer <saved webhook token>
+```
+
+The local webhook token is stored in the app secret store. For local Postman testing, the setup helper also writes a gitignored copy under `local-data/users/user_001/priority-quote-whatsapp/`.
+
+## Payload
+
+```json
+{
+  "CPROF": {
+    "CPROFNUM": "PQ26000001",
+    "CDES": "דניאל כהן"
+  }
+}
+```
+
+Mapping:
+
+- `CPROF.CPROFNUM` -> WhatsApp template body parameter 1 and URL button parameter.
+- `CPROF.CDES` -> WhatsApp template body parameter 2.
+- `CPROF.DES` is accepted as a fallback when `CDES` is missing.
+
+## Credentials
+
+Configure these in the dashboard. Secret values are masked after saving.
+
+- WhatsApp Access Token
+- WhatsApp Phone Number ID
+- Recipient Phone Number
+- Template Name
+- Template Language Code
+- Graph API Version
+
+## Test Modes
+
+- `dry_run`: validates the payload and shows the request summary without sending.
+- `test`: builds the request from saved credentials without sending.
+- `mock_output`: returns a mock WhatsApp response.
+- `live`: sends the real WhatsApp template message.
+
+Logs show the flow directions and summaries:
+
+- Received from Priority
+- Sent to WhatsApp
+- Received from WhatsApp
+
+Secrets, authorization headers, phone numbers, and customer names must not appear in logs.

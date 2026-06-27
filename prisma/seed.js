@@ -99,6 +99,16 @@ async function saveUser001WhatsappFileCredentials(integration) {
   });
 }
 
+async function savePriorityQuoteWhatsappCredentials(integration) {
+  await credentialsService.saveCredentials(integration, {
+    WHATSAPP_PHONE_NUMBER_ID: '404655686058819',
+    WHATSAPP_RECIPIENT_PHONE: '972500000000',
+    WHATSAPP_TEMPLATE_NAME: 'order_status',
+    WHATSAPP_LANGUAGE_CODE: 'he',
+    WHATSAPP_GRAPH_API_VERSION: 'v25.0',
+  });
+}
+
 async function main() {
   console.log('Seeding database...');
 
@@ -115,6 +125,7 @@ async function main() {
     { user: user1, name: 'Priority inventory to file', description: 'Scheduled task that gets inventory from Priority PARTBAL and writes timestamped JSON locally.', slug: 'priority-inventory-to-file', type: 'scheduled', codeFolder: `src/integrations/${user1.slug}/priority-inventory-to-file`, cron: '*/10 * * * *' },
     { user: user1, name: 'Shopify Orders to Priority', description: 'Receive Shopify order webhooks and create Priority orders.', slug: 'shopify-orders-priority', type: 'webhook', codeFolder: `src/integrations/${user1.slug}/shopify-orders-priority` },
     { user: user1, name: 'Priority Balance to WhatsApp', description: 'Receive customer webhook, read Priority data, and send WhatsApp.', slug: 'priority-whatsapp', type: 'webhook', codeFolder: `src/integrations/${user1.slug}/priority-whatsapp` },
+    { user: user1, name: 'Priority Quote Notification to WhatsApp', description: 'Receive Priority quote webhooks and send WhatsApp template notifications.', slug: 'priority-quote-whatsapp', type: 'webhook', codeFolder: `src/integrations/${user1.slug}/priority-quote-whatsapp` },
     { user: user1, name: 'Gmail Quote Request to Priority', description: 'Receive Gmail quote request webhook and open a Priority quote.', slug: 'gmail-priority-quote', type: 'webhook', codeFolder: `src/integrations/${user1.slug}/gmail-priority-quote` },
     { user: user1, name: 'User 001 WhatsApp Webhook', description: 'Receives WhatsApp-style webhook payloads and writes each request body to a local JSON file.', slug: 'user-001-whatsapp', type: 'webhook', codeFolder: `src/integrations/${user1.slug}/user-001-whatsapp` },
   ];
@@ -122,6 +133,7 @@ async function main() {
   for (const def of definitions) {
     const integration = await upsertIntegration(def.user, def);
     if (def.slug === 'user-001-whatsapp') await saveUser001WhatsappFileCredentials(integration);
+    else if (def.slug === 'priority-quote-whatsapp') await savePriorityQuoteWhatsappCredentials(integration);
     else await saveDummyCredentials(integration);
     if (def.type === 'webhook') await ensureWebhook(integration, def.user);
     if (def.type === 'scheduled') await ensureSchedule(integration, def.cron);

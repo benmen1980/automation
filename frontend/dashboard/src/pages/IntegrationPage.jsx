@@ -27,6 +27,7 @@ const CONNECTOR_LABELS = {
   ses: 'AWS SES email',
   shopify: 'Shopify',
   whatsapp: 'WhatsApp',
+  whatsappCloud: 'WhatsApp Cloud API',
 };
 
 function Card({ title, description, children, aside }) {
@@ -91,7 +92,10 @@ function WebhookSettingsPanel({ integration, onUpdated, disabled = false }) {
   const [token, setToken] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [copied, setCopied] = useState(false);
   const settings = integration.webhookSettings;
+  const webhookUrl = settings?.webhookUrl || `/webhooks/.../${integration.slug}`;
+  const isFullWebhookUrl = /^https?:\/\//i.test(webhookUrl);
 
   async function rotateToken(e) {
     e.preventDefault();
@@ -100,6 +104,7 @@ function WebhookSettingsPanel({ integration, onUpdated, disabled = false }) {
     try {
       await api.integrations.webhookSettings(integration.id, { token });
       setToken('');
+      setCopied(false);
       onUpdated();
     } catch (err) {
       setError(err.message);
@@ -108,18 +113,36 @@ function WebhookSettingsPanel({ integration, onUpdated, disabled = false }) {
     }
   }
 
+  async function copyWebhookUrl() {
+    setError('');
+    try {
+      await navigator.clipboard.writeText(webhookUrl);
+      setCopied(true);
+    } catch {
+      setError('Could not copy the webhook URL. Select the URL and copy it manually.');
+    }
+  }
+
   return (
     <div className="space-y-4">
       <div>
         <label className="block text-xs font-medium text-slate-600">Webhook URL</label>
-        <code className="mt-1 block overflow-x-auto rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
-          {settings?.webhookUrl || `/webhooks/.../${integration.slug}`}
-        </code>
-        <FieldHint>Use this path with the app host. Tokens are rotated below.</FieldHint>
+        <div className="mt-1 flex gap-2">
+          <code className="block min-w-0 flex-1 overflow-x-auto rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm">
+            {webhookUrl}
+          </code>
+          <button type="button" onClick={copyWebhookUrl} className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+        </div>
+        <FieldHint>
+          {isFullWebhookUrl ? 'Use this full URL as the POST destination.' : 'Use this path with the app host as the POST destination.'}
+          {' '}In Postman, put the saved token in the Authorization tab as a Bearer Token.
+        </FieldHint>
       </div>
       <div className="flex items-center gap-2 text-xs text-slate-500">
         <span>Token</span>
-        {settings?.secretTokenReference ? <Badge value="active">configured</Badge> : <Badge value="inactive">not set</Badge>}
+        {settings?.secretTokenReference ? <Badge value="active">•••••••• saved</Badge> : <Badge value="inactive">not set</Badge>}
       </div>
       <form onSubmit={rotateToken} className="flex gap-2">
         <input
@@ -134,6 +157,7 @@ function WebhookSettingsPanel({ integration, onUpdated, disabled = false }) {
           Save
         </button>
       </form>
+      <FieldHint>After saving, the token is hidden. If you lose it, create a new token here and update the sender.</FieldHint>
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
   );
