@@ -7,9 +7,21 @@ const express = require('express');
 const router = express.Router();
 const { runWebhook } = require('../core/webhook-runner');
 
-router.post('/:userSlug/:integrationSlug', async (req, res) => {
+function extractWebhookToken(req) {
   const authHeader = req.headers.authorization || '';
-  const providedToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
+  if (authHeader.startsWith('Bearer ')) return authHeader.slice(7).trim();
+  const headerToken = (
+    req.headers['x-webhook-token'] ||
+    req.headers['priority-bpm-token'] ||
+    req.headers['x-priority-token'] ||
+    req.headers['x-priority-webhook-token'] ||
+    undefined
+  );
+  return typeof headerToken === 'string' ? headerToken.trim() : headerToken;
+}
+
+router.post('/:userSlug/:integrationSlug', async (req, res) => {
+  const providedToken = extractWebhookToken(req);
 
   try {
     const execution = await runWebhook({
@@ -31,3 +43,4 @@ router.post('/:userSlug/:integrationSlug', async (req, res) => {
 });
 
 module.exports = router;
+module.exports._diagnostics = { extractWebhookToken };

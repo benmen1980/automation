@@ -82,6 +82,7 @@ export const api = {
       list: (id) => request(`/api/integrations/${id}/credentials`),
       save: (id, values) => request(`/api/integrations/${id}/credentials`, { method: 'POST', body: { values } }),
     },
+    webhookToken: (id) => request(`/api/integrations/${id}/webhook-token`),
     webhookSettings: (id, payload) => request(`/api/integrations/${id}/webhook-settings`, { method: 'POST', body: payload }),
     scheduleSettings: (id, payload) => request(`/api/integrations/${id}/schedule-settings`, { method: 'POST', body: payload }),
   },

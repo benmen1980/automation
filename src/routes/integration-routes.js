@@ -23,6 +23,7 @@ function withPublicWebhookUrl(integration) {
     webhookSettings: {
       ...integration.webhookSettings,
       webhookUrl: buildPublicUrl(integration.webhookSettings.webhookUrl),
+      secretTokenReference: integration.webhookSettings.secretTokenReference ? '[configured]' : null,
     },
   };
 }
@@ -176,6 +177,18 @@ router.post('/:id/credentials', loadIntegration({ mutate: true }), async (req, r
   try {
     const saved = await credentialsService.saveCredentials(req.integration, values);
     res.json({ saved });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+});
+
+router.get('/:id/webhook-token', loadIntegration({ mutate: true }), async (req, res) => {
+  if (req.integration.type !== 'webhook') {
+    return res.status(400).json({ error: 'Only webhook integrations have webhook tokens.' });
+  }
+  try {
+    const token = await webhookRunner.getWebhookToken(req.integration);
+    res.json({ token: token || '' });
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message });
   }

@@ -175,6 +175,12 @@ describe('execution flow (echo fixture)', () => {
         .send({ token: 'fixture-webhook-token' });
       expect(settingsRes.status).toBe(200);
 
+      const tokenRes = await request(app)
+        .get(`/api/integrations/${integration.id}/webhook-token`)
+        .set('Authorization', authHeader(user1));
+      expect(tokenRes.status).toBe(200);
+      expect(tokenRes.body.token).toBe('fixture-webhook-token');
+
       const res = await request(app)
         .post(`/webhooks/${user1.slug}/${integration.slug}`)
         .set('Authorization', 'Bearer fixture-webhook-token')
@@ -186,6 +192,27 @@ describe('execution flow (echo fixture)', () => {
 
       const stored = await waitForExecution(res.body.execution.id);
       expect(stored).not.toBeNull();
+      expect(stored.status).toBe('success');
+    });
+
+    test('accepts a saved Priority-generated token from webhook headers', async () => {
+      const settingsRes = await request(app)
+        .post(`/api/integrations/${integration.id}/webhook-settings`)
+        .set('Authorization', authHeader(user1))
+        .send({ token: 'priority-generated-token' });
+      expect(settingsRes.status).toBe(200);
+
+      const res = await request(app)
+        .post(`/webhooks/${user1.slug}/${integration.slug}`)
+        .set('Priority-BPM-Token', 'priority-generated-token')
+        .set('Priority-BPM-ID', '10948')
+        .set('Priority-BPM-Subject', 'Quote to whatsup')
+        .set('Priority-Form-Name', 'CPROF')
+        .send({ hello: 'from-priority' });
+
+      expect(res.status).toBe(200);
+      expect(res.body.execution.triggerType).toBe('webhook');
+      const stored = await waitForExecution(res.body.execution.id);
       expect(stored.status).toBe('success');
     });
   });

@@ -54,4 +54,8 @@ async function setWebhookToken(integration, token) {
   return secretsStore.setSecret(integration.id, WEBHOOK_TOKEN_KEY, token);
 }
 
-module.exports = { runWebhook, findWebhookIntegration, setWebhookToken, WEBHOOK_TOKEN_KEY };
+async function getWebhookToken(integration) {
+  return secretsStore.getSecret(integration.id, WEBHOOK_TOKEN_KEY);
+}
+
+module.exports = { runWebhook, findWebhookIntegration, setWebhookToken, getWebhookToken, WEBHOOK_TOKEN_KEY };
