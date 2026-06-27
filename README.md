@@ -51,7 +51,7 @@ npm install                 # also runs `prisma generate` via postinstall
 cp .env.example .env        # already present in this repo; review values
 npm run db:migrate          # creates prisma/migrations + local-data/dev.db
 npm run db:seed             # seeds admin + 2 users + sample integrations
-npm run dev                 # http://localhost:3000
+npm run dev                 # http://localhost:3001
 ```
 
 Seeded accounts (see `prisma/seed.js`):
@@ -80,11 +80,11 @@ equivalents.
 ```bash
 cd frontend/dashboard
 npm install
-npm run dev                 # http://localhost:5173, proxies /api + /webhooks to :3000
+npm run dev                 # http://localhost:5173, proxies /api + /webhooks to :3001
 ```
 
 No `.env` needed by default — the Vite dev server proxies API calls to
-`http://localhost:3000`. To point at a different backend, set `VITE_PROXY_TARGET`
+`http://localhost:3001`. To point at a different backend, set `VITE_PROXY_TARGET`
 (dev proxy) or `VITE_API_URL` (production build) — see
 `frontend/dashboard/.env.example`.
 

@@ -30,7 +30,7 @@ npm run dev
 ```
 
 You should see `[scheduler] Started with N active schedule(s).` and no
-errors. Backend is now at **http://localhost:3000**.
+errors. Backend is now at **http://localhost:3001**.
 
 Do not type or paste anything else into this window while it's running.
 
@@ -47,7 +47,40 @@ npm run dev
 ```
 
 Dashboard is now at **http://localhost:5173** (proxies `/api` and `/webhooks`
-to the backend on :3000 automatically — no `.env` needed here by default).
+to the backend on :3001 automatically — no `.env` needed here by default).
+
+---
+
+## Optional Window 3 - Public webhook tunnel with ngrok
+
+Use this when an external system needs to call your local webhook URL.
+The tunnel targets the backend API port, not the Vite dashboard port.
+
+One time only, add your ngrok auth token to local `.env`:
+
+```powershell
+NGROK_AUTHTOKEN=your-ngrok-token
+```
+
+Then start the tunnel in a third PowerShell window:
+
+```powershell
+cd C:\gpt\automation
+npm run dev:tunnel
+```
+
+The script prints the public API base URL and writes it to
+`local-data/ngrok-public-url.txt`. While the tunnel is running, webhook settings
+in the dashboard show full public URLs such as:
+
+```text
+https://example.ngrok-free.app/webhooks/user_001/whatsapp-order
+```
+
+Keep this window open while testing external webhooks. Stop it with `Ctrl+C`.
+
+Ngrok free endpoints may show a browser warning for manual browser/PowerShell
+checks. For API smoke tests, add the header `ngrok-skip-browser-warning: true`.
 
 ---
 
@@ -69,13 +102,13 @@ to the backend on :3000 automatically — no `.env` needed here by default).
 
 ## Troubleshooting
 
-**`Error: listen EADDRINUSE: address already in use :::3000`**
+**`Error: listen EADDRINUSE: address already in use :::3001`**
 
 Something is already bound to port 3000 — usually a previous backend
 instance still running in another window you forgot about.
 
 ```powershell
-netstat -ano | findstr :3000
+netstat -ano | findstr :3001
 ```
 
 Take the number in the last column (the PID) and run:
@@ -84,7 +117,7 @@ Take the number in the last column (the PID) and run:
 taskkill /PID <that number> /F
 ```
 
-Re-check with `netstat -ano | findstr :3000` — it should print nothing —
+Re-check with `netstat -ano | findstr :3001` — it should print nothing —
 then retry `npm run dev`.
 
 **`EPERM: operation not permitted, rename ...query_engine-windows.dll.node...`**

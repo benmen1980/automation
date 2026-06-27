@@ -8,12 +8,24 @@ const integrationLoader = require('../core/integration-loader');
 const credentialsService = require('../core/credentials');
 const secrets = require('../core/secrets');
 const { slugify } = require('../utils/slugify');
+const { buildPublicUrl } = require('../core/public-url');
 const webhookRunner = require('../core/webhook-runner');
 const scheduler = require('../core/scheduler');
 
 router.use(requireAuth);
 
 const WITH_SETTINGS = { webhookSettings: true, scheduleSettings: true };
+
+function withPublicWebhookUrl(integration) {
+  if (!integration || !integration.webhookSettings?.webhookUrl) return integration;
+  return {
+    ...integration,
+    webhookSettings: {
+      ...integration.webhookSettings,
+      webhookUrl: buildPublicUrl(integration.webhookSettings.webhookUrl),
+    },
+  };
+}
 
 router.get('/', async (req, res) => {
   const where = req.query.scope === 'all' && isAdmin(req.user) ? {} : { userId: req.user.id };
@@ -22,7 +34,7 @@ router.get('/', async (req, res) => {
     orderBy: [{ name: 'asc' }, { codeFolder: 'asc' }],
     include: WITH_SETTINGS,
   });
-  res.json({ integrations });
+  res.json({ integrations: integrations.map(withPublicWebhookUrl) });
 });
 
 // docs/product/product-architecture-spec.md 8.3: admin (or self-service user) registers an integration
@@ -117,7 +129,7 @@ router.delete('/:id', loadIntegration({ mutate: true }), async (req, res) => {
 });
 
 router.get('/:id', loadIntegration({ include: WITH_SETTINGS }), (req, res) => {
-  res.json({ integration: req.integration });
+  res.json({ integration: withPublicWebhookUrl(req.integration) });
 });
 
 router.patch('/:id', loadIntegration({ mutate: true }), async (req, res) => {
@@ -188,7 +200,13 @@ router.post('/:id/webhook-settings', loadIntegration({ mutate: true }), async (r
 
   // Never echo back the actual reference name in detail — just whether a
   // token has been configured, same masking rule as secret credentials.
-  res.json({ webhookSettings: { ...settings, secretTokenReference: settings.secretTokenReference ? '[configured]' : null } });
+  res.json({
+    webhookSettings: {
+      ...settings,
+      webhookUrl: buildPublicUrl(settings.webhookUrl),
+      secretTokenReference: settings.secretTokenReference ? '[configured]' : null,
+    },
+  });
 });
 
 router.post('/:id/schedule-settings', loadIntegration({ mutate: true }), async (req, res) => {

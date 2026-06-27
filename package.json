@@ -15,6 +15,7 @@
     "dev:worker:gmail-priority": "npm --workspace @automation/gmail-priority run dev",
     "dev:worker:shopify-priority": "npm --workspace @automation/shopify-priority run dev",
     "dev": "node src/server.js",
+    "dev:tunnel": "node scripts/ngrok-tunnel.js",
     "start": "node scripts/prisma-postinstall.js && node src/server.js",
     "build:dashboard": "npm --prefix frontend/dashboard run build",
     "db:generate": "prisma generate",
@@ -45,6 +46,7 @@
     "prisma": "^5.20.0"
   },
   "devDependencies": {
+    "@ngrok/ngrok": "^1.7.0",
     "cross-env": "^7.0.3",
     "jest": "^29.7.0",
     "supertest": "^7.0.0"
