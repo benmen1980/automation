@@ -9,26 +9,46 @@ const { runWebhook } = require('../core/webhook-runner');
 
 function extractWebhookToken(req) {
   const authHeader = req.headers.authorization || '';
-  if (authHeader.startsWith('Bearer ')) return authHeader.slice(7).trim();
-  const headerToken = (
-    req.headers['x-webhook-token'] ||
-    req.headers['priority-bpm-token'] ||
-    req.headers['x-priority-token'] ||
-    req.headers['x-priority-webhook-token'] ||
-    undefined
-  );
-  return typeof headerToken === 'string' ? headerToken.trim() : headerToken;
+  if (authHeader.startsWith('Bearer ')) return { token: authHeader.slice(7).trim(), headerName: 'Authorization' };
+  const headerNames = [
+    'priority-bpm-token',
+    'x-webhook-token',
+    'x-priority-token',
+    'x-priority-webhook-token',
+  ];
+  for (const headerName of headerNames) {
+    const headerToken = req.headers[headerName];
+    if (headerToken) {
+      return {
+        token: typeof headerToken === 'string' ? headerToken.trim() : headerToken,
+        headerName,
+      };
+    }
+  }
+  return { token: undefined, headerName: 'none' };
+}
+
+function priorityHeadersSummary(req) {
+  return {
+    priorityBpmId: req.headers['priority-bpm-id'],
+    priorityBpmSubject: req.headers['priority-bpm-subject'],
+    priorityFormName: req.headers['priority-form-name'],
+    contentType: req.headers['content-type'],
+    forwardedFor: req.headers['x-forwarded-for'] ? '[present]' : undefined,
+  };
 }
 
 router.post('/:userSlug/:integrationSlug', async (req, res) => {
-  const providedToken = extractWebhookToken(req);
+  const provided = extractWebhookToken(req);
 
   try {
     const execution = await runWebhook({
       userSlug: req.params.userSlug,
       integrationSlug: req.params.integrationSlug,
       payload: req.body,
-      providedToken,
+      providedToken: provided.token,
+      providedHeaderName: provided.headerName,
+      providerHeaders: priorityHeadersSummary(req),
       executionMode: 'live',
       triggerType: 'webhook',
     });

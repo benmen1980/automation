@@ -45,7 +45,7 @@ function SecretStateHint({ field, justSaved }) {
   if (field.saved) {
     return (
       <div className="mt-2 rounded-md border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs leading-5 text-emerald-800">
-        <p className="font-semibold">{justSaved ? 'Saved just now.' : 'Saved securely.'}</p>
+        <p className="font-semibold">{justSaved ? 'Saved to the database just now.' : 'Saved securely.'}</p>
         <p>The dots are a secure placeholder, not the actual value. Leave them unchanged to keep the saved secret, or replace them with a new value.</p>
       </div>
     );
@@ -116,7 +116,7 @@ export default function CredentialForm({ fields, onSave, disabled = false }) {
     }
 
     if (Object.keys(values).length === 0) {
-      setSavedMessage('No credential changes to save. Saved secrets are still configured.');
+      setSavedMessage('No credential changes to save. The database already has the shown integration parameters.');
       return;
     }
 
@@ -124,7 +124,7 @@ export default function CredentialForm({ fields, onSave, disabled = false }) {
     try {
       const saved = await onSave(values);
       setLastSavedKeys(Array.isArray(saved) ? saved : Object.keys(values));
-      setSavedMessage('Credentials saved. Saved secrets are shown as configured, but their values stay hidden.');
+      setSavedMessage('Credentials saved to the database. Visible integration parameters above now show the saved values.');
     } catch (err) {
       setError(err.message);
     } finally {

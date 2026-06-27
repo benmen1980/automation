@@ -166,6 +166,23 @@ describe('execution flow (echo fixture)', () => {
     test('rejects requests with no valid token', async () => {
       const res = await request(app).post(`/webhooks/${user1.slug}/${integration.slug}`).send({ hello: 'world' });
       expect(res.status).toBe(401);
+
+      const warningLog = await prisma.log.findFirst({
+        where: {
+          integrationId: integration.id,
+          level: 'warning',
+          message: { contains: 'Rejected Priority webhook before execution' },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      expect(warningLog).not.toBeNull();
+      const metadata = JSON.parse(warningLog.metadata);
+      expect(metadata).toMatchObject({
+        reason: 'invalid_or_missing_priority_bpm_token',
+        providedHeaderName: 'none',
+        providedValuePresent: false,
+        savedValueConfigured: false,
+      });
     });
 
     test('creates a real, live execution once the token is configured and matches', async () => {
@@ -214,6 +231,24 @@ describe('execution flow (echo fixture)', () => {
       expect(res.body.execution.triggerType).toBe('webhook');
       const stored = await waitForExecution(res.body.execution.id);
       expect(stored.status).toBe('success');
+
+      const acceptedLog = await prisma.log.findFirst({
+        where: {
+          integrationId: integration.id,
+          level: 'info',
+          message: { contains: 'Accepted Priority webhook request' },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      expect(acceptedLog).not.toBeNull();
+      const metadata = JSON.parse(acceptedLog.metadata);
+      expect(metadata.providedHeaderName).toBe('priority-bpm-token');
+      expect(metadata.priorityHeaders).toMatchObject({
+        priorityBpmId: '10948',
+        priorityBpmSubject: 'Quote to whatsup',
+        priorityFormName: 'CPROF',
+      });
+      expect(JSON.stringify(metadata)).not.toContain('priority-generated-token');
     });
   });
 });

@@ -42,9 +42,9 @@ module.exports = {
     {
       key: 'WHATSAPP_ACCESS_TOKEN',
       label: 'WhatsApp Access Token',
-      type: 'secret',
+      type: 'text',
       required: true,
-      helper: 'Bearer token for the Meta WhatsApp Cloud API. This is stored securely and shown only as saved dots after saving.',
+      helper: 'Bearer token for the Meta WhatsApp Cloud API. This is a visible integration parameter on this local setup page, and logs still redact it.',
       placeholder: 'Paste Meta Graph API bearer token',
       validation: { minLength: 20 },
     },
@@ -60,9 +60,9 @@ module.exports = {
     {
       key: 'WHATSAPP_RECIPIENT_PHONE',
       label: 'Recipient Phone Number',
-      type: 'secret',
+      type: 'text',
       required: true,
-      helper: 'Destination WhatsApp number in international format without a plus sign. Stored securely because it is personal data.',
+      helper: 'Destination WhatsApp number in international format without a plus sign. This is a visible integration parameter.',
       placeholder: '972507573753',
       validation: { pattern: '^\\d{8,15}$' },
     },

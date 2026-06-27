@@ -1,5 +1,4 @@
 const DEFAULT_GRAPH_HOST = 'https://graph.facebook.com';
-
 function maskPhone(phone) {
   const value = String(phone || '');
   if (value.length <= 4) return '***';
@@ -90,6 +89,24 @@ function safePrioritySummary({ quoteNumber, quoteDescription }) {
   };
 }
 
+function safeIncomingPriorityPayloadSummary(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return { type: typeof payload, hasCPROF: false };
+  }
+  const quote = payload.CPROF;
+  if (!quote || typeof quote !== 'object') {
+    return { type: 'object', keys: Object.keys(payload), hasCPROF: false };
+  }
+  return {
+    CPROF: {
+      keys: Object.keys(quote),
+      CPROFNUM: quote.CPROFNUM ? String(quote.CPROFNUM) : undefined,
+      CDES: quote.CDES ? { type: 'redacted', reason: 'sensitive personal data', length: String(quote.CDES).length } : undefined,
+      DES: quote.DES ? { type: 'redacted', reason: 'sensitive personal data', length: String(quote.DES).length } : undefined,
+    },
+  };
+}
+
 function safeWhatsAppResponseSummary(responseBody) {
   const messages = Array.isArray(responseBody?.messages)
     ? responseBody.messages.map((message) => ({
@@ -160,12 +177,18 @@ async function postTemplateMessage({ endpoint, accessToken, body }) {
 
 module.exports = {
   async execute({ payload, credentials, logger, executionMode, integration }) {
+    await logger.info('Received from Priority.', {
+      integrationName: integration?.name,
+      direction: 'Received from Priority',
+      requestPayloadSummary: safeIncomingPriorityPayloadSummary(payload),
+    });
+
     const { quoteNumber, quoteDescription } = getQuoteFields(payload);
     const endpoint = buildEndpoint(credentials);
     const body = buildTemplateBody({ credentials, quoteNumber, quoteDescription });
     const requestSummary = safeRequestSummary({ endpoint, body });
 
-    await logger.info('Received from Priority.', {
+    await logger.info('Validated Priority quote payload.', {
       integrationName: integration?.name,
       direction: 'Received from Priority',
       triggerPayloadSummary: safePrioritySummary({ quoteNumber, quoteDescription }),
@@ -244,6 +267,7 @@ module.exports = {
     maskPhone,
     safeRequestSummary,
     safePrioritySummary,
+    safeIncomingPriorityPayloadSummary,
     safeWhatsAppResponseSummary,
   },
 };

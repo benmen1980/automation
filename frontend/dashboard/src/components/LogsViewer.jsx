@@ -20,6 +20,10 @@ function parseMetadata(metadata) {
 
 function metadataSummary(metadata) {
   if (!metadata) return '';
+  if (metadata.reason === 'invalid_or_missing_priority_bpm_token') {
+    return `Priority BPM token rejected. Header checked: ${metadata.providedHeaderName || 'none'}. ${metadata.nextStep || ''}`;
+  }
+  if (metadata.nextStep) return String(metadata.nextStep);
   if (metadata.error) return String(metadata.error);
   if (metadata.errorMessage) return String(metadata.errorMessage);
   if (metadata.status || metadata.statusCode) return `status ${metadata.status || metadata.statusCode}`;
@@ -28,17 +32,18 @@ function metadataSummary(metadata) {
 
 function LogRow({ log }) {
   const metadata = parseMetadata(log.metadata);
-  const [open, setOpen] = useState(log.level === 'error');
+  const [open, setOpen] = useState(log.level === 'warning');
   const summary = metadataSummary(metadata);
+  const summaryColor = log.level === 'warning' ? 'text-amber-700' : 'text-red-700';
 
   return (
-    <div className={`rounded-md border px-2 py-2 text-xs ${log.level === 'error' ? 'border-red-100 bg-red-50/50' : 'border-slate-100 bg-white'}`}>
+    <div className={`rounded-md border px-2 py-2 text-xs ${log.level === 'error' ? 'border-red-100 bg-red-50/50' : log.level === 'warning' ? 'border-amber-100 bg-amber-50/50' : 'border-slate-100 bg-white'}`}>
       <div className="grid gap-2 lg:grid-cols-[9rem_4.5rem_minmax(0,1fr)_auto] lg:items-start">
         <span className="text-slate-400">{new Date(log.createdAt).toLocaleString()}</span>
         <span className={`w-fit rounded px-1.5 py-0.5 font-medium ${LEVEL_COLORS[log.level] || 'bg-slate-100 text-slate-600'}`}>{log.level}</span>
         <div className="min-w-0">
           <p className="break-words text-slate-700">{log.message}</p>
-          {summary && <p className="mt-1 break-words font-medium text-red-700">{summary}</p>}
+          {summary && <p className={`mt-1 break-words font-medium ${summaryColor}`}>{summary}</p>}
           {log.executionId && <p className="mt-1 break-all font-mono text-[11px] text-slate-400">execution: {log.executionId}</p>}
         </div>
         {metadata && (

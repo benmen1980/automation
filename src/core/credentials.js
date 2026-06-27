@@ -140,7 +140,7 @@ async function listCredentialsForDisplay(integration) {
   const rows = await prisma.credential.findMany({ where: { integrationId: integration.id } });
   const rowsByKey = new Map(rows.map((r) => [r.key, r]));
 
-  return fields.map((field) => {
+  return Promise.all(fields.map(async (field) => {
     const row = rowsByKey.get(field.key);
     const base = {
       key: field.key,
@@ -165,8 +165,11 @@ async function listCredentialsForDisplay(integration) {
     if (!row) {
       return { ...base, saved: false, value: field.defaultValue !== undefined ? field.defaultValue : null };
     }
+    if (row.isSecret) {
+      return { ...base, saved: true, value: await secrets.getSecret(integration.id, field.key) };
+    }
     return { ...base, saved: true, value: JSON.parse(row.valueReference) };
-  });
+  }));
 }
 
 module.exports = {

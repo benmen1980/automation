@@ -182,7 +182,7 @@ router.post('/:id/credentials', loadIntegration({ mutate: true }), async (req, r
   }
 });
 
-router.get('/:id/webhook-token', loadIntegration({ mutate: true }), async (req, res) => {
+router.get('/:id/webhook-token', loadIntegration({ mutate: true, include: WITH_SETTINGS }), async (req, res) => {
   if (req.integration.type !== 'webhook') {
     return res.status(400).json({ error: 'Only webhook integrations have webhook tokens.' });
   }
