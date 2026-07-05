@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Seeds the local database with users and runnable template integrations.
  * Run with: npm run db:seed
  */
@@ -102,7 +102,6 @@ async function saveUser001WhatsappFileCredentials(integration) {
 async function savePriorityQuoteWhatsappCredentials(integration) {
   await credentialsService.saveCredentials(integration, {
     WHATSAPP_PHONE_NUMBER_ID: '404655686058819',
-    WHATSAPP_RECIPIENT_PHONE: '972500000000',
     WHATSAPP_TEMPLATE_NAME: 'order_status',
     WHATSAPP_LANGUAGE_CODE: 'he',
     WHATSAPP_GRAPH_API_VERSION: 'v25.0',

@@ -18,11 +18,13 @@ function getQuoteFields(payload) {
 
   const quoteNumber = String(quote.CPROFNUM || '').trim();
   const quoteDescription = String(quote.CDES || quote.DES || '').trim();
+  const recipientPhone = String(quote.ROYY_PHONE || '').trim();
 
   if (!quoteNumber) throw new Error('Priority webhook payload is missing CPROF.CPROFNUM.');
   if (!quoteDescription) throw new Error('Priority webhook payload is missing CPROF.CDES.');
+  if (!recipientPhone) throw new Error('Priority webhook payload is missing CPROF.ROYY_PHONE.');
 
-  return { quoteNumber, quoteDescription };
+  return { quoteNumber, quoteDescription, recipientPhone };
 }
 
 function buildEndpoint(credentials) {
@@ -32,12 +34,12 @@ function buildEndpoint(credentials) {
   return `${DEFAULT_GRAPH_HOST}/${apiVersion}/${phoneNumberId}/messages`;
 }
 
-function buildTemplateBody({ credentials, quoteNumber, quoteDescription }) {
-  const to = String(credentials.WHATSAPP_RECIPIENT_PHONE || '').trim();
+function buildTemplateBody({ credentials, quoteNumber, quoteDescription, recipientPhone }) {
+  const to = String(recipientPhone || '').trim();
   const templateName = String(credentials.WHATSAPP_TEMPLATE_NAME || 'order_status').trim();
   const languageCode = String(credentials.WHATSAPP_LANGUAGE_CODE || 'he').trim();
 
-  if (!to) throw new Error('Missing recipient phone number credential.');
+  if (!to) throw new Error('Missing recipient phone number in Priority payload CPROF.ROYY_PHONE.');
   if (!templateName) throw new Error('Missing WhatsApp template name credential.');
   if (!languageCode) throw new Error('Missing WhatsApp template language code credential.');
 
@@ -67,24 +69,38 @@ function buildTemplateBody({ credentials, quoteNumber, quoteDescription }) {
   };
 }
 
-function safeRequestSummary({ endpoint, body }) {
+function safeWhatsAppRequestJson({ endpoint, body }) {
   return {
     endpoint,
     method: 'POST',
-    templateName: body.template.name,
-    languageCode: body.template.language.code,
-    recipientPhone: maskPhone(body.to),
-    param1: { type: 'redacted', reason: 'sensitive personal data', length: body.template.components[0].parameters[0].text.length },
-    param2: body.template.components[0].parameters[1].text,
-    buttonParam: body.template.components[1].parameters[0].text,
+    body: {
+      messaging_product: body.messaging_product,
+      to: maskPhone(body.to),
+      type: body.type,
+      template: {
+        name: body.template.name,
+        language: body.template.language,
+        components: [
+          {
+            type: 'body',
+            parameters: [
+              { type: 'text', text: { type: 'redacted', reason: 'sensitive personal data', length: body.template.components[0].parameters[0].text.length } },
+              body.template.components[0].parameters[1],
+            ],
+          },
+          body.template.components[1],
+        ],
+      },
+    },
   };
 }
 
-function safePrioritySummary({ quoteNumber, quoteDescription }) {
+function safePriorityJson({ quoteNumber, quoteDescription, recipientPhone }) {
   return {
     CPROF: {
       CPROFNUM: quoteNumber,
       CDES: { type: 'redacted', reason: 'sensitive personal data', length: quoteDescription.length },
+      ROYY_PHONE: maskPhone(recipientPhone),
     },
   };
 }
@@ -103,6 +119,7 @@ function safeIncomingPriorityPayloadSummary(payload) {
       CPROFNUM: quote.CPROFNUM ? String(quote.CPROFNUM) : undefined,
       CDES: quote.CDES ? { type: 'redacted', reason: 'sensitive personal data', length: String(quote.CDES).length } : undefined,
       DES: quote.DES ? { type: 'redacted', reason: 'sensitive personal data', length: String(quote.DES).length } : undefined,
+      ROYY_PHONE: quote.ROYY_PHONE ? maskPhone(quote.ROYY_PHONE) : undefined,
     },
   };
 }
@@ -177,60 +194,54 @@ async function postTemplateMessage({ endpoint, accessToken, body }) {
 
 module.exports = {
   async execute({ payload, credentials, logger, executionMode, integration }) {
-    await logger.info('Received from Priority.', {
-      integrationName: integration?.name,
-      direction: 'Received from Priority',
-      requestPayloadSummary: safeIncomingPriorityPayloadSummary(payload),
-    });
-
-    const { quoteNumber, quoteDescription } = getQuoteFields(payload);
+    const { quoteNumber, quoteDescription, recipientPhone } = getQuoteFields(payload);
     const endpoint = buildEndpoint(credentials);
-    const body = buildTemplateBody({ credentials, quoteNumber, quoteDescription });
-    const requestSummary = safeRequestSummary({ endpoint, body });
+    const body = buildTemplateBody({ credentials, quoteNumber, quoteDescription, recipientPhone });
+    const priorityJson = safePriorityJson({ quoteNumber, quoteDescription, recipientPhone });
+    const whatsappJson = safeWhatsAppRequestJson({ endpoint, body });
 
-    await logger.info('Validated Priority quote payload.', {
+    await logger.info('JSON from Priority.', {
       integrationName: integration?.name,
       direction: 'Received from Priority',
-      triggerPayloadSummary: safePrioritySummary({ quoteNumber, quoteDescription }),
+      priorityJson,
       quoteNumber,
-      quoteDescription: { type: 'redacted', reason: 'sensitive personal data', length: quoteDescription.length },
     });
 
-    await logger.info('Mapped Priority quote to WhatsApp template.', {
+    await logger.info('JSON to WhatsApp.', {
       integrationName: integration?.name,
-      direction: 'Priority to WhatsApp',
-      requestPayloadSummary: requestSummary,
+      direction: 'Sent to WhatsApp',
+      whatsappJson,
     });
 
     if (executionMode === 'dry_run' || executionMode === 'test') {
-      await logger.info('WhatsApp template request skipped in safe mode.', {
-        direction: 'Sent to WhatsApp',
+      await logger.info('WhatsApp response.', {
+        direction: 'Received from WhatsApp',
         executionMode,
         skipped: true,
-        requestPayloadSummary: requestSummary,
+        whatsappResponseJson: { skipped: true, reason: 'Safe mode does not call WhatsApp.' },
       });
       return {
         success: true,
         skipped: true,
         executionMode,
         message: `WhatsApp template request prepared for Priority quote ${quoteNumber}.`,
-        requestSummary,
+        requestSummary: whatsappJson,
       };
     }
 
     if (executionMode === 'mock_output') {
       const mockResponse = { messages: [{ id: `mock-whatsapp-${quoteNumber}` }] };
       const responseSummary = safeWhatsAppResponseSummary(mockResponse);
-      await logger.info('Received from WhatsApp.', {
+      await logger.info('WhatsApp response.', {
         direction: 'Received from WhatsApp',
         mocked: true,
-        responsePayloadSummary: responseSummary,
+        whatsappResponseJson: responseSummary,
       });
       return {
         success: true,
         mocked: true,
         providerMessageId: mockResponse.messages[0].id,
-        requestSummary,
+        requestSummary: whatsappJson,
         responseSummary,
       };
     }
@@ -238,25 +249,21 @@ module.exports = {
     const accessToken = String(credentials.WHATSAPP_ACCESS_TOKEN || '').trim();
     if (!accessToken) throw new Error('Missing WhatsApp access token credential.');
 
-    await logger.info('Sent to WhatsApp.', {
-      direction: 'Sent to WhatsApp',
-      requestPayloadSummary: requestSummary,
-    });
     const responseBody = await postTemplateMessage({ endpoint, accessToken, body });
     const responseSummary = safeWhatsAppResponseSummary(responseBody);
     const providerMessageId = responseBody?.messages?.[0]?.id || null;
 
-    await logger.info('Received from WhatsApp.', {
+    await logger.info('WhatsApp response.', {
       direction: 'Received from WhatsApp',
       providerMessageId,
-      responsePayloadSummary: responseSummary,
+      whatsappResponseJson: responseSummary,
     });
 
     return {
       success: true,
       providerMessageId,
       message: `WhatsApp notification sent for Priority quote ${quoteNumber}.`,
-      requestSummary,
+      requestSummary: whatsappJson,
       responseSummary,
     };
   },
@@ -265,8 +272,8 @@ module.exports = {
     buildTemplateBody,
     getQuoteFields,
     maskPhone,
-    safeRequestSummary,
-    safePrioritySummary,
+    safeWhatsAppRequestJson,
+    safePriorityJson,
     safeIncomingPriorityPayloadSummary,
     safeWhatsAppResponseSummary,
   },

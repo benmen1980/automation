@@ -12,11 +12,12 @@ async function createUser({ slug, email, name = 'Test User', role = 'user', pass
   return prisma.user.create({ data: { slug, email, name, role, passwordHash, status } });
 }
 
-async function createIntegration({ user, slug, codeFolder, type = 'webhook', name, status = 'active', manualRunEnabled = true }) {
+async function createIntegration({ user, slug, codeFolder, type = 'webhook', name, version, status = 'active', manualRunEnabled = true }) {
   return prisma.integration.create({
     data: {
       userId: user.id,
       name: name || slug,
+      version,
       description: 'Created by the automated test suite.',
       slug,
       type,

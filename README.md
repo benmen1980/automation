@@ -88,6 +88,17 @@ No `.env` needed by default — the Vite dev server proxies API calls to
 (dev proxy) or `VITE_API_URL` (production build) — see
 `frontend/dashboard/.env.example`.
 
+The visible dashboard app version is read from `frontend/dashboard/package.json`.
+It appears on the login page and in the authenticated dashboard footer so QA and
+users can confirm which frontend build is running.
+
+Each integration also has its own private version stored on the integration
+record. The dashboard shows that version next to the integration name, shows the
+internal integration ID, and lets permitted users edit the integration name and
+private version inline from the integration detail header.
+
+The Priority Quote Notification to WhatsApp integration reads the WhatsApp recipient from CPROF.ROYY_PHONE in the Priority webhook payload. Its logs show three clear JSON steps: JSON from Priority, JSON to WhatsApp, and WhatsApp response.
+
 ## Adding a new integration
 
 Per the [product architecture spec](./docs/product/product-architecture-spec.md), integration code is never uploaded or loaded from a URL

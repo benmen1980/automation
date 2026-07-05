@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 
 function NewIntegrationForm({ onCreated }) {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: '', description: '', type: 'webhook', codeFolder: '', userId: '' });
+  const [form, setForm] = useState({ name: '', version: '1.0.0', description: '', type: 'webhook', codeFolder: '', userId: '' });
   const [users, setUsers] = useState([]);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -29,7 +29,7 @@ function NewIntegrationForm({ onCreated }) {
     setSubmitting(true);
     try {
       await api.integrations.create(form);
-      setForm({ name: '', description: '', type: 'webhook', codeFolder: '', userId: '' });
+      setForm({ name: '', version: '1.0.0', description: '', type: 'webhook', codeFolder: '', userId: '' });
       setOpen(false);
       onCreated();
     } catch (err) {
@@ -78,6 +78,13 @@ function NewIntegrationForm({ onCreated }) {
           placeholder="Name"
           value={form.name}
           onChange={(e) => setForm({ ...form, name: e.target.value })}
+          className="border border-slate-300 rounded px-3 py-2 text-sm"
+        />
+        <input
+          required
+          placeholder="Private version, e.g. 1.0.0"
+          value={form.version}
+          onChange={(e) => setForm({ ...form, version: e.target.value })}
           className="border border-slate-300 rounded px-3 py-2 text-sm"
         />
         <select
@@ -213,7 +220,10 @@ export default function DashboardPage() {
                       {integration.name}
                     </Link>
                     <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600" title={integration.id}>
-                      ID #{shortId(integration.id)}
+                      #{shortId(integration.id)}
+                    </span>
+                    <span className="rounded bg-[#e9faff] px-2 py-0.5 font-mono text-xs text-[#0b5869]">
+                      v{integration.version || '1.0.0'}
                     </span>
                   </div>
                   <p className="mt-1 break-all font-mono text-[11px] text-slate-400">{integration.id}</p>

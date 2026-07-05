@@ -1,0 +1,1 @@
+ALTER TABLE "Integration" ADD COLUMN "version" TEXT NOT NULL DEFAULT '1.0.0';

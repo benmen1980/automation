@@ -15,7 +15,6 @@ function credentials(overrides = {}) {
   return {
     WHATSAPP_ACCESS_TOKEN: 'test-whatsapp-token-1234567890',
     WHATSAPP_PHONE_NUMBER_ID: '404655686058819',
-    WHATSAPP_RECIPIENT_PHONE: '972500000000',
     WHATSAPP_TEMPLATE_NAME: 'order_status',
     WHATSAPP_LANGUAGE_CODE: 'he',
     WHATSAPP_GRAPH_API_VERSION: 'v25.0',
@@ -40,7 +39,7 @@ describe('priority quote WhatsApp integration', () => {
     const logger = createLogger();
 
     const result = await handler.execute({
-      payload: { CPROF: { CPROFNUM: 'PQ26000001', CDES: 'דניאל כהן' } },
+      payload: { CPROF: { CPROFNUM: 'PQ26000001', CDES: 'דניאל כהן', ROYY_PHONE: '972500000000' } },
       credentials: credentials(),
       logger,
       executionMode: 'dry_run',
@@ -52,13 +51,20 @@ describe('priority quote WhatsApp integration', () => {
     expect(result.skipped).toBe(true);
     expect(result.requestSummary).toMatchObject({
       endpoint: 'https://graph.facebook.com/v25.0/404655686058819/messages',
-      templateName: 'order_status',
-      languageCode: 'he',
-      recipientPhone: '********0000',
-      param2: 'PQ26000001',
-      buttonParam: 'PQ26000001',
+      method: 'POST',
+      body: {
+        messaging_product: 'whatsapp',
+        to: '********0000',
+        type: 'template',
+        template: {
+          name: 'order_status',
+          language: { code: 'he' },
+        },
+      },
     });
-    expect(result.requestSummary.param1).toMatchObject({ type: 'redacted' });
+    expect(result.requestSummary.body.template.components[0].parameters[0].text).toMatchObject({ type: 'redacted' });
+    expect(result.requestSummary.body.template.components[0].parameters[1].text).toBe('PQ26000001');
+    expect(result.requestSummary.body.template.components[1].parameters[0].text).toBe('PQ26000001');
     expect(JSON.stringify(logger.info.mock.calls)).not.toContain('test-whatsapp-token');
     expect(JSON.stringify(logger.info.mock.calls)).not.toContain('דניאל');
   });
@@ -80,7 +86,7 @@ describe('priority quote WhatsApp integration', () => {
     const logger = createLogger();
 
     const result = await handler.execute({
-      payload: { CPROF: { CPROFNUM: 'PQ26000001', CDES: 'דניאל כהן' } },
+      payload: { CPROF: { CPROFNUM: 'PQ26000001', CDES: 'דניאל כהן', ROYY_PHONE: '972500000000' } },
       credentials: credentials(),
       logger,
       executionMode: 'live',
@@ -148,7 +154,7 @@ describe('priority quote WhatsApp integration', () => {
 
     await expect(
       handler.execute({
-        payload: { CPROF: { CPROFNUM: 'PQ26000001', CDES: 'דניאל כהן' } },
+        payload: { CPROF: { CPROFNUM: 'PQ26000001', CDES: 'דניאל כהן', ROYY_PHONE: '972500000000' } },
         credentials: credentials(),
         logger: createLogger(),
         executionMode: 'live',
@@ -158,7 +164,7 @@ describe('priority quote WhatsApp integration', () => {
 
     try {
       await handler.execute({
-        payload: { CPROF: { CPROFNUM: 'PQ26000001', CDES: 'דניאל כהן' } },
+        payload: { CPROF: { CPROFNUM: 'PQ26000001', CDES: 'דניאל כהן', ROYY_PHONE: '972500000000' } },
         credentials: credentials(),
         logger: createLogger(),
         executionMode: 'live',
@@ -173,10 +179,11 @@ describe('priority quote WhatsApp integration', () => {
     }
   });
 
-  test('supports DES as a fallback for CDES', () => {
-    expect(handler._diagnostics.getQuoteFields({ CPROF: { CPROFNUM: 'PQ1', DES: 'Customer' } })).toEqual({
+  test('supports DES as a fallback for CDES and uses ROYY_PHONE as recipient', () => {
+    expect(handler._diagnostics.getQuoteFields({ CPROF: { CPROFNUM: 'PQ1', DES: 'Customer', ROYY_PHONE: '972511111111' } })).toEqual({
       quoteNumber: 'PQ1',
       quoteDescription: 'Customer',
+      recipientPhone: '972511111111',
     });
   });
 });

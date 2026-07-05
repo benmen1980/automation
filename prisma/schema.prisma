@@ -47,6 +47,7 @@ model Integration {
   id               String            @id @default(cuid())
   userId           String
   name             String
+  version          String            @default("1.0.0")
   description      String?
   slug             String
   type             String

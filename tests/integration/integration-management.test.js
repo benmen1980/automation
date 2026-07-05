@@ -105,6 +105,23 @@ describe('integration management', () => {
     expect(userRes.body.integrations.some((item) => item.id === adminRes.body.integration.id)).toBe(true);
   });
 
+  test('users can update an owned integration name and private version', async () => {
+    const integration = await createIntegration({
+      user: user1,
+      slug: 'editable-version',
+      codeFolder: 'src/integrations/test_fixtures/echo',
+    });
+
+    const res = await request(app)
+      .patch(`/api/integrations/${integration.id}`)
+      .set('Authorization', authHeader(user1))
+      .send({ name: 'Renamed Echo', version: '2.4.1-private' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.integration.name).toBe('Renamed Echo');
+    expect(res.body.integration.version).toBe('2.4.1-private');
+  });
+
   test('viewer can inspect but cannot mutate or run an owned integration', async () => {
     const integration = await createIntegration({
       user: viewer,

@@ -2,6 +2,7 @@
 import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import BrandMark from '../components/BrandMark.jsx';
+import packageJson from '../../package.json';
 
 export default function LoginPage() {
   const { user, login } = useAuth();
@@ -83,6 +84,7 @@ export default function LoginPage() {
           <p className="mt-5 rounded-lg bg-[#e9faff] px-3 py-2 text-xs text-[#0b5869]">
             Local dev seed: admin@example.com / Admin123! | user1@example.com / User123!
           </p>
+          <p className="mt-4 text-center text-xs text-slate-400">Version {packageJson.version}</p>
         </section>
       </div>
     </div>

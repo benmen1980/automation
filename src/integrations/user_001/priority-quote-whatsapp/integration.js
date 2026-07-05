@@ -16,10 +16,9 @@ module.exports = {
     reviewRequired: true,
     cloudWatchLogGroup: 'integration-priority-quote-whatsapp',
     steps: [
-      'Received from Priority',
-      'Mapped quote fields to WhatsApp template parameters',
-      'Sent to WhatsApp',
-      'Received from WhatsApp',
+      'Received from Priority: JSON',
+      'Sent to WhatsApp: JSON',
+      'Received from WhatsApp: response',
     ],
   },
 
@@ -58,15 +57,6 @@ module.exports = {
       placeholder: '404655686058819',
     },
     {
-      key: 'WHATSAPP_RECIPIENT_PHONE',
-      label: 'Recipient Phone Number',
-      type: 'text',
-      required: true,
-      helper: 'Destination WhatsApp number in international format without a plus sign. This is a visible integration parameter.',
-      placeholder: '972507573753',
-      validation: { pattern: '^\\d{8,15}$' },
-    },
-    {
       key: 'WHATSAPP_TEMPLATE_NAME',
       label: 'Template Name',
       type: 'text',
@@ -98,11 +88,12 @@ module.exports = {
   testPayloads: [
     {
       name: 'Priority quote approved',
-      description: 'Priority quote payload that maps CDES to parameter 1 and CPROFNUM to parameter 2.',
+      description: 'Priority quote payload that maps ROYY_PHONE to the WhatsApp recipient, CDES to parameter 1, and CPROFNUM to parameter 2.',
       payload: {
         CPROF: {
           CPROFNUM: 'PQ26000001',
           CDES: 'דניאל כהן',
+          ROYY_PHONE: '972507573753',
         },
       },
     },

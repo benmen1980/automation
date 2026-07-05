@@ -42,12 +42,15 @@ router.get('/', async (req, res) => {
 // that already has integration.js + handler.js on disk under a
 // codeFolder. We validate those files exist before ever saving the row.
 router.post('/', async (req, res) => {
-  const { name, description, slug, type, codeFolder, userId, definitionFile, handlerFile } = req.body || {};
+  const { name, version, description, slug, type, codeFolder, userId, definitionFile, handlerFile } = req.body || {};
   if (!isAdmin(req.user)) {
     return res.status(403).json({ error: 'Only admins can register generated integrations. Ask an admin to create or assign a new integration.' });
   }
   if (!name || !type || !codeFolder) {
     return res.status(400).json({ error: 'name, type, and codeFolder are required.' });
+  }
+  if (version !== undefined && !String(version).trim()) {
+    return res.status(400).json({ error: 'version cannot be empty.' });
   }
   if (!['webhook', 'scheduled'].includes(type)) {
     return res.status(400).json({ error: 'type must be "webhook" or "scheduled".' });
@@ -73,6 +76,7 @@ router.post('/', async (req, res) => {
       data: {
         userId: ownerId,
         name,
+        version: version ? String(version).trim() : undefined,
         description,
         slug: finalSlug,
         type,
@@ -134,9 +138,18 @@ router.get('/:id', loadIntegration({ include: WITH_SETTINGS }), (req, res) => {
 });
 
 router.patch('/:id', loadIntegration({ mutate: true }), async (req, res) => {
-  const { name, description, status, manualRunEnabled } = req.body || {};
+  const { name, version, description, status, manualRunEnabled } = req.body || {};
   const data = {};
-  if (name !== undefined) data.name = name;
+  if (name !== undefined) {
+    const trimmedName = String(name).trim();
+    if (!trimmedName) return res.status(400).json({ error: 'name cannot be empty.' });
+    data.name = trimmedName;
+  }
+  if (version !== undefined) {
+    const trimmedVersion = String(version).trim();
+    if (!trimmedVersion) return res.status(400).json({ error: 'version cannot be empty.' });
+    data.version = trimmedVersion;
+  }
   if (description !== undefined) data.description = description;
   if (status !== undefined) data.status = status;
   if (manualRunEnabled !== undefined) data.manualRunEnabled = manualRunEnabled;
