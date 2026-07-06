@@ -105,6 +105,59 @@ The Priority Quote Notification to WhatsApp integration reads the WhatsApp recip
 
 New/changed credentials for that integration are configured in the dashboard: `WHATSAPP_ACCESS_TOKEN` is now a secret field, `WHATSAPP_BUTTON_URL_PREFIX` defines the static WhatsApp template URL prefix before `{{1}}`, and the Priority print URL step requires `PRIORITY_WEB_SDK_URL`, `PRIORITY_WEB_SDK_TABULAINI`, `PRIORITY_WEB_SDK_LANGUAGE`, `PRIORITY_WEB_SDK_COMPANY`, `PRIORITY_WEB_SDK_APPNAME`, `PRIORITY_WEB_SDK_USERNAME`, `PRIORITY_WEB_SDK_PASSWORD`, and optional `PRIORITY_WEB_SDK_DEVICENAME`. The Priority Web SDK default language is `1`, the default username is `shely.l`, and the quote lookup sort option is sent as `לפי מספר ההצעה`. Test, dry-run, and mock-output modes use a mock Priority print URL and do not call Priority or WhatsApp; live mode calls both Priority and WhatsApp.
 
+## AWS API/dashboard pipeline
+
+The repository root also includes `buildspec.yml` for generic CodeBuild projects.
+It installs root dependencies with Node.js 20, runs `npm test` when tests are
+configured, and excludes `node_modules/` plus `.git/` from the output artifact.
+
+Use `infra/aws/scripts/create-codeconnection.sh` first if the AWS account does not
+already have a GitHub CodeConnection. Complete the pending GitHub handshake in the
+AWS console, then pass the connection ARN to the API pipeline script:
+
+```bash
+./infra/aws/scripts/create-pipeline-api.sh \
+  --github-owner benmen1980 \
+  --github-repo automation \
+  --connection-arn arn:aws:codestar-connections:eu-west-1:123456789012:connection/example \
+  --eb-application automation \
+  --eb-environment automation-api \
+  --branch master \
+  --region eu-west-1 \
+  --create-roles
+```
+
+The script creates or updates:
+
+- an S3 artifact bucket with versioning and public access blocked
+- scoped CodePipeline and CodeBuild IAM roles when `--create-roles` is passed
+- a CodeBuild project that runs `buildspec-api-eb.yml`
+- a CodePipeline V2 pipeline from GitHub to Elastic Beanstalk
+
+Pipeline trigger behavior:
+
+- Runs for `master` pushes touching API/dashboard deployment files such as
+  `apps/api/**`, `src/**`, `frontend/dashboard/**`, `packages/shared/**`,
+  `prisma/**`, `.platform/**`, `.ebextensions/**`, package files, or
+  `buildspec-api-eb.yml`.
+- Excludes `integrations/**` and `src/integrations/**`, so integration-only
+  changes do not redeploy or restart the Elastic Beanstalk API/dashboard.
+- Uses `DetectChanges=false` on the source action and a CodePipeline V2 Git push
+  trigger with branch and file path filters.
+
+You can pass existing roles instead of creating them:
+
+```bash
+./infra/aws/scripts/create-pipeline-api.sh \
+  --github-owner benmen1980 \
+  --github-repo automation \
+  --connection-arn <connection-arn> \
+  --eb-application automation \
+  --eb-environment automation-api \
+  --codepipeline-role-arn <pipeline-role-arn> \
+  --codebuild-role-arn <build-role-arn>
+```
+
 ## Adding a new integration
 
 Per the [product architecture spec](./docs/product/product-architecture-spec.md), integration code is never uploaded or loaded from a URL
@@ -162,9 +215,12 @@ Every line item, with where it's enforced:
   access, so `npm install` and `npm test` were never actually executed here — run
   them on your machine before deploying. Every test assertion was verified by
   re-reading the route/core source it exercises, not by running the suite.
-- No AWS resources have been created. The [AWS deployment plan](./docs/ops/aws-deployment-plan.md) documents the target
+- No AWS resources are created automatically during local setup. Use the AWS scripts
+  under `infra/aws/scripts/` to create the API/dashboard pipeline, Elastic
+  Beanstalk environment, queues, integration workers, and integration pipelines.
+  The [AWS deployment plan](./docs/ops/aws-deployment-plan.md) documents the target
   architecture and the exact swap points in the code (`SECRETS_MODE=aws`,
-  `QUEUE_MODE=sqs`, `SCHEDULER_MODE=aws`, Cognito) but none of it has been deployed
-  or load-tested.
+  `QUEUE_MODE=sqs`, `SCHEDULER_MODE=aws`, Cognito), but the AWS deployment still
+  needs to be run and load-tested in your account.
 - Per the [product architecture spec](./docs/product/product-architecture-spec.md) scope: no drag-and-drop builder, no code upload from the dashboard,
   no billing, no marketplace.
