@@ -26,4 +26,5 @@ node_modules/.bin/prisma db push \
   --accept-data-loss \
   --skip-generate
 
+node_modules/.bin/prisma generate --schema=prisma/schema.postgres.prisma
 node scripts/sync-integration-db.js

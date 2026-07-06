@@ -118,9 +118,10 @@ CloudFormation, Auto Scaling, and read-only health/event permissions needed for
 Elastic Beanstalk deployments to complete and report status through CodePipeline.
 Version `1.3.0` was pushed as an end-to-end pipeline test release for the
 GitHub-triggered Elastic Beanstalk deployment path.
-The EB predeploy hook now also runs `npm run sync:integration-db` after Prisma
-schema sync. This upserts dashboard Integration records for deployed integration
-code without overwriting saved credentials or secrets.
+The EB predeploy hook now regenerates the Postgres Prisma Client and runs
+`npm run sync:integration-db` after Prisma schema sync. This upserts dashboard
+Integration records for deployed integration code without overwriting saved
+credentials or secrets.
 
 Use `infra/aws/scripts/create-codeconnection.sh` first if the AWS account does not
 already have a GitHub CodeConnection. Complete the pending GitHub handshake in the
