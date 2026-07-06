@@ -113,6 +113,9 @@ configured, and excludes `node_modules/` plus `.git/` from the output artifact.
 The API/dashboard EB pipeline uses `buildspec-api-eb.yml`; its artifact also
 excludes all `node_modules/` folders so Elastic Beanstalk installs dependencies
 on the target Node.js platform instead of receiving CodeBuild's dependency tree.
+The reusable API pipeline script also grants the CodePipeline role the EB, S3,
+CloudFormation, Auto Scaling, and read-only health/event permissions needed for
+Elastic Beanstalk deployments to complete and report status through CodePipeline.
 
 Use `infra/aws/scripts/create-codeconnection.sh` first if the AWS account does not
 already have a GitHub CodeConnection. Complete the pending GitHub handshake in the

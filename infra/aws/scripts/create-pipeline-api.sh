@@ -243,7 +243,11 @@ JSON
         "elasticbeanstalk:CreateApplicationVersion",
         "elasticbeanstalk:DescribeApplications",
         "elasticbeanstalk:DescribeApplicationVersions",
+        "elasticbeanstalk:DescribeEnvironmentHealth",
         "elasticbeanstalk:DescribeEnvironments",
+        "elasticbeanstalk:DescribeEvents",
+        "elasticbeanstalk:DescribeInstancesHealth",
+        "elasticbeanstalk:ValidateConfigurationSettings",
         "elasticbeanstalk:UpdateEnvironment"
       ],
       "Resource": "*"

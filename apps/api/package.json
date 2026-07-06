@@ -1,6 +1,6 @@
 {
   "name": "@automation/api",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "private": true,
   "description": "Automation platform API and dashboard backend workspace.",
   "main": "../../src/server.js",
