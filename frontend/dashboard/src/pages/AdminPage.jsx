@@ -182,9 +182,12 @@ export default function AdminPage() {
       <section>
         <h2 className="font-medium text-slate-800 mb-2">All integrations</h2>
         <div className="bg-white border border-slate-200 rounded-lg divide-y divide-slate-100">
-          {integrations.map((integration) => (
+          {integrations.map((integration, index) => (
             <div key={integration.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
-              <div>
+              <div className="min-w-0">
+                <span className="mr-2 inline-flex min-w-7 justify-center rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-xs font-medium text-slate-500">
+                  #{index + 1}
+                </span>
                 <Link to={`/integrations/${integration.id}`} className="font-medium text-slate-800 hover:underline">
                   {integration.name}
                 </Link>{' '}

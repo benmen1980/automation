@@ -122,6 +122,8 @@ The EB predeploy hook now regenerates the Postgres Prisma Client and runs
 `npm run sync:integration-db` after Prisma schema sync. This upserts dashboard
 Integration records for deployed integration code without overwriting saved
 credentials or secrets.
+The admin dashboard's All integrations list shows a compact row number next to
+each integration name so screenshots can be compared against the deployed order.
 
 Use `infra/aws/scripts/create-codeconnection.sh` first if the AWS account does not
 already have a GitHub CodeConnection. Complete the pending GitHub handshake in the
