@@ -1657,6 +1657,7 @@ If an integration fails, the failure must be isolated to that integration.
   - the Integration database record shown in the dashboard
   - seed/default data for that integration, if present
   - any integration-specific package.json, manifest, or visible version field, if used
+- Pushing integration code is not complete until the target environment database is refreshed/upserted for that integration as well. For this repository, run or verify `npm run sync:integration-db` against the target database after integration pushes, and confirm the dashboard Integration rows match the pushed integration code. This refresh must not overwrite existing saved credentials or secrets.
 - After every code change, update README.md with:
   - what changed
   - any new or changed environment variables

@@ -1,6 +1,6 @@
 {
   "name": "user-automation-platform",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -24,6 +24,7 @@
     "db:deploy": "prisma migrate deploy",
     "db:push:aws": "prisma db push --schema=prisma/schema.postgres.prisma --accept-data-loss",
     "db:seed": "node prisma/seed.js",
+    "sync:integration-db": "node scripts/sync-integration-db.js",
     "db:reset": "prisma migrate reset --force",
     "validate:integrations": "node scripts/validate-integrations.js",
     "test": "npm run validate:integrations && cross-env NODE_ENV=test jest --runInBand && npm run test:integration:gmail-priority && npm --workspace @automation/shopify-priority test && npm --workspace @automation/salesforce-priority test",
