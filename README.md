@@ -116,6 +116,8 @@ on the target Node.js platform instead of receiving CodeBuild's dependency tree.
 The reusable API pipeline script also grants the CodePipeline role the EB, S3,
 CloudFormation, Auto Scaling, and read-only health/event permissions needed for
 Elastic Beanstalk deployments to complete and report status through CodePipeline.
+Version `1.3.0` was pushed as an end-to-end pipeline test release for the
+GitHub-triggered Elastic Beanstalk deployment path.
 
 Use `infra/aws/scripts/create-codeconnection.sh` first if the AWS account does not
 already have a GitHub CodeConnection. Complete the pending GitHub handshake in the
