@@ -1,6 +1,6 @@
 {
   "name": "user-automation-platform",
-  "version": "1.1.2",
+  "version": "1.2.5",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -43,6 +43,7 @@
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "node-cron": "^3.0.3",
+    "priority-web-sdk": "^3.0.37",
     "prisma": "^5.20.0"
   },
   "devDependencies": {

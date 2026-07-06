@@ -1,4 +1,7 @@
 const DEFAULT_GRAPH_HOST = 'https://graph.facebook.com';
+const priority = require('priority-web-sdk');
+const PRIORITY_QUOTE_NUMBER_SORT_OPTION = 'לפי מספר ההצעה';
+
 function maskPhone(phone) {
   const value = String(phone || '');
   if (value.length <= 4) return '***';
@@ -34,10 +37,105 @@ function buildEndpoint(credentials) {
   return `${DEFAULT_GRAPH_HOST}/${apiVersion}/${phoneNumberId}/messages`;
 }
 
-function buildTemplateBody({ credentials, quoteNumber, quoteDescription, recipientPhone }) {
+function getPriorityPrintConfig(credentials) {
+  const url = String(credentials.PRIORITY_WEB_SDK_URL || '').trim();
+  const username = String(credentials.PRIORITY_WEB_SDK_USERNAME || '').trim();
+  const password = String(credentials.PRIORITY_WEB_SDK_PASSWORD || '').trim();
+  const company = String(credentials.PRIORITY_WEB_SDK_COMPANY || '').trim();
+
+  if (!url) throw new Error('Missing Priority Web SDK URL credential.');
+  if (!username) throw new Error('Missing Priority Web SDK username credential.');
+  if (!password) throw new Error('Missing Priority Web SDK password credential.');
+  if (!company) throw new Error('Missing Priority Web SDK company credential.');
+
+  return {
+    url,
+    tabulaini: String(credentials.PRIORITY_WEB_SDK_TABULAINI || 'tabula.ini').trim(),
+    language: Number(credentials.PRIORITY_WEB_SDK_LANGUAGE || 1),
+    profile: { company },
+    appname: String(credentials.PRIORITY_WEB_SDK_APPNAME || company).trim(),
+    username,
+    password,
+    devicename: String(credentials.PRIORITY_WEB_SDK_DEVICENAME || '').trim(),
+  };
+}
+
+function buildMockPriorityPrintUrl({ credentials, quoteNumber }) {
+  const baseUrl = String(credentials.PRIORITY_WEB_SDK_URL || 'https://priority.example.test/wcf/wcf/Service.svc').trim();
+  const url = new URL('/priority-print/price-quotation', baseUrl);
+  url.searchParams.set('quote', quoteNumber);
+  return url.toString();
+}
+
+async function generatePriorityPrintUrl({ quoteNumber, credentials }) {
+  let procedure;
+  const config = getPriorityPrintConfig(credentials);
+
+  await priority.login(config);
+
+  try {
+    procedure = await priority.procStart('WWWSHOWCPROF', 'P', null);
+    procedure = await procedure.proc.inputOptions(1, 1);
+    procedure = await procedure.proc.inputFields(1, {
+      EditFields: [
+        { field: 1, op: 0, value: quoteNumber },
+        { field: 2, op: 0, value: PRIORITY_QUOTE_NUMBER_SORT_OPTION },
+      ],
+    });
+    procedure = await procedure.proc.continueProc();
+
+    const reportUrl = procedure?.Urls?.[0]?.url;
+    if (!reportUrl) {
+      throw new Error('Priority did not return a price quotation print URL.');
+    }
+
+    return new URL(reportUrl, config.url).toString();
+  } finally {
+    if (procedure?.proc?.cancel) {
+      await procedure.proc.cancel().catch(() => {});
+    }
+  }
+}
+
+async function resolvePriorityPrintUrl({ quoteNumber, credentials, executionMode }) {
+  if (executionMode === 'dry_run' || executionMode === 'test' || executionMode === 'mock_output') {
+    return {
+      priorityPrintUrl: buildMockPriorityPrintUrl({ credentials, quoteNumber }),
+      mocked: true,
+    };
+  }
+
+  return {
+    priorityPrintUrl: await generatePriorityPrintUrl({ quoteNumber, credentials }),
+    mocked: false,
+  };
+}
+
+function getWhatsappButtonUrlParameter(priorityPrintUrl, credentials = {}) {
+  const value = String(priorityPrintUrl || '').trim();
+  if (!value) throw new Error('Missing Priority print URL for WhatsApp button parameter.');
+
+  const configuredPrefix = String(credentials.WHATSAPP_BUTTON_URL_PREFIX || '').trim();
+  if (configuredPrefix && value.startsWith(configuredPrefix)) {
+    return value.slice(configuredPrefix.length);
+  }
+
+  try {
+    const url = new URL(value);
+    const fileName = url.pathname.split('/').filter(Boolean).pop();
+    if (fileName) return `${fileName}${url.search || ''}`;
+  } catch {
+    // Fall through to the original value for non-URL button parameters.
+  }
+
+  return value;
+}
+
+function buildTemplateBody({ credentials, quoteNumber, quoteDescription, recipientPhone, priorityPrintUrl }) {
   const to = String(recipientPhone || '').trim();
   const templateName = String(credentials.WHATSAPP_TEMPLATE_NAME || 'order_status').trim();
   const languageCode = String(credentials.WHATSAPP_LANGUAGE_CODE || 'he').trim();
+  const documentUrlButtonParameter = getWhatsappButtonUrlParameter(priorityPrintUrl, credentials);
 
   if (!to) throw new Error('Missing recipient phone number in Priority payload CPROF.ROYY_PHONE.');
   if (!templateName) throw new Error('Missing WhatsApp template name credential.');
@@ -62,17 +160,19 @@ function buildTemplateBody({ credentials, quoteNumber, quoteDescription, recipie
           type: 'button',
           sub_type: 'url',
           index: '0',
-          parameters: [{ type: 'text', text: quoteNumber }],
+          parameters: [{ type: 'text', text: documentUrlButtonParameter }],
         },
       ],
     },
   };
 }
 
-function safeWhatsAppRequestJson({ endpoint, body }) {
+function safeWhatsAppRequestJson({ endpoint, body, priorityPrintUrl }) {
+  const buttonComponent = body.template.components.find((component) => component.type === 'button');
   return {
     endpoint,
     method: 'POST',
+    priorityDocumentUrl: priorityPrintUrl,
     body: {
       messaging_product: body.messaging_product,
       to: maskPhone(body.to),
@@ -88,10 +188,33 @@ function safeWhatsAppRequestJson({ endpoint, body }) {
               body.template.components[0].parameters[1],
             ],
           },
-          body.template.components[1],
+          buttonComponent
+            ? {
+                ...buttonComponent,
+                parameters: buttonComponent.parameters.map((parameter) => ({
+                  ...parameter,
+                  text: parameter.text,
+                })),
+              }
+            : undefined,
         ],
       },
     },
+  };
+}
+
+function safeUrlHost(value) {
+  try {
+    return new URL(value).host;
+  } catch {
+    return 'invalid-url';
+  }
+}
+
+function safePriorityPrintUrlSummary(priorityPrintUrl) {
+  return {
+    available: Boolean(priorityPrintUrl),
+    host: safeUrlHost(priorityPrintUrl),
   };
 }
 
@@ -196,15 +319,28 @@ module.exports = {
   async execute({ payload, credentials, logger, executionMode, integration }) {
     const { quoteNumber, quoteDescription, recipientPhone } = getQuoteFields(payload);
     const endpoint = buildEndpoint(credentials);
-    const body = buildTemplateBody({ credentials, quoteNumber, quoteDescription, recipientPhone });
+    const { priorityPrintUrl, mocked: priorityPrintUrlMocked } = await resolvePriorityPrintUrl({
+      quoteNumber,
+      credentials,
+      executionMode,
+    });
+    const body = buildTemplateBody({ credentials, quoteNumber, quoteDescription, recipientPhone, priorityPrintUrl });
     const priorityJson = safePriorityJson({ quoteNumber, quoteDescription, recipientPhone });
-    const whatsappJson = safeWhatsAppRequestJson({ endpoint, body });
+    const whatsappJson = safeWhatsAppRequestJson({ endpoint, body, priorityPrintUrl });
 
     await logger.info('JSON from Priority.', {
       integrationName: integration?.name,
       direction: 'Received from Priority',
       priorityJson,
       quoteNumber,
+    });
+
+    await logger.info('Priority print URL prepared before WhatsApp post.', {
+      integrationName: integration?.name,
+      direction: 'Received from Priority',
+      quoteNumber,
+      mocked: priorityPrintUrlMocked,
+      priorityPrintUrl: safePriorityPrintUrlSummary(priorityPrintUrl),
     });
 
     await logger.info('JSON to WhatsApp.', {
@@ -276,5 +412,10 @@ module.exports = {
     safePriorityJson,
     safeIncomingPriorityPayloadSummary,
     safeWhatsAppResponseSummary,
+    buildMockPriorityPrintUrl,
+    getWhatsappButtonUrlParameter,
+    getPriorityPrintConfig,
+    resolvePriorityPrintUrl,
+    safePriorityPrintUrlSummary,
   },
 };

@@ -1640,3 +1640,50 @@ Architecture rule:
 The main API process must never directly run integration code.
 All integration execution must happen through a queue and an independent worker.
 If an integration fails, the failure must be isolated to that integration.
+
+# AGENTS.md
+
+## Project rules
+
+- Keep each chat focused on one work area. The user must not ask Codex to work on more than one integration in a single chat.
+- For each integration, use a separate Codex chat/thread.
+- For dashboard or core platform work, use a separate Codex chat/thread from integration-specific work.
+- For every code change, bump the application version.
+- The version must be updated wherever the project stores it, including:
+  - package.json
+  - package-lock.json, if present
+  - any visible app/version endpoint or constant, if used
+- For every integration code or metadata change, also bump that integration's private version wherever the project stores it, including:
+  - the Integration database record shown in the dashboard
+  - seed/default data for that integration, if present
+  - any integration-specific package.json, manifest, or visible version field, if used
+- After every code change, update README.md with:
+  - what changed
+  - any new or changed environment variables
+  - any new or changed API endpoints
+  - any deployment or testing notes
+- If README.md does not need a change, explicitly say why in the final response.
+- Before finishing, run the relevant tests or at least the project startup/build check.
+- In the final response, summarize:
+  - files changed
+  - version before and after
+  - tests/checks run
+  - README.md update status
+
+## Versioning policy
+
+- Use patch version bump for bug fixes and small changes.
+- Use minor version bump for new features or new API behavior.
+- Use major version bump only for breaking changes.
+- Do not bump version for documentation-only changes.
+
+## Node.js project checks
+
+Before completing a task, run as applicable:
+
+```bash
+npm install
+npm test
+npm run build
+npm start
+```

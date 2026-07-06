@@ -46,6 +46,23 @@ Future implementation should ensure:
 - Adding or updating one integration does not affect existing integrations.
 - Test/dry-run/live behavior is defined per integration and loaded from the integration metadata.
 
+## Integration Version History and User Notes
+
+Future implementation should add version-level release notes for every integration.
+
+Each time an integration version changes, the platform should store a changelog entry that includes:
+
+- Integration ID, slug, and display name.
+- Version number.
+- Date/time of the change.
+- Author or source of the change, when available.
+- Short summary of what changed.
+- Technical notes, migration notes, credential changes, and testing notes when relevant.
+
+The dashboard should make the integration version clickable. When a user clicks the version, the UI should show the changelog for that integration version and recent prior versions, so operators can understand what changed without reading code.
+
+Future implementation should also add a user-editable notes textarea for each integration or app context. The notes field should let the user write their own operational notes, business reminders, provider-specific instructions, or testing observations. User notes should be saved separately from generated changelog entries so user-written notes are not overwritten by future Codex or deployment updates.
+
 ## Deployment Direction
 
 The long-term architecture should separate these concerns:

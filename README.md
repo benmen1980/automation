@@ -97,7 +97,13 @@ record. The dashboard shows that version next to the integration name, shows the
 internal integration ID, and lets permitted users edit the integration name and
 private version inline from the integration detail header.
 
-The Priority Quote Notification to WhatsApp integration reads the WhatsApp recipient from CPROF.ROYY_PHONE in the Priority webhook payload. Its logs show three clear JSON steps: JSON from Priority, JSON to WhatsApp, and WhatsApp response.
+When integration code or metadata changes, bump both the application version and
+that integration's private version on its integration record so the dashboard
+reflects the deployed integration behavior.
+
+The Priority Quote Notification to WhatsApp integration reads the WhatsApp recipient from CPROF.ROYY_PHONE in the Priority webhook payload, uses `priority-web-sdk` in live mode to generate a Priority price quotation print/document URL from CPROF.CPROFNUM, and inserts the generated URL suffix as the WhatsApp template URL button parameter `{{1}}`. Configure the template with a static prefix such as `https://priority.simplyct.co.il/netfiles/{{1}}`; the API payload sends only the generated `.htm` filename/suffix. Its logs show four clear sanitized steps: JSON from Priority, Priority print URL prepared before WhatsApp post, JSON to WhatsApp, and WhatsApp response. The JSON-to-WhatsApp log keeps phone/customer/token/password values redacted but shows the generated URL button parameter and the full generated Priority document URL for verification.
+
+New/changed credentials for that integration are configured in the dashboard: `WHATSAPP_ACCESS_TOKEN` is now a secret field, `WHATSAPP_BUTTON_URL_PREFIX` defines the static WhatsApp template URL prefix before `{{1}}`, and the Priority print URL step requires `PRIORITY_WEB_SDK_URL`, `PRIORITY_WEB_SDK_TABULAINI`, `PRIORITY_WEB_SDK_LANGUAGE`, `PRIORITY_WEB_SDK_COMPANY`, `PRIORITY_WEB_SDK_APPNAME`, `PRIORITY_WEB_SDK_USERNAME`, `PRIORITY_WEB_SDK_PASSWORD`, and optional `PRIORITY_WEB_SDK_DEVICENAME`. The Priority Web SDK default language is `1`, the default username is `shely.l`, and the quote lookup sort option is sent as `לפי מספר ההצעה`. Test, dry-run, and mock-output modes use a mock Priority print URL and do not call Priority or WhatsApp; live mode calls both Priority and WhatsApp.
 
 ## Adding a new integration
 

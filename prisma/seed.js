@@ -26,6 +26,7 @@ async function upsertIntegration(user, def) {
       description: def.description,
       type: def.type,
       codeFolder: def.codeFolder,
+      version: def.version || '1.0.0',
       manualRunEnabled: true,
     },
     create: {
@@ -34,6 +35,7 @@ async function upsertIntegration(user, def) {
       description: def.description,
       slug: def.slug,
       type: def.type,
+      version: def.version || '1.0.0',
       status: 'active',
       codeFolder: def.codeFolder,
       manualRunEnabled: true,
@@ -105,6 +107,10 @@ async function savePriorityQuoteWhatsappCredentials(integration) {
     WHATSAPP_TEMPLATE_NAME: 'order_status',
     WHATSAPP_LANGUAGE_CODE: 'he',
     WHATSAPP_GRAPH_API_VERSION: 'v25.0',
+    WHATSAPP_BUTTON_URL_PREFIX: 'https://priority.simplyct.co.il/netfiles/',
+    PRIORITY_WEB_SDK_TABULAINI: 'tabula.ini',
+    PRIORITY_WEB_SDK_LANGUAGE: 1,
+    PRIORITY_WEB_SDK_USERNAME: 'shely.l',
   });
 }
 
@@ -124,7 +130,7 @@ async function main() {
     { user: user1, name: 'Priority inventory to file', description: 'Scheduled task that gets inventory from Priority PARTBAL and writes timestamped JSON locally.', slug: 'priority-inventory-to-file', type: 'scheduled', codeFolder: `src/integrations/${user1.slug}/priority-inventory-to-file`, cron: '*/10 * * * *' },
     { user: user1, name: 'Shopify Orders to Priority', description: 'Receive Shopify order webhooks and create Priority orders.', slug: 'shopify-orders-priority', type: 'webhook', codeFolder: `src/integrations/${user1.slug}/shopify-orders-priority` },
     { user: user1, name: 'Priority Balance to WhatsApp', description: 'Receive customer webhook, read Priority data, and send WhatsApp.', slug: 'priority-whatsapp', type: 'webhook', codeFolder: `src/integrations/${user1.slug}/priority-whatsapp` },
-    { user: user1, name: 'Priority Quote Notification to WhatsApp', description: 'Receive Priority quote webhooks and send WhatsApp template notifications.', slug: 'priority-quote-whatsapp', type: 'webhook', codeFolder: `src/integrations/${user1.slug}/priority-quote-whatsapp` },
+    { user: user1, name: 'Priority Quote Notification to WhatsApp', description: 'Receive Priority quote webhooks and send WhatsApp template notifications.', slug: 'priority-quote-whatsapp', type: 'webhook', version: '1.2.4', codeFolder: `src/integrations/${user1.slug}/priority-quote-whatsapp` },
     { user: user1, name: 'Gmail Quote Request to Priority', description: 'Receive Gmail quote request webhook and open a Priority quote.', slug: 'gmail-priority-quote', type: 'webhook', codeFolder: `src/integrations/${user1.slug}/gmail-priority-quote` },
     { user: user1, name: 'User 001 WhatsApp Webhook', description: 'Receives WhatsApp-style webhook payloads and writes each request body to a local JSON file.', slug: 'user-001-whatsapp', type: 'webhook', codeFolder: `src/integrations/${user1.slug}/user-001-whatsapp` },
   ];
