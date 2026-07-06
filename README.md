@@ -110,6 +110,9 @@ New/changed credentials for that integration are configured in the dashboard: `W
 The repository root also includes `buildspec.yml` for generic CodeBuild projects.
 It installs root dependencies with Node.js 20, runs `npm test` when tests are
 configured, and excludes `node_modules/` plus `.git/` from the output artifact.
+The API/dashboard EB pipeline uses `buildspec-api-eb.yml`; its artifact also
+excludes all `node_modules/` folders so Elastic Beanstalk installs dependencies
+on the target Node.js platform instead of receiving CodeBuild's dependency tree.
 
 Use `infra/aws/scripts/create-codeconnection.sh` first if the AWS account does not
 already have a GitHub CodeConnection. Complete the pending GitHub handshake in the
@@ -138,8 +141,7 @@ Pipeline trigger behavior:
 
 - Runs for `master` pushes touching API/dashboard deployment files such as
   `apps/api/**`, `src/**`, `frontend/dashboard/**`, `packages/shared/**`,
-  `prisma/**`, `.platform/**`, `.ebextensions/**`, package files, or
-  `buildspec-api-eb.yml`.
+  `prisma/**`, dot-directory EB config, package files, or buildspec files.
 - Excludes `integrations/**` and `src/integrations/**`, so integration-only
   changes do not redeploy or restart the Elastic Beanstalk API/dashboard.
 - Uses `DetectChanges=false` on the source action and a CodePipeline V2 Git push

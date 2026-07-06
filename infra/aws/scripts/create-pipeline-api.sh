@@ -4,7 +4,7 @@ set -euo pipefail
 AWS_REGION="${AWS_REGION:-eu-west-1}"
 PROJECT_NAME="${PROJECT_NAME:-automation}"
 PIPELINE_NAME="${PIPELINE_NAME:-${PROJECT_NAME}-api}"
-CODEBUILD_PROJECT="${CODEBUILD_PROJECT:-${PIPELINE_NAME}-build}"
+CODEBUILD_PROJECT="${CODEBUILD_PROJECT:-}"
 ARTIFACT_BUCKET="${ARTIFACT_BUCKET:-}"
 GITHUB_OWNER="${GITHUB_OWNER:-}"
 GITHUB_REPO="${GITHUB_REPO:-automation}"
@@ -76,6 +76,10 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+if [[ -z "${CODEBUILD_PROJECT}" ]]; then
+  CODEBUILD_PROJECT="${PIPELINE_NAME}-build"
+fi
+
 require() {
   local value="$1"
   local name="$2"
@@ -104,6 +108,18 @@ fi
 
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "${TMP_DIR}"' EXIT
+
+file_uri() {
+  local path="$1"
+  if command -v cygpath >/dev/null 2>&1; then
+    local win_path
+    win_path="$(cygpath -w "${path}")"
+    win_path="${win_path//\\//}"
+    echo "file://${win_path}"
+  else
+    echo "file://${path}"
+  fi
+}
 
 ensure_bucket() {
   if aws s3api head-bucket --bucket "${ARTIFACT_BUCKET}" >/dev/null 2>&1; then
@@ -172,14 +188,14 @@ JSON
     echo "Creating CodePipeline role: ${pipeline_role}"
     aws iam create-role \
       --role-name "${pipeline_role}" \
-      --assume-role-policy-document "file://${TMP_DIR}/codepipeline-trust.json" >/dev/null
+      --assume-role-policy-document "$(file_uri "${TMP_DIR}/codepipeline-trust.json")" >/dev/null
   fi
 
   if ! aws iam get-role --role-name "${build_role}" >/dev/null 2>&1; then
     echo "Creating CodeBuild role: ${build_role}"
     aws iam create-role \
       --role-name "${build_role}" \
-      --assume-role-policy-document "file://${TMP_DIR}/codebuild-trust.json" >/dev/null
+      --assume-role-policy-document "$(file_uri "${TMP_DIR}/codebuild-trust.json")" >/dev/null
   fi
 
   CODEPIPELINE_ROLE_ARN="$(aws iam get-role --role-name "${pipeline_role}" --query Role.Arn --output text)"
@@ -193,8 +209,10 @@ JSON
       "Effect": "Allow",
       "Action": [
         "s3:GetObject",
+        "s3:GetObjectAcl",
         "s3:GetObjectVersion",
         "s3:GetBucketVersioning",
+        "s3:DeleteObject",
         "s3:PutObject",
         "s3:PutObjectAcl"
       ],
@@ -213,7 +231,10 @@ JSON
     },
     {
       "Effect": "Allow",
-      "Action": "codestar-connections:UseConnection",
+      "Action": [
+        "codestar-connections:UseConnection",
+        "codeconnections:UseConnection"
+      ],
       "Resource": "${CONNECTION_ARN}"
     },
     {
@@ -224,6 +245,49 @@ JSON
         "elasticbeanstalk:DescribeApplicationVersions",
         "elasticbeanstalk:DescribeEnvironments",
         "elasticbeanstalk:UpdateEnvironment"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:CreateBucket",
+        "s3:GetBucketLocation",
+        "s3:GetBucketPolicy",
+        "s3:ListBucket",
+        "s3:PutBucketPolicy",
+        "s3:GetObject",
+        "s3:GetObjectAcl",
+        "s3:GetObjectVersion",
+        "s3:DeleteObject",
+        "s3:PutObject",
+        "s3:PutObjectAcl"
+      ],
+      "Resource": [
+        "arn:aws:s3:::elasticbeanstalk-${AWS_REGION}-${ACCOUNT_ID}",
+        "arn:aws:s3:::elasticbeanstalk-${AWS_REGION}-${ACCOUNT_ID}/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:DescribeStackResource",
+        "cloudformation:DescribeStackResources",
+        "cloudformation:DescribeStacks",
+        "cloudformation:GetTemplate"
+      ],
+      "Resource": "arn:aws:cloudformation:${AWS_REGION}:${ACCOUNT_ID}:stack/awseb-*/*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "autoscaling:Describe*",
+        "autoscaling:ResumeProcesses",
+        "autoscaling:SuspendProcesses",
+        "cloudwatch:Describe*",
+        "cloudwatch:Get*",
+        "ec2:Describe*",
+        "elasticloadbalancing:Describe*"
       ],
       "Resource": "*"
     }
@@ -278,12 +342,12 @@ JSON
   aws iam put-role-policy \
     --role-name "${pipeline_role}" \
     --policy-name "${PIPELINE_NAME}-inline" \
-    --policy-document "file://${TMP_DIR}/codepipeline-policy.json" >/dev/null
+    --policy-document "$(file_uri "${TMP_DIR}/codepipeline-policy.json")" >/dev/null
 
   aws iam put-role-policy \
     --role-name "${build_role}" \
     --policy-name "${CODEBUILD_PROJECT}-inline" \
-    --policy-document "file://${TMP_DIR}/codebuild-policy.json" >/dev/null
+    --policy-document "$(file_uri "${TMP_DIR}/codebuild-policy.json")" >/dev/null
 
   echo "IAM roles ready. Waiting briefly for IAM propagation."
   sleep 10
@@ -324,18 +388,18 @@ JSON
     echo "Updating CodeBuild project: ${CODEBUILD_PROJECT}"
     aws codebuild update-project \
       --name "${CODEBUILD_PROJECT}" \
-      --source "file://${TMP_DIR}/codebuild-source.json" \
-      --artifacts "file://${TMP_DIR}/codebuild-artifacts.json" \
-      --environment "file://${TMP_DIR}/codebuild-environment.json" \
+      --source "$(file_uri "${TMP_DIR}/codebuild-source.json")" \
+      --artifacts "$(file_uri "${TMP_DIR}/codebuild-artifacts.json")" \
+      --environment "$(file_uri "${TMP_DIR}/codebuild-environment.json")" \
       --service-role "${CODEBUILD_ROLE_ARN}" \
       --region "${AWS_REGION}" >/dev/null
   else
     echo "Creating CodeBuild project: ${CODEBUILD_PROJECT}"
     aws codebuild create-project \
       --name "${CODEBUILD_PROJECT}" \
-      --source "file://${TMP_DIR}/codebuild-source.json" \
-      --artifacts "file://${TMP_DIR}/codebuild-artifacts.json" \
-      --environment "file://${TMP_DIR}/codebuild-environment.json" \
+      --source "$(file_uri "${TMP_DIR}/codebuild-source.json")" \
+      --artifacts "$(file_uri "${TMP_DIR}/codebuild-artifacts.json")" \
+      --environment "$(file_uri "${TMP_DIR}/codebuild-environment.json")" \
       --service-role "${CODEBUILD_ROLE_ARN}" \
       --region "${AWS_REGION}" >/dev/null
   fi
@@ -357,7 +421,7 @@ upsert_pipeline() {
     "executionMode": "QUEUED",
     "triggers": [
       {
-        "provider": "Connection",
+        "providerType": "CodeStarSourceConnection",
         "gitConfiguration": {
           "sourceActionName": "ApplicationSource",
           "push": [
@@ -372,11 +436,9 @@ upsert_pipeline() {
                   "frontend/dashboard/**",
                   "packages/shared/**",
                   "prisma/**",
-                  ".platform/**",
-                  ".ebextensions/**",
-                  "package.json",
-                  "package-lock.json",
-                  "buildspec-api-eb.yml"
+                  ".*/**",
+                  "package*.json",
+                  "buildspec*.yml"
                 ],
                 "excludes": [
                   "integrations/**",
@@ -470,12 +532,12 @@ JSON
   if aws codepipeline get-pipeline --name "${PIPELINE_NAME}" --region "${AWS_REGION}" >/dev/null 2>&1; then
     echo "Updating CodePipeline: ${PIPELINE_NAME}"
     aws codepipeline update-pipeline \
-      --cli-input-json "file://${TMP_DIR}/pipeline.json" \
+      --cli-input-json "$(file_uri "${TMP_DIR}/pipeline.json")" \
       --region "${AWS_REGION}" >/dev/null
   else
     echo "Creating CodePipeline: ${PIPELINE_NAME}"
     aws codepipeline create-pipeline \
-      --cli-input-json "file://${TMP_DIR}/pipeline.json" \
+      --cli-input-json "$(file_uri "${TMP_DIR}/pipeline.json")" \
       --region "${AWS_REGION}" >/dev/null
   fi
 }
@@ -496,6 +558,6 @@ Artifact bucket: ${ARTIFACT_BUCKET}
 
 Trigger behavior:
 - Runs on ${BRANCH} pushes touching API/dashboard files.
-- Includes apps/api/**, src/**, frontend/dashboard/**, packages/shared/**, prisma/**, EB config, package files, and buildspec-api-eb.yml.
+- Includes apps/api/**, src/**, frontend/dashboard/**, packages/shared/**, prisma/**, dot-directory EB config, package files, and buildspec files.
 - Excludes integrations/** and src/integrations/** so integration-only changes do not restart Elastic Beanstalk.
 EOF
