@@ -208,7 +208,7 @@ export default function AdminPage() {
                 <Link to={`/integrations/${integration.id}`} className="font-medium text-slate-800 hover:underline">
                   {integration.name}
                 </Link>{' '}
-                <span className="font-mono text-[11px] text-slate-500">({integration.integrationKey || integration.id})</span>
+                <span className="font-mono text-[11px] text-slate-500">({integration.id})</span>
               </div>
               <div className="flex items-center gap-2 min-w-0">
                 <label className="sr-only" htmlFor={`assign-${integration.id}`}>Assign owner</label>

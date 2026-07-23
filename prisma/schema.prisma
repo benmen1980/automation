@@ -45,7 +45,6 @@ model User {
 
 model Integration {
   id               String            @id @default(cuid())
-  integrationKey   String?
   userId           String
   name             String
   version          String            @default("1.0.0")
