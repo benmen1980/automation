@@ -16,14 +16,14 @@ router.use(requireAuth);
 
 const WITH_SETTINGS = { webhookSettings: true, scheduleSettings: true };
 
-function withPublicWebhookUrl(integration) {
+function withPublicWebhookUrl(integration, req) {
   if (!integration || !integration.webhookSettings?.webhookUrl) return integration;
   const integrationKey = getIntegrationCodeKey(integration);
   return {
     ...integration,
     webhookSettings: {
       ...integration.webhookSettings,
-      webhookUrl: buildPublicUrl(`/webhooks/${integrationKey}`),
+      webhookUrl: buildPublicUrl(`/webhooks/${integrationKey}`, req),
       secretTokenReference: integration.webhookSettings.secretTokenReference ? '[configured]' : null,
     },
   };
@@ -51,7 +51,7 @@ router.get('/', async (req, res) => {
     orderBy: [{ name: 'asc' }, { codeFolder: 'asc' }],
     include: WITH_SETTINGS,
   });
-  res.json({ integrations: integrations.map((integration) => withIntegrationCodeKey(withPublicWebhookUrl(integration))) });
+  res.json({ integrations: integrations.map((integration) => withIntegrationCodeKey(withPublicWebhookUrl(integration, req))) });
 });
 
 // docs/product/product-architecture-spec.md 8.3: admin (or self-service user) registers an integration
@@ -150,7 +150,7 @@ router.delete('/:id', loadIntegration({ mutate: true }), async (req, res) => {
 });
 
 router.get('/:id', loadIntegration({ include: WITH_SETTINGS }), (req, res) => {
-  res.json({ integration: withIntegrationCodeKey(withPublicWebhookUrl(req.integration)) });
+  res.json({ integration: withIntegrationCodeKey(withPublicWebhookUrl(req.integration, req)) });
 });
 
 router.patch('/:id', loadIntegration({ mutate: true }), async (req, res) => {
@@ -263,7 +263,7 @@ router.post('/:id/webhook-settings', loadIntegration({ mutate: true }), async (r
   res.json({
     webhookSettings: {
       ...settings,
-      webhookUrl: buildPublicUrl(settings.webhookUrl),
+      webhookUrl: buildPublicUrl(settings.webhookUrl, req),
       secretTokenReference: settings.secretTokenReference ? '[configured]' : null,
     },
   });

@@ -32,6 +32,24 @@ describe('public-url', () => {
     );
   });
 
+  test('uses forwarded request host before configured fallback', () => {
+    process.env.PUBLIC_BASE_URL = 'https://fallback.example.test';
+    const req = {
+      protocol: 'http',
+      headers: {
+        'x-forwarded-proto': 'https',
+        'x-forwarded-host': 'stage.example.test',
+      },
+      get(name) {
+        return name === 'host' ? 'localhost:3001' : undefined;
+      },
+    };
+
+    expect(publicUrl.buildPublicUrl('/webhooks/int_abc1234567890000', req)).toBe(
+      'https://stage.example.test/webhooks/int_abc1234567890000'
+    );
+  });
+
   test('uses the ngrok public URL file when present', () => {
     process.env.NODE_ENV = 'development';
     fs.writeFileSync(process.env.NGROK_PUBLIC_URL_FILE, 'https://abc.ngrok-free.app\n');

@@ -37,11 +37,20 @@ function getPublicBaseUrl() {
   return normalizeBaseUrl(readPublicBaseUrlFile());
 }
 
-function buildPublicUrl(relativePath) {
+function getRequestBaseUrl(req) {
+  if (!req) return '';
+  const forwardedProto = String(req.headers?.['x-forwarded-proto'] || '').split(',')[0].trim();
+  const forwardedHost = String(req.headers?.['x-forwarded-host'] || '').split(',')[0].trim();
+  const proto = forwardedProto || req.protocol;
+  const host = forwardedHost || (typeof req.get === 'function' ? req.get('host') : req.headers?.host);
+  return normalizeBaseUrl(proto && host ? `${proto}://${host}` : '');
+}
+
+function buildPublicUrl(relativePath, req) {
   if (!relativePath || typeof relativePath !== 'string') return relativePath;
   if (/^https?:\/\//i.test(relativePath)) return relativePath;
 
-  const baseUrl = getPublicBaseUrl();
+  const baseUrl = getRequestBaseUrl(req) || getPublicBaseUrl();
   const pathPart = relativePath.startsWith('/') ? relativePath : `/${relativePath}`;
   return baseUrl ? `${baseUrl}${pathPart}` : pathPart;
 }
@@ -49,6 +58,7 @@ function buildPublicUrl(relativePath) {
 module.exports = {
   buildPublicUrl,
   getPublicBaseUrl,
+  getRequestBaseUrl,
   normalizeBaseUrl,
   resolvePublicUrlFile,
 };

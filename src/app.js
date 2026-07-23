@@ -16,6 +16,7 @@ const { sanitizeString } = require('./utils/sanitize-logs');
 const { DOCUMENT_DIRECTORY } = require('./core/priority-document-store');
 
 const app = express();
+app.set('trust proxy', true);
 const dashboardDistPath = path.resolve(__dirname, '..', 'frontend', 'dashboard', 'dist');
 const dashboardIndexPath = path.join(dashboardDistPath, 'index.html');
 
