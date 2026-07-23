@@ -17,8 +17,8 @@ router.use(requireAuth);
 const WITH_SETTINGS = { webhookSettings: true, scheduleSettings: true };
 const STABLE_INTEGRATION_KEYS = new Map([
   ['src/integrations/tuf1/priority-quote-whatsapp', 'cmrtomudr0001105jk8e1spo6'],
-  ['src/integrations/user_001/priority-quote-whatsapp', 'cmrtomudr0001105jk8e1spo6'],
 ]);
+const RESERVED_INTEGRATION_KEYS = new Set(STABLE_INTEGRATION_KEYS.values());
 
 function withPublicWebhookUrl(integration) {
   if (!integration || !integration.webhookSettings?.webhookUrl) return integration;
@@ -44,9 +44,12 @@ function withStableIntegrationKey(integration) {
   const fallbackKey = [...STABLE_INTEGRATION_KEYS.entries()].find(([codeFolder]) =>
     normalizedCodeFolder.endsWith(codeFolder)
   )?.[1];
+  const storedKey = integration.integrationKey && !RESERVED_INTEGRATION_KEYS.has(integration.integrationKey)
+    ? integration.integrationKey
+    : null;
   return {
     ...integration,
-    integrationKey: definitionKey || integration.integrationKey || fallbackKey || integration.id,
+    integrationKey: definitionKey || fallbackKey || storedKey || integration.id,
   };
 }
 

@@ -833,7 +833,6 @@ export default function IntegrationPage() {
         <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-slate-500">{integration.userId}</span>
               <InlineEditableText
                 value={integration.name}
                 disabled={!canManage}
@@ -842,8 +841,8 @@ export default function IntegrationPage() {
                 displayClassName="max-w-full cursor-text rounded-md"
                 inputClassName="w-full max-w-xl rounded-md border border-[#97dbf3] px-2 py-1 text-2xl font-semibold text-[#0b5869] outline-none ring-2 ring-[#97dbf3]/30"
               />
-              <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600" title={integration.id}>
-                #{integration.id}
+              <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600" title={integration.integrationKey || integration.id}>
+                #{integration.integrationKey || integration.id}
               </span>
               <InlineEditableText
                 value={integration.version || '1.0.0'}
