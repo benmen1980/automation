@@ -1,5 +1,5 @@
 /**
- * Public, unauthenticated webhook endpoint: POST /webhooks/:userSlug/:integrationSlug
+ * Public, unauthenticated webhook endpoint: POST /webhooks/:integrationKey
  * (docs/product/product-architecture-spec.md 5.7). Token/signature validation happens inside
  * core/webhook-runner.js, not here — this route is a thin HTTP adapter.
  */
@@ -62,14 +62,12 @@ router.post('/:userSlug/:integrationSlug', async (req, res) => {
   }
 });
 
-router.post('/:integrationSlug', async (req, res, next) => {
-  if (req.baseUrl !== '/tuf1') return next();
+router.post('/:integrationKey', async (req, res) => {
   const provided = extractWebhookToken(req);
 
   try {
     const execution = await runWebhook({
-      userSlug: 'tuf1',
-      integrationSlug: req.params.integrationSlug,
+      integrationKey: req.params.integrationKey,
       payload: req.body,
       providedToken: provided.token,
       providedHeaderName: provided.headerName,
@@ -77,7 +75,6 @@ router.post('/:integrationSlug', async (req, res, next) => {
       executionMode: 'live',
       triggerType: 'webhook',
     });
-    // Keep the same behavior as the primary webhook endpoint.
     res.status(200).json({ execution });
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message });

@@ -1,4 +1,4 @@
-const express = require('express');
+﻿const express = require('express');
 const router = express.Router();
 const prisma = require('../db/client');
 const { requireAuth } = require('../middleware/auth-middleware');
@@ -18,25 +18,30 @@ const WITH_SETTINGS = { webhookSettings: true, scheduleSettings: true };
 
 function withPublicWebhookUrl(integration) {
   if (!integration || !integration.webhookSettings?.webhookUrl) return integration;
+  const integrationKey = getIntegrationCodeKey(integration);
   return {
     ...integration,
     webhookSettings: {
       ...integration.webhookSettings,
-      webhookUrl: buildPublicUrl(integration.webhookSettings.webhookUrl),
+      webhookUrl: buildPublicUrl(`/webhooks/${integrationKey}`),
       secretTokenReference: integration.webhookSettings.secretTokenReference ? '[configured]' : null,
     },
   };
 }
 
-function withIntegrationCodeKey(integration) {
-  if (!integration) return integration;
+function getIntegrationCodeKey(integration) {
   let integrationKey = integration.id;
   try {
     integrationKey = integrationLoader.loadDefinition(integration)?.integrationKey || integration.id;
   } catch {
     integrationKey = integration.id;
   }
-  return { ...integration, integrationKey };
+  return integrationKey;
+}
+
+function withIntegrationCodeKey(integration) {
+  if (!integration) return integration;
+  return { ...integration, integrationKey: getIntegrationCodeKey(integration) };
 }
 
 router.get('/', async (req, res) => {
@@ -242,12 +247,7 @@ router.post('/:id/webhook-settings', loadIntegration({ mutate: true }), async (r
     return res.status(400).json({ error: 'Only webhook integrations have webhook settings.' });
   }
   const { token, active } = req.body || {};
-  const owner = await prisma.user.findUnique({ where: { id: req.integration.userId } });
-
-  const webhookPath =
-    owner.slug === 'tuf1' && req.integration.slug === 'priority-quote-whatsapp'
-      ? `/tuf1/${req.integration.slug}`
-      : `/webhooks/${owner.slug}/${req.integration.slug}`;
+  const webhookPath = `/webhooks/${getIntegrationCodeKey(req.integration)}`;
   const data = { webhookUrl: webhookPath };
   if (active !== undefined) data.active = active;
   if (token) data.secretTokenReference = await webhookRunner.setWebhookToken(req.integration, token);
@@ -258,7 +258,7 @@ router.post('/:id/webhook-settings', loadIntegration({ mutate: true }), async (r
     create: { integrationId: req.integration.id, ...data },
   });
 
-  // Never echo back the actual reference name in detail — just whether a
+  // Never echo back the actual reference name in detail ג€” just whether a
   // token has been configured, same masking rule as secret credentials.
   res.json({
     webhookSettings: {
@@ -295,3 +295,4 @@ router.post('/:id/schedule-settings', loadIntegration({ mutate: true }), async (
 });
 
 module.exports = router;
+

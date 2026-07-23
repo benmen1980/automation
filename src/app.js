@@ -38,7 +38,6 @@ app.use('/api/integrations', testRoutes); // adds /:id/test, /:id/dry-run, /:id/
 app.use('/api', executionRoutes); // defines /integrations/:id/executions, /integrations/:id/run, /executions/:id[/replay]
 app.use('/api', logRoutes); // defines /integrations/:id/logs, /executions/:id/logs
 app.use('/webhooks', webhookRoutes); // public, no auth — see core/webhook-runner.js for token validation
-app.use('/tuf1', webhookRoutes); // thread-specific short alias endpoint: /tuf1/:integrationSlug
 
 app.use('/documents/priority-orders', (req, res, next) => {
   if (req.path.toLowerCase().endsWith('.pdf')) {

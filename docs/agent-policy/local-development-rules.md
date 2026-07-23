@@ -129,6 +129,7 @@ Each integration's `integration.js` must describe only the fields and controls t
 For every integration, define:
 
 - `integrationKey`: a unique, stable random external key inside `integration.js`, using the format `int_<16 lowercase letters or digits>`. It must not come from the database id, user/owner, name, slug, code folder, or any mutable integration relationship, and must not duplicate any other integration's key.
+- Webhook URLs must use only the code-defined external key: `{public_base_url}/webhooks/{integrationKey}`. Do not use database ids, user slugs, owner names, integration slugs, or code folders in webhook URLs.
 - `credentials`: only credentials needed by this integration.
 - `connectors`: only connectors used by this integration, such as `priority`, `shopify`, `gmail`, `whatsapp`, `email`, or `genericRest`.
 - `credentialTests`: only connector credential tests that make sense for this integration. Do not show WhatsApp/email/generic credential tests unless that integration uses them.

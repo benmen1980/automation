@@ -205,7 +205,7 @@ export default function AdminPage() {
                 <span className="mr-2 inline-flex min-w-7 justify-center rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-xs font-medium text-slate-500">
                   #{index + 1}
                 </span>
-                <Link to={`/integrations/${integration.id}`} className="font-medium text-slate-800 hover:underline">
+                <Link to={`/integrations/${integration.integrationKey || integration.id}`} className="font-medium text-slate-800 hover:underline">
                   {integration.name}
                 </Link>{' '}
                 <span className="font-mono text-[11px] text-slate-500">({integration.integrationKey || integration.id})</span>

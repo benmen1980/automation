@@ -98,7 +98,7 @@ function WebhookSettingsPanel({ integration, definition, disabled = false }) {
   const [savedMessage, setSavedMessage] = useState('');
   const [copied, setCopied] = useState(false);
   const settings = integration.webhookSettings;
-  const webhookUrl = settings?.webhookUrl || `/webhooks/.../${integration.slug}`;
+  const webhookUrl = settings?.webhookUrl || `/webhooks/${integration.integrationKey || integration.id}`;
   const isFullWebhookUrl = /^https?:\/\//i.test(webhookUrl);
   const samplePayload = definition?.testPayloads?.[0]?.payload;
   const sampleDescription = definition?.testPayloads?.[0]?.description;
@@ -1115,7 +1115,7 @@ export default function IntegrationPage() {
           open={sectionOpenState.logs}
           onToggle={(value) => setSectionOpenState((state) => ({ ...state, logs: value }))}
         >
-          <ActivityPanel integrationId={id} executions={executions} onRefresh={refreshExecutions} selectedExecutionId={selectedActivityExecutionId} />
+          <ActivityPanel integrationId={integration.id} executions={executions} onRefresh={refreshExecutions} selectedExecutionId={selectedActivityExecutionId} />
         </CollapsibleCard>
       </div>
     </div>

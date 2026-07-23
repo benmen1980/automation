@@ -8,6 +8,8 @@ const webhookRunner = require('../../src/core/webhook-runner');
 const { waitForExecution } = require('../../src/core/queue');
 const { createUser, createIntegration } = require('../helpers/factory');
 const { authHeader } = require('../helpers/auth');
+const echoIntegrationKey = require('../../src/integrations/test_fixtures/echo/integration').integrationKey;
+const user001WhatsappIntegrationKey = require('../../src/integrations/user_001/user-001-whatsapp/integration').integrationKey;
 
 describe('integration management', () => {
   let admin, user1, user2, viewer;
@@ -122,6 +124,21 @@ describe('integration management', () => {
     expect(res.body.integration.version).toBe('2.4.1-private');
   });
 
+  test('users can open an owned integration by its code-defined key', async () => {
+    const keyUser = await createUser({ slug: 'mgmt_key_user', email: 'mgmt-key-user@test.local' });
+    const integration = await createIntegration({
+      user: keyUser,
+      slug: 'keyed-echo',
+      codeFolder: 'src/integrations/test_fixtures/echo',
+    });
+
+    const res = await request(app).get(`/api/integrations/${echoIntegrationKey}`).set('Authorization', authHeader(keyUser));
+
+    expect(res.status).toBe(200);
+    expect(res.body.integration.id).toBe(integration.id);
+    expect(res.body.integration.integrationKey).toBe(echoIntegrationKey);
+  });
+
   test('viewer can inspect but cannot mutate or run an owned integration', async () => {
     const integration = await createIntegration({
       user: viewer,
@@ -169,7 +186,7 @@ describe('user_001 WhatsApp body file webhook', () => {
     await prisma.webhookSettings.create({
       data: {
         integrationId: integration.id,
-        webhookUrl: `/webhooks/${user.slug}/${integration.slug}`,
+        webhookUrl: `/webhooks/${user001WhatsappIntegrationKey}`,
         active: true,
       },
     });
@@ -185,7 +202,7 @@ describe('user_001 WhatsApp body file webhook', () => {
   test('writes the received webhook body to a local JSON file', async () => {
     const payload = { from: '+972501234567', message: 'hello file' };
     const res = await request(app)
-      .post(`/webhooks/${user.slug}/${integration.slug}`)
+      .post(`/webhooks/${user001WhatsappIntegrationKey}`)
       .set('Authorization', 'Bearer file-webhook-token')
       .send(payload);
 

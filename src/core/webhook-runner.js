@@ -18,6 +18,23 @@ async function findWebhookIntegration(userSlug, integrationSlug) {
   return { user, integration };
 }
 
+async function findWebhookIntegrationByKey(integrationKey) {
+  const integrations = await prisma.integration.findMany({
+    include: { user: true, webhookSettings: true },
+  });
+  const integration = integrations.find((candidate) => {
+    if (candidate.type !== 'webhook') return false;
+    try {
+      return integrationLoader.loadDefinition(candidate)?.integrationKey === integrationKey;
+    } catch {
+      return false;
+    }
+  });
+  if (!integration) return null;
+  const { user, ...rest } = integration;
+  return { user, integration: rest };
+}
+
 function httpError(message, statusCode) {
   const err = new Error(message);
   err.statusCode = statusCode;
@@ -35,6 +52,7 @@ function tokenDiagnostics({ expected, providedToken, headerName, providerHeaders
 }
 
 async function runWebhook({
+  integrationKey,
   userSlug,
   integrationSlug,
   payload,
@@ -46,7 +64,9 @@ async function runWebhook({
   skipTokenCheck = false,
   wait = executionMode !== 'live',
 }) {
-  const found = await findWebhookIntegration(userSlug, integrationSlug);
+  const found = integrationKey
+    ? await findWebhookIntegrationByKey(integrationKey)
+    : await findWebhookIntegration(userSlug, integrationSlug);
   if (!found) throw httpError('Webhook not found.', 404);
   const { user, integration } = found;
   const logger = createLogger({ userId: user.id, integrationId: integration.id, executionMode, isTest: false });
@@ -122,4 +142,4 @@ async function getWebhookToken(integration) {
   return secretsStore.getSecret(integration.id, WEBHOOK_TOKEN_KEY);
 }
 
-module.exports = { runWebhook, findWebhookIntegration, setWebhookToken, getWebhookToken, WEBHOOK_TOKEN_KEY };
+module.exports = { runWebhook, findWebhookIntegration, findWebhookIntegrationByKey, setWebhookToken, getWebhookToken, WEBHOOK_TOKEN_KEY };

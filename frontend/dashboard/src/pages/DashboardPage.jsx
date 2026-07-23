@@ -217,7 +217,7 @@ export default function DashboardPage() {
               <div key={integration.id} className="grid gap-3 px-4 py-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Link to={`/integrations/${integration.id}`} className="font-semibold text-slate-900 hover:text-[#028baa]">
+                    <Link to={`/integrations/${displayKey}`} className="font-semibold text-slate-900 hover:text-[#028baa]">
                       {integration.name}
                     </Link>
                     <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600" title={displayKey}>
@@ -242,7 +242,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="flex shrink-0 flex-wrap justify-end gap-2">
                   <Link
-                    to={`/integrations/${integration.id}`}
+                    to={`/integrations/${displayKey}`}
                     className="rounded-full border border-[#306cb4]/70 px-4 py-2 text-center text-sm font-semibold text-[#0b5869] transition hover:bg-[#e9faff]"
                   >
                     Open details

@@ -24,6 +24,7 @@ const { createUser, createIntegration } = require('../helpers/factory');
 const { authHeader } = require('../helpers/auth');
 
 const CODE_FOLDER = 'src/integrations/test_fixtures/echo';
+const ECHO_INTEGRATION_KEY = require('../../src/integrations/test_fixtures/echo/integration').integrationKey;
 
 describe('execution flow (echo fixture)', () => {
   let user1, integration;
@@ -177,7 +178,7 @@ describe('execution flow (echo fixture)', () => {
 
   describe('public webhook endpoint', () => {
     test('rejects requests with no valid token', async () => {
-      const res = await request(app).post(`/webhooks/${user1.slug}/${integration.slug}`).send({ hello: 'world' });
+      const res = await request(app).post(`/webhooks/${ECHO_INTEGRATION_KEY}`).send({ hello: 'world' });
       expect(res.status).toBe(401);
 
       const warningLog = await prisma.log.findFirst({
@@ -204,6 +205,7 @@ describe('execution flow (echo fixture)', () => {
         .set('Authorization', authHeader(user1))
         .send({ token: 'fixture-webhook-token' });
       expect(settingsRes.status).toBe(200);
+      expect(settingsRes.body.webhookSettings.webhookUrl).toBe(`/webhooks/${ECHO_INTEGRATION_KEY}`);
 
       const tokenRes = await request(app)
         .get(`/api/integrations/${integration.id}/webhook-token`)
@@ -216,7 +218,7 @@ describe('execution flow (echo fixture)', () => {
       expect(savedSettings.secretTokenReference).toContain(`${integration.id}::WEBHOOK_TOKEN`);
 
       const res = await request(app)
-        .post(`/webhooks/${user1.slug}/${integration.slug}`)
+        .post(`/webhooks/${ECHO_INTEGRATION_KEY}`)
         .set('Authorization', 'Bearer fixture-webhook-token')
         .send({ hello: 'from-third-party' });
 
