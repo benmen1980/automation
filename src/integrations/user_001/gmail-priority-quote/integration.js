@@ -1,5 +1,6 @@
 ﻿module.exports = {
   name: 'Gmail Quote Request to Priority',
+  integrationKey: 'user-001-gmail-priority-quote',
   description: 'Webhook that receives Gmail quote-request data and opens a quote in Priority.',
   type: 'webhook',
   manualRun: true,

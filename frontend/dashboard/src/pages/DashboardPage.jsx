@@ -212,6 +212,7 @@ export default function DashboardPage() {
         <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-[#97dbf3]/60 bg-white shadow-sm">
           {integrations.map((integration) => {
             const lastExec = lastExecutions[integration.id];
+            const displayKey = integration.integrationKey || integration.id;
             return (
               <div key={integration.id} className="grid gap-3 px-4 py-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
                 <div className="min-w-0">
@@ -219,14 +220,14 @@ export default function DashboardPage() {
                     <Link to={`/integrations/${integration.id}`} className="font-semibold text-slate-900 hover:text-[#028baa]">
                       {integration.name}
                     </Link>
-                    <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600" title={integration.id}>
-                      #{shortId(integration.id)}
+                    <span className="rounded bg-slate-100 px-2 py-0.5 font-mono text-xs text-slate-600" title={displayKey}>
+                      #{shortId(displayKey)}
                     </span>
                     <span className="rounded bg-[#e9faff] px-2 py-0.5 font-mono text-xs text-[#0b5869]">
                       v{integration.version || '1.0.0'}
                     </span>
                   </div>
-                  <p className="mt-1 break-all font-mono text-[11px] text-slate-400">{integration.id}</p>
+                  <p className="mt-1 break-all font-mono text-[11px] text-slate-400">{displayKey}</p>
                   <div className="flex flex-wrap items-center gap-2 mt-2">
                     <Badge value={integration.type} />
                     <Badge value={integration.status} />

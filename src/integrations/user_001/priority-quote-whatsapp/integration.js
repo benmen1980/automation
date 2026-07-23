@@ -1,5 +1,6 @@
 module.exports = {
   name: 'Priority Quote Notification to WhatsApp',
+  integrationKey: 'user-001-priority-quote-whatsapp',
   description: 'Receives a Priority quote webhook and sends a WhatsApp template notification.',
   type: 'webhook',
   manualRun: true,

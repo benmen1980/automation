@@ -1,5 +1,6 @@
 ﻿module.exports = {
   name: 'Priority to Shopify Inventory Sync',
+  integrationKey: 'user-001-priority-shopify-inventory',
   description: 'Scheduled job that reads Priority inventory and captures/posts inventory updates to Shopify.',
   type: 'scheduled',
   manualRun: true,

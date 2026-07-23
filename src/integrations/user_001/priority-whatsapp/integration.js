@@ -1,5 +1,6 @@
 ﻿module.exports = {
   name: 'Priority Balance to WhatsApp',
+  integrationKey: 'user-001-priority-whatsapp',
   description: 'Webhook that receives a customer id, reads Priority data, and sends a WhatsApp message.',
   type: 'webhook',
   manualRun: true,

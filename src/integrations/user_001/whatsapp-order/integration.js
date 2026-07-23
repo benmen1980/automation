@@ -1,5 +1,6 @@
 module.exports = {
   name: "WhatsApp Order Notification",
+  integrationKey: "user-001-whatsapp-order",
   description: "Receives order data and sends a WhatsApp message.",
   type: "webhook",
   manualRun: true,
