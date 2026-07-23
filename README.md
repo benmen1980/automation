@@ -173,6 +173,14 @@ You can pass existing roles instead of creating them:
 
 ## Adding a new integration
 
+Before creating any integration, run the integration gate skill to confirm all business requirements of the integration:
+
+```bash
+npm run skill:new-integration
+```
+
+The gate asks direct integration questions only (for example: source, target, trigger type and schedule/webhook examples, auth, credentials, mappings, tests, UI and run feedback). It also auto-learns common examples from existing `src/integrations/**` and `integrations/**` definitions and blocks integration scaffolding until answers are clear.
+
 Per the [product architecture spec](./docs/product/product-architecture-spec.md), integration code is never uploaded or loaded from a URL
 parameter — it must already exist on disk before it's registered:
 
@@ -183,6 +191,29 @@ parameter — it must already exist on disk before it's registered:
    `integration.js` parses before saving.
 3. Configure credentials, then use **Run / test** on the integration page (dry run,
    mock output, or a live test) before wiring up the real webhook URL or schedule.
+
+### New workspace-style worker integration: `priority-sales-projects-insights`
+
+For OData pulls and insight generation, this repo now includes:
+
+- `integrations/priority-sales-projects-insights/` (manifest, handler, lambda wrapper, fixtures, tests)
+- Manual run: `npm run dev:worker:priority-sales-projects-insights`
+- Local fixture run: `npm run invoke:priority-sales-projects-insights -- --fixture integrations/priority-sales-projects-insights/fixtures/sample-job.json`
+- Integration tests: `npm run test:integration:priority-sales-projects-insights`
+
+It supports manual and scheduled triggers and reads the following OData entities:
+
+- `TRANSORDER_q`
+- `BASEINVOICEREP`
+- `BASEINVOICEREPSON`
+
+Required env vars in this worker are now documented in `.env.example`:
+
+- `PRIORITY_ODATA_BASE_URL`
+- `PRIORITY_BASIC_USERNAME`
+- `PRIORITY_BASIC_PASSWORD`
+- `PRIORITY_ODATA_AUTH_HEADER` (optional override)
+- `PRIORITY_SALES_PROJECTS_TOP_N`
 
 ## Testing tools available in the dashboard
 
@@ -197,6 +228,59 @@ Connector mode contract: `live`, `test`, `mock_input`, and `replay` use real
 connector modules with the integration's saved credentials; `dry_run` executes
 handler logic but skips connector calls without logging request arguments; and
 `mock_output`/`dummy` use mock connector modules.
+
+### Automation `cmrtomudr0001105jk8e1spo6`: Priority order to ITC
+
+This automation now generates a Priority sales-order confirmation through `priority-web-sdk` and sends its URL through the ITC/Effective template-message REST API instead of calling Meta WhatsApp Cloud API directly.
+
+- Incoming object: `ORDERS`.
+- Recipient: `ORDERS.ZANA_PHONENUM`, normalized to E.164.
+- ITC variable 1: `ORDERS.ZANA_CUSTDES`.
+- ITC variable 2: `ORDERS.ORDNAME`.
+- ITC variable 3: full document URL returned by Priority `WWWSHOWORDER` for `ORDERS.ORDNAME`.
+- Dashboard settings: ITC template endpoint, masked bearer token, channel ID, Priority Web SDK login fields, masked Priority password, and language-specific order sort option.
+- The ITC settings card includes a JSON textarea, safe-mode selector, sample restore action, validation feedback, execution result, and an explicitly confirmed live-send option.
+- Before persistence or queueing, the test input is reduced to `ORDERS.ORDNAME`, `ORDERS.ZANA_CUSTDES`, and `ORDERS.ZANA_PHONENUM`; extra pasted fields are discarded.
+- Execution modes are validated against the integration manifest before an execution is created or queued, and the worker permits provider delivery only for the exact `live` mode.
+- Local executions for this automation are dispatched to the same `integrations/priority-order-itc` package in a separate child-worker process. The API-side Priority connector is limited to the settings/login check; `WWWSHOWORDER` business logic has one canonical worker implementation.
+- `dry_run` and `test` use a mock confirmation URL; `mock_output` also uses a mock ITC response; only `live` calls Priority and ITC.
+- ITC configuration check validates settings without sending a message; Priority connection test logs in without generating a document.
+- Live Priority printing follows the procedure state returned by the tenant. It supports both an introductory option screen and a direct input-fields screen, selects field 2 through Priority's own Sort choice list, submits all required field values, selects the active document format, and then reads the generated URL.
+- Priority failures are shown with a safe, specific stage such as login, WWWSHOWORDER startup, Sort selection, parameter submission, procedure validation, document format selection, or document URL generation, followed by an actionable next step. Priority's safe server explanation is retained while credentials, the order number, and token-shaped values are redacted.
+- Live delivery writes a durable `IN_FLIGHT` marker immediately before ITC. Crashes, ITC 5xx, and network-unknown results never auto-resend; safe pre-delivery retries are finalized as failed on attempt 3 before DLQ transfer.
+
+Per-user ITC and Priority settings are saved through the dashboard secret/configuration store. The independent worker uses `SQS_QUEUE_URL_CMRTOMUDR0001105JK8E1SPO6`, an authenticated status callback, non-secret queue settings, and integration-scoped Secrets Manager references for `ITC_BEARER_TOKEN` and `PRIORITY_WEB_SDK_PASSWORD`; the matching environment-variable names are documented in `.env.example`. Rotate the bearer token that was shared during development before entering its replacement in the dashboard.
+
+Local checks:
+
+```bash
+npx jest tests/unit/priority-order-itc-handler.test.js tests/unit/priority-web-sdk-connector.test.js tests/unit/itc-connector.test.js --runInBand
+npm run test:integration:priority-order-itc
+npm run validate:integrations
+npm --prefix frontend/dashboard run build
+```
+
+After deploying the integration worker, run `npm run sync:integration-db` against the target database. The sync updates this automation to private version `1.5.1` without changing its stored credentials or secrets.
+
+## Restart skill
+
+You can now run a learning-based app restart helper from the repo with:
+
+```bash
+npm run skill:restart-app
+```
+
+The skill runs candidate restart commands from `RESTART_APP_COMMANDS`, records each
+attempt in `RESTART_APP_HISTORY_PATH`, and on next runs prioritizes commands that
+historically succeed more often (and avoids recently failing commands where possible).
+
+Configure it in `.env`/`.env.example`:
+
+- `RESTART_APP_COMMANDS`
+- `RESTART_APP_HISTORY_PATH`
+- `RESTART_APP_HISTORY_LIMIT`
+- `RESTART_APP_HISTORY_WINDOW_MS`
+- `RESTART_APP_COMMAND_TIMEOUT_MS`
 
 ## Acceptance Criteria
 

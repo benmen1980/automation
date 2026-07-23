@@ -1,0 +1,40 @@
+{
+  "id": "local-priority-sales-projects-insights-001",
+  "mode": "test",
+  "status": "queued",
+  "topN": 2,
+  "payload": {
+    "transorder": [
+      { "TRANSORDER_Q": "SO-1001", "ORDERDATE": "2026-06-10", "CUSTOMER": "Acme Ltd", "PROJECT": "P1", "AMOUNT": 2500 },
+      { "TRANSORDER_Q": "SO-1002", "ORDERDATE": "2026-06-11", "CUSTOMER": "Beta LLC", "PROJECT": "P2", "AMOUNT": 1750 }
+    ],
+    "baseinvoicerep": [
+      { "BASEINVOICEREP": "INV-2001", "INVDATE": "2026-06-11", "CUSTOMER": "Acme Ltd", "PROJECT": "P1", "TOTALAMOUNT": 3000 },
+      { "BASEINVOICEREP": "INV-2002", "INVDATE": "2026-06-12", "CUSTOMER": "Beta LLC", "PROJECT": "P2", "TOTALAMOUNT": 900 }
+    ],
+    "baseinvoicerepson": [
+      { "BASEINVOICEREP": "INV-2001", "PROJECT": "P1", "ITEM": "Service A", "QTY": 1, "PRICE": 3000, "LINEAMOUNT": 3000 },
+      { "BASEINVOICEREP": "INV-2002", "PROJECT": "P2", "ITEM": "Service B", "QTY": 2, "PRICE": 450, "LINEAMOUNT": 900 }
+    ]
+  },
+  "mocks": {
+    "TRANSORDER_q": { "value": [
+      { "TRANSORDER_Q": "SO-1001", "ORDERDATE": "2026-06-10", "CUSTOMER": "Acme Ltd", "PROJECT": "P1", "AMOUNT": 2500 },
+      { "TRANSORDER_Q": "SO-1002", "ORDERDATE": "2026-06-11", "CUSTOMER": "Beta LLC", "PROJECT": "P2", "AMOUNT": 1750 },
+      { "TRANSORDER_Q": "SO-1003", "ORDERDATE": "2026-06-11", "CUSTOMER": "Acme Ltd", "PROJECT": "P1", "AMOUNT": 750 }
+    ]},
+    "BASEINVOICEREP": { "value": [
+      { "BASEINVOICEREP": "INV-2001", "INVDATE": "2026-06-11", "CUSTOMER": "Acme Ltd", "PROJECT": "P1", "TOTALAMOUNT": 3000 },
+      { "BASEINVOICEREP": "INV-2002", "INVDATE": "2026-06-12", "CUSTOMER": "Beta LLC", "PROJECT": "P2", "TOTALAMOUNT": 900 }
+    ]},
+    "BASEINVOICEREPSON": { "value": [
+      { "BASEINVOICEREP": "INV-2001", "PROJECT": "P1", "ITEM": "Service A", "QTY": 1, "PRICE": 3000, "LINEAMOUNT": 3000 },
+      { "BASEINVOICEREP": "INV-2002", "PROJECT": "P2", "ITEM": "Service B", "QTY": 2, "PRICE": 450, "LINEAMOUNT": 900 }
+    ]}
+  },
+  "credentials": {
+    "PRIORITY_ODATA_BASE_URL": "https://priority.simplyct.co.il/odata/Priority/tabula.ini/roihd",
+    "PRIORITY_BASIC_USERNAME": "APIWEB",
+    "PRIORITY_BASIC_PASSWORD": "12345678"
+  }
+}

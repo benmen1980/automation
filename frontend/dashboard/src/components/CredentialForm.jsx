@@ -116,7 +116,7 @@ export default function CredentialForm({ fields, onSave, disabled = false }) {
     }
 
     if (Object.keys(values).length === 0) {
-      setSavedMessage('No credential changes to save. The database already has the shown integration parameters.');
+      setSavedMessage('No changes to save. Existing saved values and integration defaults remain unchanged.');
       return;
     }
 
@@ -126,7 +126,7 @@ export default function CredentialForm({ fields, onSave, disabled = false }) {
       setLastSavedKeys(Array.isArray(saved) ? saved : Object.keys(values));
       setSavedMessage('Credentials saved to the database. Visible integration parameters above now show the saved values.');
     } catch (err) {
-      setError(err.message);
+      setError(`Save failed: ${err.message || 'Unknown error.'}`);
     } finally {
       setSaving(false);
     }
@@ -233,7 +233,7 @@ export default function CredentialForm({ fields, onSave, disabled = false }) {
         </div>
       ))}
 
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
       {savedMessage && <p className="text-sm text-green-600">{savedMessage}</p>}
 
       <button type="submit" disabled={saving || disabled} className="bg-slate-800 text-white rounded px-4 py-2 text-sm font-medium hover:bg-slate-700 disabled:opacity-50">

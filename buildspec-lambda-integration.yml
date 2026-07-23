@@ -2,13 +2,14 @@ version: 0.2
 
 env:
   variables:
-    INTEGRATION_NAME: gmail-priority
+    INTEGRATION_NAME: ""
 
 phases:
   install:
     runtime-versions:
       nodejs: 22
     commands:
+      - test -n "${INTEGRATION_NAME}"
       - npm ci --ignore-scripts
   build:
     commands:
@@ -18,7 +19,11 @@ phases:
       - mkdir -p "dist/lambda-${INTEGRATION_NAME}/node_modules/@automation"
       - cp -R "integrations/${INTEGRATION_NAME}/package.json" "integrations/${INTEGRATION_NAME}/src" "integrations/${INTEGRATION_NAME}/fixtures" "dist/lambda-${INTEGRATION_NAME}/"
       - cp -R packages/shared "dist/lambda-${INTEGRATION_NAME}/node_modules/@automation/shared"
-      - cd "dist/lambda-${INTEGRATION_NAME}" && zip -r "../${INTEGRATION_NAME}.zip" .
+      - (cd "dist/lambda-${INTEGRATION_NAME}" && npm install --omit=dev --ignore-scripts)
+      - (cd "dist/lambda-${INTEGRATION_NAME}" && zip -r "../${INTEGRATION_NAME}.zip" .)
+  post_build:
+    commands:
+      - aws lambda update-function-code --function-name "${INTEGRATION_NAME}" --zip-file "fileb://dist/${INTEGRATION_NAME}.zip"
 artifacts:
   files:
     - "dist/${INTEGRATION_NAME}.zip"

@@ -3,7 +3,7 @@ const integrationLoader = require('./integration-loader');
 const secretsStore = require('./secrets');
 const { createAndEnqueue } = require('./manual-runner');
 const { createLogger } = require('./logger');
-const crypto = require('crypto');
+const { redactExecutionForDisplay } = require('./execution-privacy');
 
 const WEBHOOK_TOKEN_KEY = 'WEBHOOK_TOKEN';
 
@@ -24,20 +24,12 @@ function httpError(message, statusCode) {
   return err;
 }
 
-function fingerprint(value) {
-  if (!value) return null;
-  return crypto.createHash('sha256').update(String(value)).digest('hex').slice(0, 12);
-}
-
 function tokenDiagnostics({ expected, providedToken, headerName, providerHeaders }) {
   return {
     providedHeaderName: headerName || 'none',
     providedValuePresent: !!providedToken,
-    providedValueLength: providedToken ? String(providedToken).length : 0,
-    providedFingerprint: fingerprint(providedToken),
     savedValueConfigured: !!expected,
-    savedValueLength: expected ? String(expected).length : 0,
-    savedFingerprint: fingerprint(expected),
+    valuesMatched: Boolean(expected && providedToken && providedToken === expected),
     priorityHeaders: providerHeaders,
   };
 }
@@ -106,11 +98,11 @@ async function runWebhook({
       jobId: execution.id,
     });
   }
-  return execution;
+  return redactExecutionForDisplay(integration, execution);
 }
 
 async function setWebhookToken(integration, token) {
-  return String(token);
+  return secretsStore.setSecret(integration.id, WEBHOOK_TOKEN_KEY, String(token));
 }
 
 async function getWebhookToken(integration) {
@@ -118,7 +110,14 @@ async function getWebhookToken(integration) {
   const legacyLocalReference = `${integration.id}::${WEBHOOK_TOKEN_KEY}`;
   const legacyAwsPrefix = `automation/${integration.id}/`;
   if (saved && saved !== legacyLocalReference && !saved.startsWith(legacyAwsPrefix)) {
-    return saved;
+    const legacyPlaintext = saved;
+    const safeReference = await setWebhookToken(integration, legacyPlaintext);
+    await prisma.webhookSettings.update({
+      where: { integrationId: integration.id },
+      data: { secretTokenReference: safeReference },
+    });
+    if (integration.webhookSettings) integration.webhookSettings.secretTokenReference = safeReference;
+    return legacyPlaintext;
   }
   return secretsStore.getSecret(integration.id, WEBHOOK_TOKEN_KEY);
 }

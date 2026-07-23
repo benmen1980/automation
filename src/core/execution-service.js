@@ -68,7 +68,17 @@ async function getExecutionForQueue(executionId) {
     where: { id: executionId },
     include: {
       integration: {
-        select: { id: true, userId: true, slug: true, name: true, type: true, codeFolder: true },
+        select: {
+          id: true,
+          userId: true,
+          slug: true,
+          name: true,
+          type: true,
+          codeFolder: true,
+          credentials: {
+            select: { key: true, valueReference: true, isSecret: true },
+          },
+        },
       },
       user: {
         select: { id: true, slug: true, email: true },
@@ -85,6 +95,39 @@ async function listExecutionsForIntegration(integrationId, { take = 50 } = {}) {
   });
 }
 
+async function claimForWorker(executionId, integrationId) {
+  const claimedAt = new Date();
+  const claimed = await prisma.execution.updateMany({
+    where: {
+      id: executionId,
+      integrationId,
+      status: { in: ['queued', 'retrying'] },
+    },
+    data: { status: 'running', startedAt: claimedAt, finishedAt: null, errorMessage: null },
+  });
+  if (claimed.count === 1) return { accepted: true, status: 'running', startedAt: claimedAt };
+
+  const existing = await prisma.execution.findFirst({ where: { id: executionId, integrationId } });
+  if (!existing) return null;
+  return {
+    accepted: false,
+    status: existing.status,
+    alreadyCompleted: existing.status === 'success',
+    inProgress: existing.status === 'running',
+  };
+}
+
+async function markRetrying(executionId, integrationId, errorMessage) {
+  return prisma.execution.update({
+    where: { id: executionId, integrationId },
+    data: {
+      status: 'retrying',
+      errorMessage: String(errorMessage || 'Worker retry requested.').slice(0, 4000),
+      finishedAt: null,
+    },
+  });
+}
+
 module.exports = {
   createExecution,
   markQueued,
@@ -94,4 +137,6 @@ module.exports = {
   getExecutionById,
   getExecutionForQueue,
   listExecutionsForIntegration,
+  claimForWorker,
+  markRetrying,
 };

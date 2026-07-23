@@ -3,7 +3,12 @@ describe('queue SQS mode', () => {
 
   beforeEach(() => {
     jest.resetModules();
-    process.env = { ...OLD_ENV, QUEUE_MODE: 'sqs', SQS_QUEUE_URL_GMAIL_PRIORITY: 'https://sqs.test/gmail-priority' };
+    process.env = {
+      ...OLD_ENV,
+      QUEUE_MODE: 'sqs',
+      SQS_QUEUE_URL_GMAIL_PRIORITY: 'https://sqs.test/gmail-priority',
+      INTEGRATION_WORKER_STATUS_CALLBACK_BASE_URL: 'https://automation.example.test',
+    };
   });
 
   afterEach(() => {
@@ -12,7 +17,7 @@ describe('queue SQS mode', () => {
     jest.dontMock('@aws-sdk/client-sqs');
   });
 
-  test('publishes an execution job without credentials and marks it queued', async () => {
+  test('publishes only safe settings and scoped secret references, then marks the execution queued', async () => {
     const send = jest.fn(async () => ({ MessageId: 'msg-123' }));
     class SendMessageCommand {
       constructor(input) {
@@ -43,7 +48,17 @@ describe('queue SQS mode', () => {
         executionMode: 'test',
         inputPayload: JSON.stringify({ email: 'lead@example.test', body: 'Need SKU-1' }),
         createdAt: new Date('2026-06-28T00:00:00.000Z'),
-        integration: { id: 'int-1', slug: 'gmail-priority', name: 'Gmail Priority' },
+        integration: {
+          id: 'int-1',
+          slug: 'gmail-priority',
+          name: 'Gmail Priority',
+          codeFolder: 'src/integrations/test_fixtures/echo',
+          credentials: [
+            { key: 'GREETING', valueReference: JSON.stringify('Hello from queue'), isSecret: false },
+            { key: 'API_TOKEN', valueReference: 'automation/int-1/API_TOKEN', isSecret: true },
+            { key: 'OBSOLETE_PASSWORD', valueReference: 'automation/int-1/OBSOLETE_PASSWORD', isSecret: true },
+          ],
+        },
         user: { id: 'user-1', slug: 'user_001', email: 'user@example.test' },
       })),
       markQueued,
@@ -61,7 +76,7 @@ describe('queue SQS mode', () => {
       queueUrl: 'https://sqs.test/gmail-priority',
     });
     expect(message).toMatchObject({
-      schemaVersion: 1,
+      schemaVersion: 2,
       jobType: 'integration-execution',
       executionId: 'exec-1',
       id: 'exec-1',
@@ -69,8 +84,90 @@ describe('queue SQS mode', () => {
       userSlug: 'user_001',
       mode: 'test',
       payload: { email: 'lead@example.test', body: 'Need SKU-1' },
+      credentialReferences: { API_TOKEN: 'automation/int-1/API_TOKEN' },
+      settings: { credentials: { GREETING: 'Hello from queue' } },
+      statusCallbackUrl: 'https://automation.example.test/api/internal/integration-executions/exec-1/status',
     });
-    expect(JSON.stringify(message)).not.toMatch(/secret|token|password|credential/i);
+    expect(JSON.stringify(message)).not.toContain('fixture-secret-value');
+    expect(JSON.stringify(message)).not.toContain('OBSOLETE_PASSWORD');
     expect(getExecutionById).not.toHaveBeenCalled();
+  });
+
+  test('fails closed when a manifest secret is misclassified as non-secret in storage', () => {
+    const { buildSqsJobMessage } = require('../../src/core/queue');
+    const execution = {
+      id: 'exec-secret-mismatch',
+      userId: 'user-1',
+      integrationId: 'int-1',
+      triggerType: 'manual',
+      executionMode: 'live',
+      inputPayload: '{}',
+      createdAt: new Date('2026-07-21T00:00:00.000Z'),
+      integration: {
+        id: 'int-1',
+        slug: 'echo-fixture',
+        name: 'Test Echo',
+        codeFolder: 'src/integrations/test_fixtures/echo',
+        credentials: [
+          {
+            key: 'API_TOKEN',
+            valueReference: JSON.stringify('must-never-enter-sqs'),
+            isSecret: false,
+          },
+        ],
+      },
+      user: { id: 'user-1', slug: 'user_001' },
+    };
+
+    expect(() => buildSqsJobMessage(execution, {
+      INTEGRATION_WORKER_STATUS_CALLBACK_BASE_URL: 'https://automation.example.test',
+    })).toThrow('Credential storage classification mismatch for API_TOKEN');
+  });
+
+  test('fails closed before serialization for plaintext and malformed secret-reference lookalikes', () => {
+    const { buildSqsJobMessage } = require('../../src/core/queue');
+    const serializationSpy = jest.spyOn(JSON, 'stringify');
+    const baseExecution = {
+      id: 'exec-plaintext-secret',
+      userId: 'user-1',
+      integrationId: 'int-1',
+      triggerType: 'manual',
+      executionMode: 'live',
+      inputPayload: '{}',
+      createdAt: new Date('2026-07-21T00:00:00.000Z'),
+      integration: {
+        id: 'int-1',
+        slug: 'echo-fixture',
+        name: 'Test Echo',
+        codeFolder: 'src/integrations/test_fixtures/echo',
+        credentials: [],
+      },
+      user: { id: 'user-1', slug: 'user_001' },
+    };
+
+    try {
+      for (const valueReference of [
+        'actual-super-secret-value',
+        'not-an-arn:secret:automation/int-1/API_TOKEN',
+        'automation/int-1/API_TOKEN\nplaintext-tail',
+        'arn:aws:secretsmanager:eu-west-1:123456789012:secret:automation/int-1/API_TOKEN-bad',
+      ]) {
+        const execution = {
+          ...baseExecution,
+          integration: {
+            ...baseExecution.integration,
+            credentials: [{ key: 'API_TOKEN', valueReference, isSecret: true }],
+          },
+        };
+        expect(() => buildSqsJobMessage(execution, {
+          INTEGRATION_WORKER_STATUS_CALLBACK_BASE_URL: 'https://automation.example.test',
+        })).toThrow('Secret reference for API_TOKEN is invalid or outside this integration');
+      }
+      expect(serializationSpy).not.toHaveBeenCalledWith(expect.objectContaining({
+        credentialReferences: expect.any(Object),
+      }));
+    } finally {
+      serializationSpy.mockRestore();
+    }
   });
 });

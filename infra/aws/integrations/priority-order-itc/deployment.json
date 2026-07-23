@@ -1,0 +1,37 @@
+{
+  "integration": "priority-order-itc",
+  "automationId": "cmrtomudr0001105jk8e1spo6",
+  "runtime": "lambda",
+  "lambdaName": "priority-order-itc",
+  "pipelineName": "integration-priority-order-itc",
+  "sourcePaths": [
+    "integrations/priority-order-itc/**",
+    "packages/shared/**",
+    "buildspec-lambda-integration.yml",
+    "src/integrations/tuf1/priority-quote-whatsapp/**",
+    "scripts/sync-integration-db.js"
+  ],
+  "apiPipelineExcludedPaths": [
+    "integrations/**"
+  ],
+  "queue": {
+    "name": "priority-order-itc-queue",
+    "apiEnvironmentVariable": "SQS_QUEUE_URL_CMRTOMUDR0001105JK8E1SPO6",
+    "maxReceiveCount": 3,
+    "visibilityTimeoutSeconds": 180,
+    "batchSize": 1,
+    "reportBatchItemFailures": true
+  },
+  "deadLetterQueue": {
+    "name": "priority-order-itc-dlq"
+  },
+  "cloudWatchLogGroup": "/aws/lambda/priority-order-itc",
+  "logRetentionDays": 30,
+  "lambdaTimeoutSeconds": 60,
+  "workerStatusCallbackRequired": true,
+  "credentialReferencesRequired": true,
+  "finalizationTable": "priority-order-itc-finalization",
+  "idempotency": "Priority document generation occurs before ITC delivery. A durable IN_FLIGHT marker is written immediately before ITC; any crash, network failure, or HTTP 5xx after that marker blocks automatic resend and requires reconciliation. Known success/failure is finalized before the dashboard callback. Safe pre-delivery retries are finalized as FAILED on maxReceiveCount before DLQ transfer.",
+  "scheduleRequired": false,
+  "apiMustNotRestart": true
+}

@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "jobType": "integration-execution",
+  "id": "priority-order-itc-fixture-1",
+  "integrationId": "cmrtomudr0001105jk8e1spo6",
+  "integrationSlug": "priority-quote-whatsapp",
+  "triggerType": "manual",
+  "mode": "test",
+  "payload": {
+    "ORDERS": {
+      "ORDNAME": "SO26000001",
+      "ZANA_CUSTDES": "ירדן",
+      "ZANA_PHONENUM": "+972507573753"
+    }
+  },
+  "credentials": {
+    "ITC_TEMPLATE_MESSAGE_URL": "https://itc.example.test/api/v2/msg/sendMsg/tempMsg/template-test-id",
+    "ITC_BEARER_TOKEN": "fixture-token-not-for-live-use",
+    "ITC_CHANNEL_ID": "whatsapp:+97246960480",
+    "PRIORITY_WEB_SDK_URL": "https://priority.example.test/wcf/wcf/Service.svc",
+    "PRIORITY_WEB_SDK_TABULAINI": "tabula.ini",
+    "PRIORITY_WEB_SDK_LANGUAGE": 3,
+    "PRIORITY_WEB_SDK_COMPANY": "demo",
+    "PRIORITY_WEB_SDK_APPNAME": "automation-test",
+    "PRIORITY_WEB_SDK_USERNAME": "fixture-user",
+    "PRIORITY_WEB_SDK_PASSWORD": "fixture-password-not-for-live-use",
+    "PRIORITY_WEB_SDK_DEVICENAME": "",
+    "PRIORITY_WEB_SDK_ORDER_SORT_OPTION": "By Order Number"
+  }
+}

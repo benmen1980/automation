@@ -97,6 +97,7 @@ export const api = {
     dryRun: (id, payload) => request(`/api/integrations/${id}/dry-run`, { method: 'POST', body: payload }),
     testConnector: (id, connector, credentials) =>
       request(`/api/integrations/${id}/test-connector`, { method: 'POST', body: { connector, credentials } }),
+    connectorStatus: (id, connector) => request(`/api/integrations/${id}/test-connector-status`, { params: { connector } }),
   },
   logs: {
     forIntegration: (id, params) => request(`/api/integrations/${id}/logs`, { params }),

@@ -91,6 +91,7 @@ export default function AdminPage() {
   const [health, setHealth] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [reassigningIntegrationId, setReassigningIntegrationId] = useState('');
 
   async function load() {
     setLoading(true);
@@ -135,6 +136,22 @@ export default function AdminPage() {
   async function toggleUserStatus(user) {
     await api.admin.users.update(user.id, { status: user.status === 'active' ? 'disabled' : 'active' });
     load();
+  }
+
+  async function handleReassignIntegration(integrationId, ownerId) {
+    setError('');
+    setReassigningIntegrationId(integrationId);
+    try {
+      const { integration: updated } = await api.integrations.update(integrationId, { userId: ownerId });
+      setIntegrations((previous) =>
+        previous.map((integration) => (integration.id === updated.id ? { ...integration, userId: updated.userId } : integration))
+      );
+    } catch (err) {
+      setError(err.message);
+      await load();
+    } finally {
+      setReassigningIntegrationId('');
+    }
   }
 
   const usersById = Object.fromEntries(users.map((u) => [u.id, u]));
@@ -191,9 +208,27 @@ export default function AdminPage() {
                 <Link to={`/integrations/${integration.id}`} className="font-medium text-slate-800 hover:underline">
                   {integration.name}
                 </Link>{' '}
-                <span className="text-slate-400">— owner: {usersById[integration.userId]?.email || integration.userId}</span>
+                <span className="text-slate-500">Owner:</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <label className="sr-only" htmlFor={`assign-${integration.id}`}>Assign owner</label>
+                <select
+                  id={`assign-${integration.id}`}
+                  value={integration.userId}
+                  onChange={(event) => handleReassignIntegration(integration.id, event.target.value)}
+                  disabled={reassigningIntegrationId === integration.id}
+                  className="min-w-40 rounded border border-slate-300 bg-white px-2 py-1.5 text-xs"
+                >
+                  <option value={integration.userId}>
+                    {usersById[integration.userId]?.name || integration.userId}
+                  </option>
+                  {users.filter((item) => item.id !== integration.userId).map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="text-slate-400">Assigned to:</span>
                 <Badge value={integration.type} />
                 <Badge value={integration.status} />
               </div>

@@ -1,6 +1,7 @@
 ﻿const path = require('path');
 const { spawn } = require('child_process');
 const executionService = require('./execution-service');
+const integrationLoader = require('./integration-loader');
 
 const QUEUE_MODE = process.env.QUEUE_MODE || 'local';
 const LOCAL_WORKER_TIMEOUT_MS = Number(process.env.LOCAL_WORKER_TIMEOUT_MS || 120000);
@@ -16,8 +17,8 @@ function resolveSqsQueueUrl(integration) {
   const slugKey = queueEnvKeyForIntegration(integration);
   const idKey = integration.id ? integration.id.replace(/[^a-zA-Z0-9]+/g, '_').toUpperCase() : '';
   const candidates = [
-    slugKey && `SQS_QUEUE_URL_${slugKey}`,
     idKey && `SQS_QUEUE_URL_${idKey}`,
+    slugKey && `SQS_QUEUE_URL_${slugKey}`,
     'SQS_QUEUE_URL',
   ].filter(Boolean);
 
@@ -30,10 +31,71 @@ function resolveSqsQueueUrl(integration) {
   throw err;
 }
 
-function buildSqsJobMessage(execution) {
+function parseStoredSetting(valueReference) {
+  try {
+    return JSON.parse(valueReference);
+  } catch {
+    throw new Error('A saved non-secret worker setting is malformed. Save the integration settings again.');
+  }
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function isScopedSecretReference(valueReference, integrationId, credentialKey) {
+  const value = String(valueReference || '');
+  const scopeComponent = /^[A-Za-z0-9_+=.@-]+$/;
+  if (!scopeComponent.test(String(integrationId || '')) || !scopeComponent.test(String(credentialKey || ''))) {
+    return false;
+  }
+  const expectedName = `automation/${integrationId}/${credentialKey}`;
+  if (value === expectedName) return true;
+  const arnPattern = new RegExp(
+    `^arn:[a-z0-9-]+:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:${escapeRegExp(expectedName)}-[A-Za-z0-9]{6}$`
+  );
+  return arnPattern.test(value);
+}
+
+function buildSqsJobMessage(execution, env = process.env) {
   const payload = execution.inputPayload ? JSON.parse(execution.inputPayload) : {};
+  const rawCallbackBaseUrl = String(env.INTEGRATION_WORKER_STATUS_CALLBACK_BASE_URL || '').trim();
+  if (!rawCallbackBaseUrl) {
+    throw new Error('INTEGRATION_WORKER_STATUS_CALLBACK_BASE_URL is required when QUEUE_MODE=sqs.');
+  }
+  let parsedCallbackBaseUrl;
+  try {
+    parsedCallbackBaseUrl = new URL(rawCallbackBaseUrl);
+  } catch {
+    throw new Error('INTEGRATION_WORKER_STATUS_CALLBACK_BASE_URL must be a valid URL.');
+  }
+  const localCallback = ['localhost', '127.0.0.1', '::1'].includes(parsedCallbackBaseUrl.hostname);
+  if (parsedCallbackBaseUrl.protocol !== 'https:' && !localCallback) {
+    throw new Error('INTEGRATION_WORKER_STATUS_CALLBACK_BASE_URL must use HTTPS outside local development.');
+  }
+  const callbackBaseUrl = parsedCallbackBaseUrl.toString().replace(/\/+$/, '');
+  const definition = integrationLoader.loadDefinition(execution.integration, { bypassCache: true });
+  const credentialDefinitions = new Map((definition.credentials || []).map((field) => [field.key, field]));
+  const credentialRows = (execution.integration.credentials || []).filter((row) => credentialDefinitions.has(row.key));
+  const credentialReferences = {};
+  const workerSettings = {};
+  for (const row of credentialRows) {
+    const field = credentialDefinitions.get(row.key);
+    const manifestSecret = field.type === 'secret' || field.masked === true || field.isSecret === true;
+    if (Boolean(row.isSecret) !== manifestSecret) {
+      throw new Error(`Credential storage classification mismatch for ${row.key}. Re-save this integration credential before queueing a worker job.`);
+    }
+    if (manifestSecret) {
+      if (!isScopedSecretReference(row.valueReference, execution.integrationId, row.key)) {
+        throw new Error(`Secret reference for ${row.key} is invalid or outside this integration. Re-save this integration credential before queueing a worker job.`);
+      }
+      credentialReferences[row.key] = row.valueReference;
+    } else {
+      workerSettings[row.key] = parseStoredSetting(row.valueReference);
+    }
+  }
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     jobType: 'integration-execution',
     id: execution.id,
     executionId: execution.id,
@@ -47,6 +109,9 @@ function buildSqsJobMessage(execution) {
     executionMode: execution.executionMode,
     status: 'queued',
     payload,
+    credentialReferences,
+    settings: { credentials: workerSettings },
+    statusCallbackUrl: `${callbackBaseUrl}/api/internal/integration-executions/${encodeURIComponent(execution.id)}/status`,
     createdAt: execution.createdAt,
   };
 }

@@ -138,7 +138,7 @@ router.get('/:id', loadIntegration({ include: WITH_SETTINGS }), (req, res) => {
 });
 
 router.patch('/:id', loadIntegration({ mutate: true }), async (req, res) => {
-  const { name, version, description, status, manualRunEnabled } = req.body || {};
+  const { name, version, description, status, manualRunEnabled, userId } = req.body || {};
   const data = {};
   if (name !== undefined) {
     const trimmedName = String(name).trim();
@@ -153,9 +153,24 @@ router.patch('/:id', loadIntegration({ mutate: true }), async (req, res) => {
   if (description !== undefined) data.description = description;
   if (status !== undefined) data.status = status;
   if (manualRunEnabled !== undefined) data.manualRunEnabled = manualRunEnabled;
+  if (userId !== undefined) {
+    if (!isAdmin(req.user)) {
+      return res.status(403).json({ error: 'Only admins can reassign an automation to another user.' });
+    }
+    const trimmedUserId = String(userId).trim();
+    if (!trimmedUserId) return res.status(400).json({ error: 'userId cannot be empty.' });
+    const owner = await prisma.user.findUnique({ where: { id: trimmedUserId } });
+    if (!owner) return res.status(400).json({ error: 'Selected user does not exist.' });
+    data.userId = owner.id;
+  }
 
-  const integration = await prisma.integration.update({ where: { id: req.integration.id }, data });
-  res.json({ integration });
+  try {
+    const integration = await prisma.integration.update({ where: { id: req.integration.id }, data });
+    res.json({ integration });
+  } catch (err) {
+    if (err.code === 'P2002') return res.status(409).json({ error: 'An integration with this slug already exists for this user.' });
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
 });
 
 router.get('/:id/definition', loadIntegration(), (req, res) => {
@@ -178,8 +193,12 @@ router.get('/:id/definition', loadIntegration(), (req, res) => {
 });
 
 router.get('/:id/credentials', loadIntegration(), async (req, res) => {
-  const credentials = await credentialsService.listCredentialsForDisplay(req.integration);
-  res.json({ credentials });
+  try {
+    const credentials = await credentialsService.listCredentialsForDisplay(req.integration);
+    res.json({ credentials });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
 });
 
 router.post('/:id/credentials', loadIntegration({ mutate: true }), async (req, res) => {
@@ -201,7 +220,7 @@ router.get('/:id/webhook-token', loadIntegration({ mutate: true, include: WITH_S
   }
   try {
     const token = await webhookRunner.getWebhookToken(req.integration);
-    res.json({ token: token || '' });
+    res.json({ configured: Boolean(token), token: null });
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message });
   }
@@ -214,7 +233,11 @@ router.post('/:id/webhook-settings', loadIntegration({ mutate: true }), async (r
   const { token, active } = req.body || {};
   const owner = await prisma.user.findUnique({ where: { id: req.integration.userId } });
 
-  const data = { webhookUrl: `/webhooks/${owner.slug}/${req.integration.slug}` };
+  const webhookPath =
+    owner.slug === 'tuf1' && req.integration.slug === 'priority-quote-whatsapp'
+      ? `/tuf1/${req.integration.slug}`
+      : `/webhooks/${owner.slug}/${req.integration.slug}`;
+  const data = { webhookUrl: webhookPath };
   if (active !== undefined) data.active = active;
   if (token) data.secretTokenReference = await webhookRunner.setWebhookToken(req.integration, token);
 

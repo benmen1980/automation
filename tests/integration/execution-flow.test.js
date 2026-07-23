@@ -106,6 +106,19 @@ describe('execution flow (echo fixture)', () => {
     expect(output.greeting).toBe('Hello'); // GREETING's defaultValue applied
   });
 
+  test('an undeclared test execution mode is rejected before an execution is created or queued', async () => {
+    const beforeCount = await prisma.execution.count({ where: { integrationId: integration.id } });
+    const res = await request(app)
+      .post(`/api/integrations/${integration.id}/test`)
+      .set('Authorization', authHeader(user1))
+      .send({ executionMode: 'typo', payload: { hello: 'world' } });
+    const afterCount = await prisma.execution.count({ where: { integrationId: integration.id } });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/Unsupported execution mode/);
+    expect(afterCount).toBe(beforeCount);
+  });
+
   test('dry_run skips the real connector call entirely', async () => {
     const res = await request(app)
       .post(`/api/integrations/${integration.id}/dry-run`)
@@ -196,7 +209,11 @@ describe('execution flow (echo fixture)', () => {
         .get(`/api/integrations/${integration.id}/webhook-token`)
         .set('Authorization', authHeader(user1));
       expect(tokenRes.status).toBe(200);
-      expect(tokenRes.body.token).toBe('fixture-webhook-token');
+      expect(tokenRes.body).toEqual({ configured: true, token: null });
+      expect(JSON.stringify(tokenRes.body)).not.toContain('fixture-webhook-token');
+      const savedSettings = await prisma.webhookSettings.findUnique({ where: { integrationId: integration.id } });
+      expect(savedSettings.secretTokenReference).not.toBe('fixture-webhook-token');
+      expect(savedSettings.secretTokenReference).toContain(`${integration.id}::WEBHOOK_TOKEN`);
 
       const res = await request(app)
         .post(`/webhooks/${user1.slug}/${integration.slug}`)
@@ -244,6 +261,10 @@ describe('execution flow (echo fixture)', () => {
       expect(acceptedLog.executionId).toBe(res.body.execution.id);
       const metadata = JSON.parse(acceptedLog.metadata);
       expect(metadata.providedHeaderName).toBe('priority-bpm-token');
+      expect(metadata).not.toHaveProperty('providedFingerprint');
+      expect(metadata).not.toHaveProperty('savedFingerprint');
+      expect(metadata).not.toHaveProperty('providedValueLength');
+      expect(metadata).not.toHaveProperty('savedValueLength');
       expect(metadata.priorityHeaders).toMatchObject({
         priorityBpmId: '10948',
         priorityBpmSubject: 'Quote to whatsup',
@@ -251,5 +272,69 @@ describe('execution flow (echo fixture)', () => {
       });
       expect(JSON.stringify(metadata)).not.toContain('priority-generated-token');
     });
+
+    test('migrates a legacy plaintext webhook token to the secret store on first use', async () => {
+      await prisma.webhookSettings.update({
+        where: { integrationId: integration.id },
+        data: { secretTokenReference: 'legacy-plaintext-webhook-token' },
+      });
+
+      const res = await request(app)
+        .post(`/webhooks/${user1.slug}/${integration.slug}`)
+        .set('Priority-BPM-Token', 'legacy-plaintext-webhook-token')
+        .send({ hello: 'migration-check' });
+      expect(res.status).toBe(200);
+
+      const migrated = await prisma.webhookSettings.findUnique({ where: { integrationId: integration.id } });
+      expect(migrated.secretTokenReference).toBe(`${integration.id}::WEBHOOK_TOKEN`);
+      expect(JSON.stringify(res.body)).not.toContain('legacy-plaintext-webhook-token');
+    });
+  });
+
+  test('authenticated worker callback atomically claims and completes a queued execution', async () => {
+    const previousToken = process.env.INTEGRATION_WORKER_CALLBACK_TOKEN;
+    process.env.INTEGRATION_WORKER_CALLBACK_TOKEN = 'worker-callback-test-token';
+    try {
+      const execution = await prisma.execution.create({
+        data: {
+          userId: user1.id,
+          integrationId: integration.id,
+          triggerType: 'manual',
+          executionMode: 'live',
+          status: 'queued',
+          inputPayload: '{}',
+        },
+      });
+      const url = `/api/internal/integration-executions/${execution.id}/status`;
+
+      const rejected = await request(app).post(url).send({ integrationId: integration.id, status: 'running' });
+      expect(rejected.status).toBe(401);
+
+      const claimed = await request(app)
+        .post(url)
+        .set('Authorization', 'Bearer worker-callback-test-token')
+        .send({ integrationId: integration.id, status: 'running' });
+      expect(claimed.status).toBe(200);
+      expect(claimed.body).toMatchObject({ accepted: true, status: 'running' });
+
+      const duplicate = await request(app)
+        .post(url)
+        .set('Authorization', 'Bearer worker-callback-test-token')
+        .send({ integrationId: integration.id, status: 'running' });
+      expect(duplicate.body).toMatchObject({ accepted: false, inProgress: true });
+
+      const completed = await request(app)
+        .post(url)
+        .set('Authorization', 'Bearer worker-callback-test-token')
+        .send({ integrationId: integration.id, status: 'success', outputPayload: { success: true } });
+      expect(completed.body).toMatchObject({ accepted: true, status: 'success' });
+
+      const stored = await prisma.execution.findUnique({ where: { id: execution.id } });
+      expect(stored.status).toBe('success');
+      expect(JSON.parse(stored.outputPayload)).toEqual({ success: true });
+    } finally {
+      if (previousToken === undefined) delete process.env.INTEGRATION_WORKER_CALLBACK_TOKEN;
+      else process.env.INTEGRATION_WORKER_CALLBACK_TOKEN = previousToken;
+    }
   });
 });

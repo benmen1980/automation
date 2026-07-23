@@ -23,3 +23,9 @@ data/*token*.json
 **/credentails/
 **/*token*.json
 **/client_secret*.json
+
+# Local Priority Web SDK proof-of-concept contains environment-specific credentials/output.
+node print Price Quotattion POC/
+
+# Local Priority BI/cache data can contain customer, order, invoice, and hour-report records.
+/work/priority_cache/

@@ -14,6 +14,10 @@ const sesReal = require('./ses/real');
 const sesMock = require('./ses/mock');
 const whatsappCloudReal = require('./whatsapp-cloud/real');
 const whatsappCloudMock = require('./whatsapp-cloud/mock');
+const itcReal = require('./itc/real');
+const itcMock = require('./itc/mock');
+const priorityWebSdkReal = require('./priority-web-sdk/real');
+const priorityWebSdkMock = require('./priority-web-sdk/mock');
 
 const REGISTRY = {
   whatsapp: { real: whatsappReal, mock: whatsappMock },
@@ -24,6 +28,8 @@ const REGISTRY = {
   gmail: { real: gmailReal, mock: gmailMock },
   ses: { real: sesReal, mock: sesMock },
   whatsappCloud: { real: whatsappCloudReal, mock: whatsappCloudMock },
+  itc: { real: itcReal, mock: itcMock },
+  priorityWebSdk: { real: priorityWebSdkReal, mock: priorityWebSdkMock },
 };
 
 const MOCK_MODES = new Set(['dummy', 'mock_output']);

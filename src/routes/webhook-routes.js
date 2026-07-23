@@ -62,5 +62,27 @@ router.post('/:userSlug/:integrationSlug', async (req, res) => {
   }
 });
 
+router.post('/:integrationSlug', async (req, res, next) => {
+  if (req.baseUrl !== '/tuf1') return next();
+  const provided = extractWebhookToken(req);
+
+  try {
+    const execution = await runWebhook({
+      userSlug: 'tuf1',
+      integrationSlug: req.params.integrationSlug,
+      payload: req.body,
+      providedToken: provided.token,
+      providedHeaderName: provided.headerName,
+      providerHeaders: priorityHeadersSummary(req),
+      executionMode: 'live',
+      triggerType: 'webhook',
+    });
+    // Keep the same behavior as the primary webhook endpoint.
+    res.status(200).json({ execution });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+});
+
 module.exports = router;
 module.exports._diagnostics = { extractWebhookToken };

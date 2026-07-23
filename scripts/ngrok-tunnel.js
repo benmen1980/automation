@@ -8,7 +8,7 @@ const { sanitizeString } = require('../src/utils/sanitize-logs');
 
 const PROJECT_ROOT = path.resolve(__dirname, '..');
 const publicUrlFile = path.resolve(PROJECT_ROOT, process.env.NGROK_PUBLIC_URL_FILE || 'local-data/ngrok-public-url.txt');
-const target = process.env.NGROK_TARGET_ADDR || `localhost:${process.env.NGROK_TARGET_PORT || process.env.PORT || 3001}`;
+const target = process.env.NGROK_TARGET_ADDR || `localhost:${process.env.NGROK_TARGET_PORT || process.env.PORT || 3000}`;
 const targetDisplay = /^https?:\/\//i.test(target) ? target : `http://${target}`;
 let listener;
 let keepAliveTimer;

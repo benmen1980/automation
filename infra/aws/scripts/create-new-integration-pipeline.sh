@@ -8,6 +8,7 @@ GITHUB_OWNER="${GITHUB_OWNER:-benmen1980}"
 GITHUB_REPO="${GITHUB_REPO:-automation}"
 AWS_REGION="${AWS_REGION:-eu-west-1}"
 CODECONNECTION_ARN="${CODECONNECTION_ARN:-}"
+API_QUEUE_ENV_SUFFIX="${API_QUEUE_ENV_SUFFIX:-}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -17,6 +18,7 @@ while [[ $# -gt 0 ]]; do
     --github-owner) GITHUB_OWNER="${2:?}"; shift 2 ;;
     --github-repo) GITHUB_REPO="${2:?}"; shift 2 ;;
     --codeconnection-arn) CODECONNECTION_ARN="${2:?}"; shift 2 ;;
+    --api-queue-env-suffix) API_QUEUE_ENV_SUFFIX="${2:?}"; shift 2 ;;
     --region) AWS_REGION="${2:?}"; shift 2 ;;
     *) echo "Unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -32,21 +34,29 @@ if [[ "${RUNTIME}" != "lambda" && "${RUNTIME}" != "fargate" ]]; then
   exit 2
 fi
 
-echo "Create independent pipeline automation-${INTEGRATION_NAME}:"
-echo "- Source: ${GITHUB_OWNER}/${GITHUB_REPO}, branch ${BRANCH}"
-echo "- Region: ${AWS_REGION}"
-echo "- CodeConnection ARN: ${CODECONNECTION_ARN:-<provide account-specific ARN>}"
-echo "- Path filter: integrations/${INTEGRATION_NAME}/**, packages/shared/**, buildspec-${RUNTIME}-integration.yml"
-echo "- Runtime: ${RUNTIME}"
-echo "- Queue: ${INTEGRATION_NAME}-queue"
-echo "- DLQ: ${INTEGRATION_NAME}-dlq"
-echo "- CloudWatch log group: /automation/integrations/${INTEGRATION_NAME}"
-echo
-echo "Next commands:"
-echo "  infra/aws/scripts/create-sqs-for-integration.sh ${INTEGRATION_NAME}"
+: "${CODECONNECTION_ARN:?Pass --codeconnection-arn or set CODECONNECTION_ARN.}"
+: "${PIPELINE_ROLE_ARN:?Set PIPELINE_ROLE_ARN.}"
+: "${CODEBUILD_ROLE_ARN:?Set CODEBUILD_ROLE_ARN.}"
+: "${ARTIFACT_BUCKET:?Set ARTIFACT_BUCKET.}"
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ID="${GITHUB_OWNER}/${GITHUB_REPO}"
+export AWS_REGION BRANCH CODECONNECTION_ARN PIPELINE_ROLE_ARN CODEBUILD_ROLE_ARN ARTIFACT_BUCKET REPO_ID
+export API_QUEUE_ENV_SUFFIX="${API_QUEUE_ENV_SUFFIX:-$(echo "${INTEGRATION_NAME}" | tr '[:lower:]-' '[:upper:]_')}"
+
+"${SCRIPT_DIR}/create-sqs-for-integration.sh" "${INTEGRATION_NAME}"
+"${SCRIPT_DIR}/create-dynamodb-finalization-for-integration.sh" "${INTEGRATION_NAME}"
+
 if [[ "${RUNTIME}" == "lambda" ]]; then
-  echo "  infra/aws/scripts/create-lambda-integration.sh ${INTEGRATION_NAME}"
+  : "${LAMBDA_ROLE_ARN:?Set LAMBDA_ROLE_ARN.}"
+  : "${WORKER_CALLBACK_TOKEN_SECRET_ID:?Set WORKER_CALLBACK_TOKEN_SECRET_ID.}"
+  QUEUE_URL=$(aws sqs get-queue-url --queue-name "${INTEGRATION_NAME}-queue" --region "${AWS_REGION}" --query QueueUrl --output text)
+  export SQS_QUEUE_ARN
+  SQS_QUEUE_ARN=$(aws sqs get-queue-attributes --queue-url "${QUEUE_URL}" --attribute-names QueueArn --region "${AWS_REGION}" --query 'Attributes.QueueArn' --output text)
+  "${SCRIPT_DIR}/create-lambda-integration.sh" "${INTEGRATION_NAME}"
 else
-  echo "  infra/aws/scripts/create-fargate-integration.sh ${INTEGRATION_NAME}"
+  "${SCRIPT_DIR}/create-fargate-integration.sh" "${INTEGRATION_NAME}"
 fi
-echo "  infra/aws/scripts/create-pipeline-integration.sh ${INTEGRATION_NAME}"
+
+"${SCRIPT_DIR}/create-pipeline-integration.sh" "${INTEGRATION_NAME}"
+echo "Provisioned independent ${RUNTIME} resources and pipeline for ${INTEGRATION_NAME}."

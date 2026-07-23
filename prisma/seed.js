@@ -9,6 +9,13 @@ const credentialsService = require('../src/core/credentials');
 
 const prisma = new PrismaClient();
 
+function webhookUrlFor(user, integration) {
+  if (user.slug === 'tuf1' && integration.slug === 'priority-quote-whatsapp') {
+    return `/tuf1/${integration.slug}`;
+  }
+  return `/webhooks/${user.slug}/${integration.slug}`;
+}
+
 async function upsertUser({ slug, email, name, role, password }) {
   const passwordHash = await bcrypt.hash(password, 10);
   return prisma.user.upsert({
@@ -46,8 +53,8 @@ async function upsertIntegration(user, def) {
 async function ensureWebhook(integration, user, token = 'local-webhook-token') {
   await prisma.webhookSettings.upsert({
     where: { integrationId: integration.id },
-    update: { webhookUrl: `/webhooks/${user.slug}/${integration.slug}`, allowedMethod: 'POST', active: true },
-    create: { integrationId: integration.id, webhookUrl: `/webhooks/${user.slug}/${integration.slug}`, allowedMethod: 'POST', active: true },
+    update: { webhookUrl: webhookUrlFor(user, integration), allowedMethod: 'POST', active: true },
+    create: { integrationId: integration.id, webhookUrl: webhookUrlFor(user, integration), allowedMethod: 'POST', active: true },
   });
   await credentialsService.saveCredentials(integration, {}); // loads definition once and validates paths early
   const webhookRunner = require('../src/core/webhook-runner');

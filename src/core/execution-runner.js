@@ -19,6 +19,12 @@ function parseJson(value, fallback) {
   }
 }
 
+function defaultRecordsRead(payload) {
+  if (Array.isArray(payload)) return payload.length;
+  if (payload && typeof payload === 'object' && Object.keys(payload).length > 0) return 1;
+  return 0;
+}
+
 async function runExecutionJob(executionId) {
   const execution = await prisma.execution.findUnique({
     where: { id: executionId },
@@ -71,6 +77,15 @@ async function runExecutionJob(executionId) {
       executionMode: execution.executionMode,
     });
 
+    const counts = {
+      recordsRead: result?.counts?.recordsRead ?? defaultRecordsRead(payload),
+      recordsCreated: result?.counts?.recordsCreated ?? 0,
+      recordsUpdated: result?.counts?.recordsUpdated ?? 0,
+      recordsSkipped: result?.counts?.recordsSkipped ?? 0,
+      messagesSent: result?.counts?.messagesSent ?? 0,
+      errors: result?.counts?.errors ?? 0,
+    };
+
     await executionService.markSuccess(execution.id, result);
     await logger.info('Execution finished successfully.', {
       integrationName: integration.name,
@@ -81,6 +96,7 @@ async function runExecutionJob(executionId) {
       status: 'success',
       endedAt: new Date().toISOString(),
       responsePayloadSummary: summarizePayload(result),
+      ...counts,
     });
   } catch (err) {
     const failureDetails = {
@@ -96,6 +112,12 @@ async function runExecutionJob(executionId) {
       endedAt: new Date().toISOString(),
       requestPayloadSummary: summarizePayload(payload),
       responsePayloadSummary: err.providerError ? summarizePayload(err.providerError) : undefined,
+      recordsRead: defaultRecordsRead(payload),
+      recordsCreated: 0,
+      recordsUpdated: 0,
+      recordsSkipped: 0,
+      messagesSent: 0,
+      errors: 1,
       integration: {
         id: integration.id,
         name: integration.name,

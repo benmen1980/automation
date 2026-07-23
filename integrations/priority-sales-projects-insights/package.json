@@ -1,0 +1,15 @@
+{
+  "name": "@automation/priority-sales-projects-insights",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Independent Priority sales-projects OData analytics worker.",
+  "scripts": {
+    "dev": "node ../../scripts/invoke-integration.mjs priority-sales-projects-insights --fixture fixtures/sample-job.json",
+    "invoke": "node ../../scripts/invoke-integration.mjs priority-sales-projects-insights",
+    "test": "node --test test/handler.test.js"
+  },
+  "dependencies": {
+    "@automation/shared": "file:../../packages/shared"
+  }
+}

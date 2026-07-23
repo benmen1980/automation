@@ -23,6 +23,15 @@ function parseMetadata(metadata) {
   }
 }
 
+function connectorLabel(connector) {
+  const labels = {
+    priorityWebSdk: 'Priority Web SDK',
+    itc: 'ITC',
+    whatsappCloud: 'WhatsApp Cloud API',
+  };
+  return labels[connector] || String(connector || 'connector').replace(/([a-z])([A-Z])/g, '$1 $2');
+}
+
 function metadataSummary(metadata) {
   if (!metadata) return '';
   if (metadata.reason === 'invalid_or_missing_priority_bpm_token') {
@@ -89,17 +98,23 @@ function buildActivityItems(executions, logs) {
   const rejectedAttemptItems = logs
     .filter((log) => {
       const metadata = parseMetadata(log.metadata);
-      return !log.executionId && (metadata?.reason || log.level === 'warning' || log.level === 'error');
+      return !log.executionId && (metadata?.connector || metadata?.reason || log.level === 'warning' || log.level === 'error');
     })
     .map((log) => {
       const metadata = parseMetadata(log.metadata);
+      const isConnectorCheck = Boolean(metadata?.connector) || log.message === 'Connector settings check completed.';
+      const displayConnector = connectorLabel(metadata?.connector);
       return {
         key: `log:${log.id}`,
-        type: 'webhook_attempt',
+        type: isConnectorCheck ? 'connector_check' : 'webhook_attempt',
         id: log.id,
         log,
         timestamp: log.createdAt,
-        title: metadata?.reason === 'invalid_or_missing_priority_bpm_token' ? 'Rejected webhook attempt' : log.message,
+        title: isConnectorCheck
+          ? `${displayConnector} settings check`
+          : metadata?.reason === 'invalid_or_missing_priority_bpm_token'
+            ? 'Rejected webhook attempt'
+            : log.message,
         status: metadata?.status || log.level,
         cause: logSummary(log),
         logCount: 1,
@@ -211,6 +226,7 @@ function ActivityDetailsModal({ item, logs, loading, onClose }) {
   if (!item) return null;
 
   const isExecution = item.type === 'execution';
+  const isConnectorCheck = item.type === 'connector_check';
   const metadata = parseMetadata(item.log?.metadata);
   const cause = item.cause || (isExecution ? 'No error was recorded for this execution.' : logSummary(item.log));
   const tone = item.status === 'success' ? 'border-emerald-100 bg-emerald-50 text-emerald-800' : item.status === 'rejected' || item.status === 'failed' || item.status === 'error' ? 'border-red-100 bg-red-50 text-red-800' : 'border-slate-200 bg-slate-50 text-slate-700';
@@ -227,7 +243,9 @@ function ActivityDetailsModal({ item, logs, loading, onClose }) {
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{isExecution ? 'Execution details' : 'Webhook attempt details'}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              {isExecution ? 'Execution details' : isConnectorCheck ? 'Settings check details' : 'Webhook attempt details'}
+            </p>
             <div className="mt-1 flex flex-wrap items-center gap-2">
               <h3 id="activity-details-title" className="text-base font-semibold text-slate-800">{item.title}</h3>
               <Badge value={item.status || 'unknown'} />
@@ -257,6 +275,17 @@ function ActivityDetailsModal({ item, logs, loading, onClose }) {
               <dd className="text-slate-700">{formatDate(item.execution.finishedAt)}</dd>
               <dt className="font-semibold text-slate-500">Execution ID</dt>
               <dd className="break-all font-mono text-slate-700">{item.id}</dd>
+            </>
+          ) : isConnectorCheck ? (
+            <>
+              <dt className="font-semibold text-slate-500">Action</dt>
+              <dd className="text-slate-700">settings check</dd>
+              <dt className="font-semibold text-slate-500">Connector</dt>
+              <dd className="text-slate-700">{connectorLabel(metadata?.connector)}</dd>
+              <dt className="font-semibold text-slate-500">Execution</dt>
+              <dd className="text-slate-700">No message execution created</dd>
+              <dt className="font-semibold text-slate-500">Checked</dt>
+              <dd className="text-slate-700">{formatDate(item.timestamp)}</dd>
             </>
           ) : (
             <>
