@@ -128,6 +128,7 @@ Each integration's `integration.js` must describe only the fields and controls t
 
 For every integration, define:
 
+- `integrationKey`: a unique, stable external key inside `integration.js`; it must not come from the database id and must not duplicate any other integration's key.
 - `credentials`: only credentials needed by this integration.
 - `connectors`: only connectors used by this integration, such as `priority`, `shopify`, `gmail`, `whatsapp`, `email`, or `genericRest`.
 - `credentialTests`: only connector credential tests that make sense for this integration. Do not show WhatsApp/email/generic credential tests unless that integration uses them.

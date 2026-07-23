@@ -47,7 +47,7 @@ npm --prefix frontend/dashboard run build
 An integration is not ready until:
 
 - The checklist answers are complete.
-- `integration.js` includes credentials, connectors, credential tests, testing modes, sample data or test payloads, and logging metadata.
+- `integration.js` includes a unique code-defined `integrationKey`, credentials, connectors, credential tests, testing modes, sample data or test payloads, and logging metadata.
 - Secrets are masked in the UI and never logged.
 - The dashboard gives clear save, test, success, and error feedback.
 - Logs show `Received from ...` and `Sent to ...` direction where applicable.
