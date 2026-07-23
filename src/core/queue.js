@@ -7,18 +7,22 @@ const QUEUE_MODE = process.env.QUEUE_MODE || 'local';
 const LOCAL_WORKER_TIMEOUT_MS = Number(process.env.LOCAL_WORKER_TIMEOUT_MS || 120000);
 
 function queueEnvKeyForIntegration(integration) {
-  return String(integration.slug || integration.id || '')
+  let key = integration.slug || integration.id || '';
+  try {
+    key = integrationLoader.loadDefinition(integration, { bypassCache: true })?.integrationKey || key;
+  } catch {
+    key = integration.slug || integration.id || '';
+  }
+  return String(key)
     .replace(/[^a-zA-Z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '')
     .toUpperCase();
 }
 
 function resolveSqsQueueUrl(integration) {
-  const slugKey = queueEnvKeyForIntegration(integration);
-  const idKey = integration.id ? integration.id.replace(/[^a-zA-Z0-9]+/g, '_').toUpperCase() : '';
+  const integrationKey = queueEnvKeyForIntegration(integration);
   const candidates = [
-    idKey && `SQS_QUEUE_URL_${idKey}`,
-    slugKey && `SQS_QUEUE_URL_${slugKey}`,
+    integrationKey && `SQS_QUEUE_URL_${integrationKey}`,
     'SQS_QUEUE_URL',
   ].filter(Boolean);
 
@@ -26,7 +30,7 @@ function resolveSqsQueueUrl(integration) {
     if (process.env[key]) return { queueUrl: process.env[key], envKey: key };
   }
 
-  const err = new Error(`No SQS queue URL configured for integration "${integration.slug}". Set SQS_QUEUE_URL_${slugKey} or SQS_QUEUE_URL.`);
+  const err = new Error(`No SQS queue URL configured for integration "${integration.slug}". Set SQS_QUEUE_URL_${integrationKey} or SQS_QUEUE_URL.`);
   err.statusCode = 500;
   throw err;
 }
@@ -75,6 +79,7 @@ function buildSqsJobMessage(execution, env = process.env) {
   }
   const callbackBaseUrl = parsedCallbackBaseUrl.toString().replace(/\/+$/, '');
   const definition = integrationLoader.loadDefinition(execution.integration, { bypassCache: true });
+  const integrationKey = definition.integrationKey || execution.integration.slug || execution.integrationId;
   const credentialDefinitions = new Map((definition.credentials || []).map((field) => [field.key, field]));
   const credentialRows = (execution.integration.credentials || []).filter((row) => credentialDefinitions.has(row.key));
   const credentialReferences = {};
@@ -100,6 +105,7 @@ function buildSqsJobMessage(execution, env = process.env) {
     id: execution.id,
     executionId: execution.id,
     integrationId: execution.integrationId,
+    integrationKey,
     integrationSlug: execution.integration.slug,
     integrationName: execution.integration.name,
     userId: execution.userId,
@@ -129,6 +135,7 @@ async function publishToSqs(executionId) {
     QueueUrl: queueUrl,
     MessageBody: JSON.stringify(message),
     MessageAttributes: {
+      integrationKey: { DataType: 'String', StringValue: message.integrationKey },
       integrationSlug: { DataType: 'String', StringValue: execution.integration.slug },
       executionMode: { DataType: 'String', StringValue: execution.executionMode },
       triggerType: { DataType: 'String', StringValue: execution.triggerType },

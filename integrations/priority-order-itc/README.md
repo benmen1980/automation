@@ -1,6 +1,6 @@
 # Priority Customer Order to ITC worker
 
-Independent Lambda worker for automation `cmrtomudr0001105jk8e1spo6`. It consumes the automation's SQS jobs, runs Priority `WWWSHOWORDER` for `ORDERS.ORDNAME`, copies the generated sales-order confirmation to the automation server, maps the server URL to ITC variable 3, and logs to `/aws/lambda/priority-order-itc`.
+Independent Lambda worker for automation `int_7f9a2c8e4b1d6f03`. It consumes the automation's SQS jobs, runs Priority `WWWSHOWORDER` for `ORDERS.ORDNAME`, copies the generated sales-order confirmation to the automation server, maps the server URL to ITC variable 3, and logs to `/aws/lambda/priority-order-itc`.
 
 This package is also the canonical implementation for local runs. The local queue launches it in a separate child-worker process; the API-side Priority connector performs login/settings checks only and does not contain or execute the `WWWSHOWORDER` flow.
 
@@ -15,13 +15,13 @@ Deployment resources:
 Create the isolated resources with:
 
 ```bash
-API_QUEUE_ENV_SUFFIX=CMRTOMUDR0001105JK8E1SPO6 VISIBILITY_TIMEOUT_SECONDS=180 MAX_RECEIVE_COUNT=3 ./infra/aws/scripts/create-sqs-for-integration.sh priority-order-itc
+API_QUEUE_ENV_SUFFIX=INT_7F9A2C8E4B1D6F03 VISIBILITY_TIMEOUT_SECONDS=180 MAX_RECEIVE_COUNT=3 ./infra/aws/scripts/create-sqs-for-integration.sh priority-order-itc
 ./infra/aws/scripts/create-dynamodb-finalization-for-integration.sh priority-order-itc
 SQS_QUEUE_ARN=<queue-arn> LAMBDA_ROLE_ARN=<role-arn> WORKER_CALLBACK_TOKEN_SECRET_ID=<secret-id> LAMBDA_TIMEOUT_SECONDS=60 MAX_RECEIVE_COUNT=3 ./infra/aws/scripts/create-lambda-integration.sh priority-order-itc
 CODECONNECTION_ARN=<connection-arn> PIPELINE_ROLE_ARN=<role-arn> CODEBUILD_ROLE_ARN=<role-arn> ARTIFACT_BUCKET=<bucket> ./infra/aws/scripts/create-pipeline-integration.sh priority-order-itc
 ```
 
-Configure the API with the integration-ID-specific queue variable `SQS_QUEUE_URL_CMRTOMUDR0001105JK8E1SPO6`, `INTEGRATION_WORKER_STATUS_CALLBACK_BASE_URL`, and an `INTEGRATION_WORKER_CALLBACK_TOKEN` injected from deployment secret storage. The queue contains non-secret settings and integration-scoped Secrets Manager references only. Lambda resolves both `ITC_BEARER_TOKEN` and `PRIORITY_WEB_SDK_PASSWORD` through its least-privilege IAM role; never include live secrets in an SQS message.
+Configure the API with the integration-key-specific queue variable `SQS_QUEUE_URL_INT_7F9A2C8E4B1D6F03`, `INTEGRATION_WORKER_STATUS_CALLBACK_BASE_URL`, and an `INTEGRATION_WORKER_CALLBACK_TOKEN` injected from deployment secret storage. The queue contains non-secret settings and integration-scoped Secrets Manager references only. Lambda resolves both `ITC_BEARER_TOKEN` and `PRIORITY_WEB_SDK_PASSWORD` through its least-privilege IAM role; never include live secrets in an SQS message.
 
 Live order printing uses `priority-web-sdk` with `WWWSHOWORDER` and `ORDERS.ORDNAME` as field 1. The worker follows the procedure step returned by the tenant, opens Priority's field 2 Sort chooser, submits the chooser's returned value, requests print format code `-109`, reads the generated URL, copies that document to the automation server, and sends the server URL to ITC. The default `PRIORITY_WEB_SDK_ORDER_SORT_OPTION=By Order Number` selects the first Priority choice even when its display language is not English; a non-default setting must exactly match one of the returned choices.
 

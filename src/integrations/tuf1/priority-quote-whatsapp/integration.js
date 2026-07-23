@@ -1,7 +1,7 @@
 module.exports = {
   name: 'Priority Order Notification via ITC',
   displayName: 'Priority Order Notification via ITC',
-  integrationKey: 'tuf1-priority-order-itc',
+  integrationKey: 'int_7f9a2c8e4b1d6f03',
   version: '1.5.3',
   description: 'Receives a Priority customer-order webhook, generates its sales-order confirmation with Priority Web SDK, saves a server copy, and sends the server URL in an ITC WhatsApp template message.',
   type: 'webhook',

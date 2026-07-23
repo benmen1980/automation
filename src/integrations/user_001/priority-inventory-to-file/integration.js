@@ -1,6 +1,6 @@
 ﻿module.exports = {
   name: 'Priority inventory to file',
-  integrationKey: 'user-001-priority-inventory-to-file',
+  integrationKey: 'int_c91a7e4f28b603d5',
   description: 'Scheduled task that gets inventory from Priority PARTBAL and writes a timestamped JSON file locally under the user folder.',
   type: 'scheduled',
   manualRun: true,

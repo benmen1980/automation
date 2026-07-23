@@ -26,7 +26,7 @@ describe('execution payload privacy', () => {
 
   test('redacts API execution input while preserving non-sensitive fields', () => {
     const integration = {
-      id: 'cmrtomudr0001105jk8e1spo6',
+      id: 'fixture-db-integration-id',
       codeFolder: 'src/integrations/tuf1/priority-quote-whatsapp',
       definitionFile: 'integration.js',
     };

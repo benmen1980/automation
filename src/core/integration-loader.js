@@ -137,11 +137,14 @@ function validateIntegrationFiles(codeFolder, definitionFile = 'integration.js',
 
 function validateIntegrationContract(definition, { strict = true } = {}) {
   const errors = [];
-  const requiredTextFields = ['name', 'description', 'type'];
+  const requiredTextFields = ['name', 'integrationKey', 'description', 'type'];
   for (const field of requiredTextFields) {
     if (typeof definition?.[field] !== 'string' || definition[field].trim() === '') {
       errors.push(`integration.js must define a non-empty ${field}.`);
     }
+  }
+  if (definition?.integrationKey && !/^int_[a-z0-9]{16}$/.test(definition.integrationKey)) {
+    errors.push('integration.js integrationKey must use the format int_<16 lowercase letters or digits>.');
   }
 
   if (!['webhook', 'scheduled'].includes(definition?.type)) {

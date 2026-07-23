@@ -1,6 +1,6 @@
 ﻿module.exports = {
   name: 'Shopify Orders to Priority',
-  integrationKey: 'user-001-shopify-orders-priority',
+  integrationKey: 'int_2f7d9c4a6b1e8350',
   description: 'Webhook that receives Shopify orders and creates matching Priority orders.',
   type: 'webhook',
   manualRun: true,

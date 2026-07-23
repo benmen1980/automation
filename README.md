@@ -229,7 +229,7 @@ connector modules with the integration's saved credentials; `dry_run` executes
 handler logic but skips connector calls without logging request arguments; and
 `mock_output`/`dummy` use mock connector modules.
 
-### Automation `cmrtomudr0001105jk8e1spo6`: Priority order to ITC
+### Automation `int_7f9a2c8e4b1d6f03`: Priority order to ITC
 
 This automation now generates a Priority sales-order confirmation through `priority-web-sdk` and sends its URL through the ITC/Effective template-message REST API instead of calling Meta WhatsApp Cloud API directly.
 
@@ -249,7 +249,7 @@ This automation now generates a Priority sales-order confirmation through `prior
 - Priority failures are shown with a safe, specific stage such as login, WWWSHOWORDER startup, Sort selection, parameter submission, procedure validation, document format selection, or document URL generation, followed by an actionable next step. Priority's safe server explanation is retained while credentials, the order number, and token-shaped values are redacted.
 - Live delivery writes a durable `IN_FLIGHT` marker immediately before ITC. Crashes, ITC 5xx, and network-unknown results never auto-resend; safe pre-delivery retries are finalized as failed on attempt 3 before DLQ transfer.
 
-Per-user ITC and Priority settings are saved through the dashboard secret/configuration store. The independent worker uses `SQS_QUEUE_URL_CMRTOMUDR0001105JK8E1SPO6`, an authenticated status callback, non-secret queue settings, and integration-scoped Secrets Manager references for `ITC_BEARER_TOKEN` and `PRIORITY_WEB_SDK_PASSWORD`; the matching environment-variable names are documented in `.env.example`. Rotate the bearer token that was shared during development before entering its replacement in the dashboard.
+Per-user ITC and Priority settings are saved through the dashboard secret/configuration store. The independent worker uses `SQS_QUEUE_URL_INT_7F9A2C8E4B1D6F03`, an authenticated status callback, non-secret queue settings, and integration-scoped Secrets Manager references for `ITC_BEARER_TOKEN` and `PRIORITY_WEB_SDK_PASSWORD`; the matching environment-variable names are documented in `.env.example`. Rotate the bearer token that was shared during development before entering its replacement in the dashboard.
 
 Local checks:
 

@@ -1,6 +1,6 @@
 # Priority Customer Order to ITC
 
-Automation `cmrtomudr0001105jk8e1spo6` receives a Priority customer-order webhook, generates the sales-order confirmation with `priority-web-sdk`, saves a copy on the automation server, and sends the server-hosted URL through the Effective/ITC template-message REST API. ITC delivers the message over its configured WhatsApp channel; this integration does not call Meta WhatsApp Cloud API directly.
+Automation `int_7f9a2c8e4b1d6f03` receives a Priority customer-order webhook, generates the sales-order confirmation with `priority-web-sdk`, saves a copy on the automation server, and sends the server-hosted URL through the Effective/ITC template-message REST API. ITC delivers the message over its configured WhatsApp channel; this integration does not call Meta WhatsApp Cloud API directly.
 
 ## Contract
 

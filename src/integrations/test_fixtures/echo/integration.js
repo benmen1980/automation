@@ -11,6 +11,7 @@
  */
 module.exports = {
   name: 'Test Echo',
+  integrationKey: 'int_4d6a8c2f9e1b7350',
   description: 'Deterministic fixture integration used by the automated test suite.',
   type: 'webhook',
   manualRun: true,

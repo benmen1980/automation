@@ -1,6 +1,6 @@
 module.exports = {
   name: 'Priority inventory to email',
-  integrationKey: 'user-001-priority-inventory-to-email',
+  integrationKey: 'int_3e8f1c6a9d2b0475',
   description: 'Scheduled task that gets inventory from Priority PARTBAL and emails the inventory JSON as an attachment to a configured recipient group using Gmail API OAuth2 or Amazon SES.',
   type: 'scheduled',
   manualRun: true,

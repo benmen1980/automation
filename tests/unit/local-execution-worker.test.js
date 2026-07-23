@@ -4,8 +4,8 @@ const {
 } = require('../../src/workers/local-execution-worker');
 
 describe('independent local integration worker support', () => {
-  test('routes the target automation by stable owner and slug', () => {
-    expect(INDEPENDENT_LOCAL_WORKERS.get('tuf1/priority-quote-whatsapp')).toBe(
+  test('routes the target automation by code-defined integration key', () => {
+    expect(INDEPENDENT_LOCAL_WORKERS.get('int_7f9a2c8e4b1d6f03')).toBe(
       'priority-order-itc'
     );
   });

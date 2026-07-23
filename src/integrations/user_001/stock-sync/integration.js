@@ -1,6 +1,6 @@
 module.exports = {
   name: "Stock Sync",
-  integrationKey: "user-001-stock-sync",
+  integrationKey: "int_d5a17c9e4f02b638",
   description: "Checks stock levels on a schedule and emails a low-stock alert.",
   type: "scheduled",
   manualRun: true,

@@ -9,11 +9,11 @@ const { summarizePayload } = require('../utils/payload-summary');
 const {
   copyPriorityDocumentFromUrl,
 } = require('../core/priority-document-store');
+const integrationLoader = require('../core/integration-loader');
 const prisma = require('../db/client');
 
 const INDEPENDENT_LOCAL_WORKERS = new Map([
-  ['cmrtomudr0001105jk8e1spo6', 'priority-order-itc'],
-  ['tuf1/priority-quote-whatsapp', 'priority-order-itc'],
+  ['int_7f9a2c8e4b1d6f03', 'priority-order-itc'],
 ]);
 
 function parseJson(value, fallback = {}) {
@@ -187,10 +187,14 @@ async function main() {
   });
   if (!queuedExecution) throw new Error(`Execution not found: ${executionId}`);
 
-  const stableIntegrationKey = `${queuedExecution.user.slug}/${queuedExecution.integration.slug}`;
+  let integrationKey = queuedExecution.integrationId;
+  try {
+    integrationKey = integrationLoader.loadDefinition(queuedExecution.integration, { bypassCache: true })?.integrationKey || integrationKey;
+  } catch {
+    integrationKey = queuedExecution.integrationId;
+  }
   const workerName =
-    INDEPENDENT_LOCAL_WORKERS.get(queuedExecution.integrationId) ||
-    INDEPENDENT_LOCAL_WORKERS.get(stableIntegrationKey);
+    INDEPENDENT_LOCAL_WORKERS.get(integrationKey);
   const execution = workerName
     ? await runIndependentLocalWorker(queuedExecution, workerName)
     : await runExecutionJob(executionId);

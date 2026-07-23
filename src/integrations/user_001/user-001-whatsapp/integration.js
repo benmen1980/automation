@@ -1,6 +1,6 @@
 module.exports = {
   name: 'User 001 WhatsApp Webhook',
-  integrationKey: 'user-001-user-001-whatsapp',
+  integrationKey: 'int_8b6e3d1f74a9c502',
   description: 'Receives WhatsApp-style webhook payloads for user_001 and writes each request body to a local JSON file.',
   type: 'webhook',
   manualRun: true,

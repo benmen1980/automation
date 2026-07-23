@@ -6,7 +6,7 @@ describe('queue SQS mode', () => {
     process.env = {
       ...OLD_ENV,
       QUEUE_MODE: 'sqs',
-      SQS_QUEUE_URL_GMAIL_PRIORITY: 'https://sqs.test/gmail-priority',
+      SQS_QUEUE_URL_INT_4D6A8C2F9E1B7350: 'https://sqs.test/echo-fixture',
       INTEGRATION_WORKER_STATUS_CALLBACK_BASE_URL: 'https://automation.example.test',
     };
   });
@@ -73,7 +73,7 @@ describe('queue SQS mode', () => {
     expect(queued.status).toBe('queued');
     expect(markQueued).toHaveBeenCalledWith('exec-1', {
       messageId: 'msg-123',
-      queueUrl: 'https://sqs.test/gmail-priority',
+      queueUrl: 'https://sqs.test/echo-fixture',
     });
     expect(message).toMatchObject({
       schemaVersion: 2,
@@ -81,6 +81,7 @@ describe('queue SQS mode', () => {
       executionId: 'exec-1',
       id: 'exec-1',
       integrationSlug: 'gmail-priority',
+      integrationKey: 'int_4d6a8c2f9e1b7350',
       userSlug: 'user_001',
       mode: 'test',
       payload: { email: 'lead@example.test', body: 'Need SKU-1' },

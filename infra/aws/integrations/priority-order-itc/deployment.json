@@ -1,6 +1,6 @@
 {
   "integration": "priority-order-itc",
-  "automationId": "cmrtomudr0001105jk8e1spo6",
+  "integrationKey": "int_7f9a2c8e4b1d6f03",
   "runtime": "lambda",
   "lambdaName": "priority-order-itc",
   "pipelineName": "integration-priority-order-itc",
@@ -16,7 +16,7 @@
   ],
   "queue": {
     "name": "priority-order-itc-queue",
-    "apiEnvironmentVariable": "SQS_QUEUE_URL_CMRTOMUDR0001105JK8E1SPO6",
+    "apiEnvironmentVariable": "SQS_QUEUE_URL_INT_7F9A2C8E4B1D6F03",
     "maxReceiveCount": 3,
     "visibilityTimeoutSeconds": 180,
     "batchSize": 1,
