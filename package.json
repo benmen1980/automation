@@ -1,6 +1,6 @@
 {
   "name": "user-automation-platform",
-  "version": "1.3.3",
+  "version": "1.6.2",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -27,11 +27,18 @@
     "sync:integration-db": "node scripts/sync-integration-db.js",
     "db:reset": "prisma migrate reset --force",
     "validate:integrations": "node scripts/validate-integrations.js",
-    "test": "npm run validate:integrations && cross-env NODE_ENV=test jest --runInBand && npm run test:integration:gmail-priority && npm --workspace @automation/shopify-priority test && npm --workspace @automation/salesforce-priority test",
+    "skill:restart-app": "node scripts/restart-skill.js",
+    "skill:new-integration": "node scripts/integration-gate-skill.js",
+    "test": "npm run validate:integrations && cross-env NODE_ENV=test jest --runInBand && npm run test:integration:gmail-priority && npm run test:integration:priority-order-itc && npm --workspace @automation/shopify-priority test && npm --workspace @automation/salesforce-priority test",
     "test:api": "cross-env NODE_ENV=test jest --runInBand",
     "test:watch": "cross-env NODE_ENV=test jest --watch --runInBand",
     "test:integration:gmail-priority": "npm --workspace @automation/gmail-priority test",
-    "invoke:gmail-priority": "npm --workspace @automation/gmail-priority run invoke --"
+    "test:integration:priority-sales-projects-insights": "npm --workspace @automation/priority-sales-projects-insights test",
+    "test:integration:priority-order-itc": "npm --workspace @automation/priority-order-itc test",
+    "dev:worker:priority-sales-projects-insights": "npm --workspace @automation/priority-sales-projects-insights run dev",
+    "invoke:priority-sales-projects-insights": "npm --workspace @automation/priority-sales-projects-insights run invoke --",
+    "dev:worker:priority-order-itc": "npm --workspace @automation/priority-order-itc run dev",
+    "invoke:priority-order-itc": "npm --workspace @automation/priority-order-itc run invoke --"
   },
   "dependencies": {
     "@aws-sdk/client-secrets-manager": "^3.600.0",

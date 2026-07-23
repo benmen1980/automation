@@ -9,6 +9,13 @@ const { PrismaClient } = require('@prisma/client');
 
 const prisma = new PrismaClient();
 
+function webhookUrlFor(def) {
+  if (def.user.slug === 'tuf1' && def.slug === 'priority-quote-whatsapp') {
+    return `/tuf1/${def.slug}`;
+  }
+  return `/webhooks/${def.user.slug}/${def.slug}`;
+}
+
 const USERS = [
   { slug: 'admin', email: 'admin@example.com', name: 'Platform Admin', role: 'admin', password: 'Admin123!' },
   { slug: 'user_001', email: 'user1@example.com', name: 'David Cohen', role: 'user', password: 'User123!' },
@@ -18,6 +25,7 @@ const USERS = [
 function integrationDefinitions(usersBySlug) {
   const user1 = usersBySlug.get('user_001');
   const user2 = usersBySlug.get('user_002');
+  const tuf1 = usersBySlug.get('tuf1');
 
   return [
     { user: user1, name: 'WhatsApp Order Notification', description: 'Receives order data and sends a WhatsApp message.', slug: 'whatsapp-order', type: 'webhook', codeFolder: 'src/integrations/user_001/whatsapp-order' },
@@ -31,6 +39,19 @@ function integrationDefinitions(usersBySlug) {
     { user: user1, name: 'Priority Quote Notification to WhatsApp', description: 'Receive Priority quote webhooks and send WhatsApp template notifications.', slug: 'priority-quote-whatsapp', type: 'webhook', version: '1.2.4', codeFolder: 'src/integrations/user_001/priority-quote-whatsapp' },
     { user: user1, name: 'Gmail Quote Request to Priority', description: 'Receive Gmail quote request webhook and open a Priority quote.', slug: 'gmail-priority-quote', type: 'webhook', codeFolder: 'src/integrations/user_001/gmail-priority-quote' },
     { user: user1, name: 'User 001 WhatsApp Webhook', description: 'Receives WhatsApp-style webhook payloads and writes each request body to a local JSON file.', slug: 'user-001-whatsapp', type: 'webhook', codeFolder: 'src/integrations/user_001/user-001-whatsapp' },
+    ...(tuf1
+      ? [
+          {
+            user: tuf1,
+            name: 'שידור וואצפ מהזמנת לקוח',
+            description: 'שליחת ווצאפ מהזמנת לקוח: יצירת אישור הזמנה דרך Priority Web SDK ושליחת קישור המסמך למערכת ITC.',
+            slug: 'priority-quote-whatsapp',
+            type: 'webhook',
+            version: '1.5.2',
+            codeFolder: 'src/integrations/tuf1/priority-quote-whatsapp',
+          },
+        ]
+      : []),
   ];
 }
 
@@ -84,13 +105,13 @@ async function upsertIntegration(def) {
     await prisma.webhookSettings.upsert({
       where: { integrationId: integration.id },
       update: {
-        webhookUrl: `/webhooks/${def.user.slug}/${def.slug}`,
+        webhookUrl: webhookUrlFor(def),
         allowedMethod: 'POST',
         active: true,
       },
       create: {
         integrationId: integration.id,
-        webhookUrl: `/webhooks/${def.user.slug}/${def.slug}`,
+        webhookUrl: webhookUrlFor(def),
         allowedMethod: 'POST',
         active: true,
       },
@@ -121,6 +142,9 @@ async function main() {
   console.log('Syncing integration DB records...');
 
   const users = await Promise.all(USERS.map(upsertUser));
+  const existingTuf1 = await prisma.user.findUnique({ where: { slug: 'tuf1' } });
+  if (existingTuf1) users.push(existingTuf1);
+  else console.warn('Skipped tuf1/priority-quote-whatsapp because the tuf1 user does not exist in this database.');
   const usersBySlug = new Map(users.map((user) => [user.slug, user]));
 
   const synced = [];
