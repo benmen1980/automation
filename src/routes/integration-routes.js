@@ -15,6 +15,10 @@ const scheduler = require('../core/scheduler');
 router.use(requireAuth);
 
 const WITH_SETTINGS = { webhookSettings: true, scheduleSettings: true };
+const STABLE_INTEGRATION_KEYS = new Map([
+  ['src/integrations/tuf1/priority-quote-whatsapp', 'cmrtomudr0001105jk8e1spo6'],
+  ['src/integrations/user_001/priority-quote-whatsapp', 'cmrtomudr0001105jk8e1spo6'],
+]);
 
 function withPublicWebhookUrl(integration) {
   if (!integration || !integration.webhookSettings?.webhookUrl) return integration;
@@ -28,6 +32,24 @@ function withPublicWebhookUrl(integration) {
   };
 }
 
+function withStableIntegrationKey(integration) {
+  if (!integration) return integration;
+  let definitionKey = null;
+  try {
+    definitionKey = integrationLoader.loadDefinition(integration)?.integrationKey || null;
+  } catch {
+    definitionKey = null;
+  }
+  const normalizedCodeFolder = String(integration.codeFolder || '').replace(/\\/g, '/').replace(/\/+$/, '');
+  const fallbackKey = [...STABLE_INTEGRATION_KEYS.entries()].find(([codeFolder]) =>
+    normalizedCodeFolder.endsWith(codeFolder)
+  )?.[1];
+  return {
+    ...integration,
+    integrationKey: definitionKey || integration.integrationKey || fallbackKey || integration.id,
+  };
+}
+
 router.get('/', async (req, res) => {
   const where = req.query.scope === 'all' && isAdmin(req.user) ? {} : { userId: req.user.id };
   const integrations = await prisma.integration.findMany({
@@ -35,7 +57,7 @@ router.get('/', async (req, res) => {
     orderBy: [{ name: 'asc' }, { codeFolder: 'asc' }],
     include: WITH_SETTINGS,
   });
-  res.json({ integrations: integrations.map(withPublicWebhookUrl) });
+  res.json({ integrations: integrations.map((integration) => withStableIntegrationKey(withPublicWebhookUrl(integration))) });
 });
 
 // docs/product/product-architecture-spec.md 8.3: admin (or self-service user) registers an integration
@@ -43,6 +65,7 @@ router.get('/', async (req, res) => {
 // codeFolder. We validate those files exist before ever saving the row.
 router.post('/', async (req, res) => {
   const { name, version, description, slug, type, codeFolder, userId, definitionFile, handlerFile } = req.body || {};
+  let definition = null;
   if (!isAdmin(req.user)) {
     return res.status(403).json({ error: 'Only admins can register generated integrations. Ask an admin to create or assign a new integration.' });
   }
@@ -63,7 +86,7 @@ router.post('/', async (req, res) => {
 
   try {
     const { definitionPath } = integrationLoader.validateIntegrationFiles(codeFolder, definitionFile, handlerFile);
-    const definition = integrationLoader.loadDefinitionFromPath(definitionPath);
+    definition = integrationLoader.loadDefinitionFromPath(definitionPath);
     integrationLoader.validateIntegrationContract(definition, { strict: true });
   } catch (err) {
     return res.status(400).json({ error: `Integration code is invalid: ${err.message}` });
@@ -80,12 +103,13 @@ router.post('/', async (req, res) => {
         description,
         slug: finalSlug,
         type,
+        integrationKey: definition?.integrationKey || null,
         codeFolder,
         definitionFile: definitionFile || 'integration.js',
         handlerFile: handlerFile || 'handler.js',
       },
     });
-    res.status(201).json({ integration });
+    res.status(201).json({ integration: withStableIntegrationKey(integration) });
   } catch (err) {
     if (err.code === 'P2002') return res.status(409).json({ error: 'An integration with this slug already exists for this user.' });
     res.status(500).json({ error: err.message });
@@ -134,7 +158,7 @@ router.delete('/:id', loadIntegration({ mutate: true }), async (req, res) => {
 });
 
 router.get('/:id', loadIntegration({ include: WITH_SETTINGS }), (req, res) => {
-  res.json({ integration: withPublicWebhookUrl(req.integration) });
+  res.json({ integration: withStableIntegrationKey(withPublicWebhookUrl(req.integration)) });
 });
 
 router.patch('/:id', loadIntegration({ mutate: true }), async (req, res) => {
@@ -166,7 +190,7 @@ router.patch('/:id', loadIntegration({ mutate: true }), async (req, res) => {
 
   try {
     const integration = await prisma.integration.update({ where: { id: req.integration.id }, data });
-    res.json({ integration });
+    res.json({ integration: withStableIntegrationKey(integration) });
   } catch (err) {
     if (err.code === 'P2002') return res.status(409).json({ error: 'An integration with this slug already exists for this user.' });
     res.status(err.statusCode || 500).json({ error: err.message });

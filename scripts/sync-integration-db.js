@@ -42,6 +42,8 @@ function integrationDefinitions(usersBySlug) {
     ...(tuf1
       ? [
           {
+            id: 'cmrtomudr0001105jk8e1spo6',
+            integrationKey: 'cmrtomudr0001105jk8e1spo6',
             user: tuf1,
             name: 'שידור וואצפ מהזמנת לקוח',
             description: 'שליחת ווצאפ מהזמנת לקוח: יצירת אישור הזמנה דרך Priority Web SDK ושליחת קישור המסמך למערכת ITC.',
@@ -84,12 +86,15 @@ async function upsertIntegration(def) {
       description: def.description,
       type: def.type,
       codeFolder: def.codeFolder,
+      integrationKey: def.integrationKey || null,
       version: def.version || '1.0.0',
       manualRunEnabled: true,
       status: 'active',
     },
     create: {
+      ...(def.id ? { id: def.id } : {}),
       userId: def.user.id,
+      integrationKey: def.integrationKey || null,
       name: def.name,
       description: def.description,
       slug: def.slug,

@@ -833,7 +833,7 @@ export default function IntegrationPage() {
         <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs text-slate-500">Owner: {integration.userId}</span>
+              <span className="text-xs text-slate-500">{integration.userId}</span>
               <InlineEditableText
                 value={integration.name}
                 disabled={!canManage}
