@@ -104,6 +104,11 @@ export const api = {
     forExecution: (executionId) => request(`/api/executions/${executionId}/logs`),
   },
   admin: {
+    sendgrid: {
+      get: () => request('/api/admin/sendgrid'),
+      save: (payload) => request('/api/admin/sendgrid', { method: 'PUT', body: payload }),
+      test: () => request('/api/admin/sendgrid/test', { method: 'POST' }),
+    },
     users: {
       list: () => request('/api/admin/users'),
       create: (payload) => request('/api/admin/users', { method: 'POST', body: payload }),

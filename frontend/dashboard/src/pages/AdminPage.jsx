@@ -92,14 +92,18 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [reassigningIntegrationId, setReassigningIntegrationId] = useState('');
+  const [sendgrid, setSendgrid] = useState({ apiKey: '', domain: '', fromEmail: '', recipients: '', configured: false });
+  const [sendgridMessage, setSendgridMessage] = useState('');
+  const [sendgridSaving, setSendgridSaving] = useState(false);
 
   async function load() {
     setLoading(true);
     setError('');
     try {
-      const [{ users: u }, { integrations: i }] = await Promise.all([api.admin.users.list(), api.integrations.list({ scope: 'all' })]);
+      const [{ users: u }, { integrations: i }, { sendgrid: s }] = await Promise.all([api.admin.users.list(), api.integrations.list({ scope: 'all' }), api.admin.sendgrid.get()]);
       setUsers(u);
       setIntegrations(i);
+      setSendgrid((previous) => ({ ...previous, ...s }));
 
       const failedPerIntegration = await Promise.all(
         i.map(async (integration) => {
@@ -138,6 +142,31 @@ export default function AdminPage() {
     load();
   }
 
+  async function saveSendgrid(event) {
+    event.preventDefault();
+    setSendgridSaving(true);
+    setSendgridMessage('');
+    try {
+      const { sendgrid: saved } = await api.admin.sendgrid.save(sendgrid);
+      setSendgrid((previous) => ({ ...previous, ...saved, apiKey: '' }));
+      setSendgridMessage('SendGrid settings saved.');
+    } catch (err) {
+      setSendgridMessage(err.message);
+    } finally {
+      setSendgridSaving(false);
+    }
+  }
+
+  async function testSendgrid() {
+    setSendgridMessage('');
+    try {
+      const result = await api.admin.sendgrid.test();
+      setSendgridMessage(result.message);
+    } catch (err) {
+      setSendgridMessage(err.message);
+    }
+  }
+
   async function handleReassignIntegration(integrationId, ownerId) {
     setError('');
     setReassigningIntegrationId(integrationId);
@@ -169,6 +198,21 @@ export default function AdminPage() {
           API: {health ? <Badge value="active">ok</Badge> : <Badge value="failed">unreachable</Badge>} · {users.length} users ·{' '}
           {integrations.length} integrations · {failedExecutions.length} recent failed executions
         </p>
+      </section>
+
+      <section className="bg-white border border-slate-200 rounded-lg p-4">
+        <h2 className="font-medium text-slate-800 mb-2">SendGrid error notifications</h2>
+        <form onSubmit={saveSendgrid} className="space-y-3 max-w-xl">
+          <label className="block text-sm font-medium text-slate-700">SendGrid API key<input type="password" placeholder={sendgrid.configured ? 'Saved — enter to replace' : 'Enter API key'} value={sendgrid.apiKey} onChange={(e) => setSendgrid({ ...sendgrid, apiKey: e.target.value })} className="mt-1 w-full border border-slate-300 rounded px-3 py-2 text-sm" /></label>
+          <label className="block text-sm font-medium text-slate-700">SendGrid domain<input required placeholder="example.com" value={sendgrid.domain} onChange={(e) => setSendgrid({ ...sendgrid, domain: e.target.value })} className="mt-1 w-full border border-slate-300 rounded px-3 py-2 text-sm" /></label>
+          <label className="block text-sm font-medium text-slate-700">From email<input required type="email" placeholder="automation@example.com" value={sendgrid.fromEmail} onChange={(e) => setSendgrid({ ...sendgrid, fromEmail: e.target.value })} className="mt-1 w-full border border-slate-300 rounded px-3 py-2 text-sm" /></label>
+          <label className="block text-sm font-medium text-slate-700">Error mailing list<textarea required rows={4} placeholder="One email per line" value={sendgrid.recipients} onChange={(e) => setSendgrid({ ...sendgrid, recipients: e.target.value })} className="mt-1 w-full border border-slate-300 rounded px-3 py-2 text-sm" /></label>
+          <div className="flex gap-2">
+            <button type="submit" disabled={sendgridSaving} className="bg-slate-800 text-white rounded px-3 py-1.5 text-sm font-medium disabled:opacity-50">{sendgridSaving ? 'Saving...' : 'Save settings'}</button>
+            <button type="button" onClick={testSendgrid} className="border border-slate-300 rounded px-3 py-1.5 text-sm">Send test email</button>
+          </div>
+          {sendgridMessage && <p className="text-sm text-slate-600">{sendgridMessage}</p>}
+        </form>
       </section>
 
       <section>

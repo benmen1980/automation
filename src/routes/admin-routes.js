@@ -4,8 +4,31 @@ const prisma = require('../db/client');
 const { requireAuth, requireAdmin } = require('../middleware/auth-middleware');
 const { hashPassword } = require('../core/auth');
 const { slugify } = require('../utils/slugify');
+const sendgrid = require('../core/sendgrid');
 
 router.use(requireAuth, requireAdmin);
+
+router.get('/sendgrid', async (req, res) => {
+  res.json({ sendgrid: await sendgrid.getConfig() });
+});
+
+router.put('/sendgrid', async (req, res) => {
+  try {
+    const { apiKey, domain, fromEmail, recipients } = req.body || {};
+    res.json({ sendgrid: await sendgrid.saveConfig({ apiKey, domain, fromEmail, recipients }) });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
+
+router.post('/sendgrid/test', async (req, res) => {
+  try {
+    await sendgrid.send({ subject: 'Automation SendGrid test', text: 'This is a test email from the automation platform.' });
+    res.json({ success: true, message: 'Test email sent.' });
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+});
 
 const PUBLIC_USER_FIELDS = { id: true, slug: true, email: true, name: true, role: true, status: true, createdAt: true };
 
