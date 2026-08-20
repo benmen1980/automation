@@ -85,9 +85,9 @@ export default function LoginPage() {
         </section>
       </div>
       <img
-        src="/simplyct_aman_logo.png"
-        alt="SimplyCT Priority experts"
-        className="mt-6 h-auto w-52 object-contain"
+        src="/automation.png"
+        alt="AI builds automation that runs on AWS"
+        className="mt-6 h-auto w-full max-w-5xl rounded-[28px] border border-white/70 shadow-2xl shadow-[#0b5869]/10"
       />
     </div>
   );
