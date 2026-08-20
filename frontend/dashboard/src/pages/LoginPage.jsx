@@ -81,12 +81,14 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-5 rounded-lg bg-[#e9faff] px-3 py-2 text-xs text-[#0b5869]">
-            Local dev seed: admin@example.com / Admin123! | user1@example.com / User123!
-          </p>
           <p className="mt-4 text-center text-xs text-slate-400">Version {packageJson.version}</p>
         </section>
       </div>
+      <img
+        src="/simplyct_aman_logo.png"
+        alt="SimplyCT Priority experts"
+        className="mt-6 h-auto w-52 object-contain"
+      />
     </div>
   );
 }
