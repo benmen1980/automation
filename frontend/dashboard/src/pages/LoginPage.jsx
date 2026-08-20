@@ -29,7 +29,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="login-stage min-h-screen px-4 py-8">
+    <div className="login-stage flex-col min-h-screen px-4 py-8">
       <div className="login-shell w-full max-w-5xl overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-2xl shadow-[#0b5869]/10">
         <section className="brand-panel">
           <BrandMark />
