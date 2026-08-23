@@ -18,6 +18,48 @@ const { createLogger } = require('../core/logger');
 
 router.use(requireAuth);
 
+router.post('/:id/http-test', loadIntegration({ mutate: true }), async (req, res) => {
+  const url = String(req.body?.url || '').trim();
+  const payload = req.body?.payload === undefined ? {} : req.body.payload;
+  let target;
+  try {
+    target = new URL(url);
+  } catch {
+    return res.status(400).json({ error: 'A valid HTTP or HTTPS URL is required.' });
+  }
+  if (!['http:', 'https:'].includes(target.protocol)) {
+    return res.status(400).json({ error: 'The test URL must use HTTP or HTTPS.' });
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch(target, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json, text/plain, */*' },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    const responseText = (await response.text()).slice(0, 32000);
+    res.json({
+      request: { method: 'POST', url: target.toString() },
+      response: {
+        status: response.status,
+        statusText: response.statusText,
+        contentType: response.headers.get('content-type') || '',
+        body: responseText,
+      },
+    });
+  } catch (err) {
+    const message = err.name === 'AbortError'
+      ? 'The HTTP test timed out after 15 seconds.'
+      : `The HTTP test could not reach the URL: ${err.message}`;
+    res.status(502).json({ error: message });
+  } finally {
+    clearTimeout(timeout);
+  }
+});
+
 router.post('/:id/test', loadIntegration({ mutate: true }), async (req, res) => {
   const { payload = {}, executionMode = 'test', headers = {}, testTokenValidation = false } = req.body || {};
 

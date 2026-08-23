@@ -599,6 +599,11 @@ export default function IntegrationPage() {
   const [itcRunning, setItcRunning] = useState(false);
   const [itcTestResult, setItcTestResult] = useState(null);
   const [itcTestError, setItcTestError] = useState('');
+  const [httpTestUrl, setHttpTestUrl] = useState('');
+  const [httpTestPayload, setHttpTestPayload] = useState('{\n  "test": "automation outbound"\n}');
+  const [httpTestRunning, setHttpTestRunning] = useState(false);
+  const [httpTestResult, setHttpTestResult] = useState(null);
+  const [httpTestError, setHttpTestError] = useState('');
   const [connectorTesting, setConnectorTesting] = useState(false);
   const [connectorResultMap, setConnectorResultMap] = useState({ webhook: null, messaging: null, priority: null });
   const [activeTestConnector, setActiveTestConnector] = useState({
@@ -723,6 +728,30 @@ export default function IntegrationPage() {
       setError(err.message);
     } finally {
       setRunning(false);
+    }
+  }
+
+  async function handleHttpTest() {
+    let payload;
+    try {
+      payload = JSON.parse(httpTestPayload || '{}');
+    } catch {
+      setHttpTestError('Enter valid JSON before sending the HTTP test.');
+      return;
+    }
+    if (!httpTestUrl.trim()) {
+      setHttpTestError('Enter a URL before sending the HTTP test.');
+      return;
+    }
+    setHttpTestRunning(true);
+    setHttpTestError('');
+    setHttpTestResult(null);
+    try {
+      setHttpTestResult(await api.test.httpTest(id, { url: httpTestUrl.trim(), payload }));
+    } catch (err) {
+      setHttpTestError(err.message);
+    } finally {
+      setHttpTestRunning(false);
     }
   }
 
@@ -976,6 +1005,53 @@ export default function IntegrationPage() {
                 {testResult.outputPayload && <pre className="max-h-64 overflow-auto rounded-md border border-slate-300 bg-white p-2 text-xs">{testResult.outputPayload}</pre>}
               </div>
             )}
+            <section className="mt-5 space-y-3 rounded-lg border border-[#97dbf3]/70 bg-[#f5fcff] p-4">
+              <div>
+                <h3 className="text-sm font-semibold text-[#0b5869]">Outbound HTTP test</h3>
+                <p className="mt-1 text-xs leading-5 text-slate-600">
+                  Sends a POST request from the automation worker to the URL you provide and displays the response. Use a public ngrok URL to verify the worker&apos;s outbound IP.
+                </p>
+              </div>
+              {!canManage && <ReadOnlyNotice>Your role can view this section, but cannot send test requests.</ReadOnlyNotice>}
+              <div>
+                <label htmlFor="http-test-url" className="block text-xs font-medium text-slate-700">POST URL</label>
+                <input
+                  id="http-test-url"
+                  value={httpTestUrl}
+                  onChange={(event) => { setHttpTestUrl(event.target.value); setHttpTestError(''); setHttpTestResult(null); }}
+                  placeholder="https://your-ngrok-url.ngrok-free.app/echo"
+                  readOnly={!canManage}
+                  className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#028baa] focus:ring-2 focus:ring-[#97dbf3]/40"
+                />
+              </div>
+              <div>
+                <label htmlFor="http-test-payload" className="block text-xs font-medium text-slate-700">JSON body</label>
+                <textarea
+                  id="http-test-payload"
+                  value={httpTestPayload}
+                  onChange={(event) => { setHttpTestPayload(event.target.value); setHttpTestError(''); setHttpTestResult(null); }}
+                  rows={5}
+                  readOnly={!canManage}
+                  spellCheck={false}
+                  className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 font-mono text-sm outline-none focus:border-[#028baa] focus:ring-2 focus:ring-[#97dbf3]/40"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleHttpTest}
+                disabled={httpTestRunning || !canManage}
+                className="rounded-md bg-[#306cb4] px-4 py-2 text-sm font-semibold text-white hover:bg-[#028baa] disabled:opacity-50"
+              >
+                {httpTestRunning ? 'Posting...' : 'Send POST test'}
+              </button>
+              {httpTestError && <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{httpTestError}</p>}
+              {httpTestResult && (
+                <div role="status" aria-live="polite" className="rounded-md border border-slate-200 bg-white p-3 text-sm">
+                  <p className="font-medium">HTTP {httpTestResult.response.status} {httpTestResult.response.statusText}</p>
+                  <pre className="mt-2 max-h-64 overflow-auto rounded-md border border-slate-300 bg-slate-50 p-2 text-xs">{httpTestResult.response.body || '(empty response)'}</pre>
+                </div>
+              )}
+            </section>
           </section>
         </CollapsibleCard>
 

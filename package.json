@@ -16,6 +16,7 @@
     "dev:worker:shopify-priority": "npm --workspace @automation/shopify-priority run dev",
     "dev": "node src/server.js",
     "dev:tunnel": "node scripts/ngrok-tunnel.js",
+    "dev:nat-echo": "node scripts/nat-echo-server.js",
     "start": "node scripts/prisma-postinstall.js && node src/server.js",
     "build:dashboard": "npm --prefix frontend/dashboard run build",
     "db:generate": "prisma generate",

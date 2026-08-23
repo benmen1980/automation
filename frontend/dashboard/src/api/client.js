@@ -94,6 +94,7 @@ export const api = {
   },
   test: {
     test: (id, payload) => request(`/api/integrations/${id}/test`, { method: 'POST', body: payload }),
+    httpTest: (id, payload) => request(`/api/integrations/${id}/http-test`, { method: 'POST', body: payload }),
     dryRun: (id, payload) => request(`/api/integrations/${id}/dry-run`, { method: 'POST', body: payload }),
     testConnector: (id, connector, credentials) =>
       request(`/api/integrations/${id}/test-connector`, { method: 'POST', body: { connector, credentials } }),
