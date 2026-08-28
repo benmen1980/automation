@@ -3,7 +3,7 @@
   "automation_id": "aut_ea71be6b4ff0780f",
   "slug": "priority-quote-whatsapp",
   "name": "שידור וואצפ מהזמנת לקוח",
-  "version": "1.6.8",
+  "version": "1.2.5",
   "runtime": { "type": "worker", "language": "javascript", "entrypoint": "integrations/priority-order-itc/src/handler.js", "definition": "src/integrations/tuf1/priority-quote-whatsapp/integration.js" },
   "connections": { "legacy": { "credential_keys": ["ITC_TEMPLATE_MESSAGE_URL", "ITC_BEARER_TOKEN", "ITC_CHANNEL_ID", "PRIORITY_WEB_SDK_URL", "PRIORITY_WEB_SDK_TABULAINI", "PRIORITY_WEB_SDK_LANGUAGE", "PRIORITY_WEB_SDK_COMPANY", "PRIORITY_WEB_SDK_APPNAME", "PRIORITY_WEB_SDK_USERNAME", "PRIORITY_WEB_SDK_PASSWORD", "PRIORITY_WEB_SDK_DEVICENAME", "PRIORITY_WEB_SDK_ORDER_SORT_OPTION"] }, "worker_adapter": { "package": "integrations/priority-order-itc" } },
   "config": { "schema": "legacy integration.js credentials" },
