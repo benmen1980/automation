@@ -1,0 +1,15 @@
+{
+  "manifest_schema": 1,
+  "automation_id": "aut_ea71be6b4ff0780f",
+  "slug": "priority-quote-whatsapp",
+  "name": "שידור וואצפ מהזמנת לקוח",
+  "version": "1.5.4",
+  "runtime": { "type": "worker", "language": "javascript", "entrypoint": "integrations/priority-order-itc/src/handler.js", "definition": "src/integrations/tuf1/priority-quote-whatsapp/integration.js" },
+  "connections": { "legacy": { "credential_keys": ["ITC_TEMPLATE_MESSAGE_URL", "ITC_BEARER_TOKEN", "ITC_CHANNEL_ID", "PRIORITY_WEB_SDK_URL", "PRIORITY_WEB_SDK_TABULAINI", "PRIORITY_WEB_SDK_LANGUAGE", "PRIORITY_WEB_SDK_COMPANY", "PRIORITY_WEB_SDK_APPNAME", "PRIORITY_WEB_SDK_USERNAME", "PRIORITY_WEB_SDK_PASSWORD", "PRIORITY_WEB_SDK_DEVICENAME", "PRIORITY_WEB_SDK_ORDER_SORT_OPTION"] }, "worker_adapter": { "package": "integrations/priority-order-itc" } },
+  "config": { "schema": "legacy integration.js credentials" },
+  "ui": { "mode": "generic", "fallback": true, "modules": [], "reference": "generic dashboard integration settings" },
+  "observability": { "scope": "automation_id", "eventSchema": "automation.log", "metrics": ["execution.duration_ms", "execution.status", "execution.errors"], "alerts": ["execution.failed"], "reference": "integration.js logging and worker manifest metadata" },
+  "tests": { "references": ["tests/integration/integration-management.test.js", "tests/integration/phase1-compatibility.test.js", "tests/integration/phase2-assignment.test.js", "integrations/priority-order-itc/test/handler.test.js"] },
+  "deployment": { "mode": "existing deployment configuration" },
+  "compatibility": { "legacy": { "slug": "priority-quote-whatsapp", "user_slug": "tuf1", "integration_key": "int_7f9a2c8e4b1d6f03", "code_folder": "src/integrations/tuf1/priority-quote-whatsapp" } }
+}
