@@ -45,7 +45,7 @@ module.exports = {
     modes: ['dry_run', 'test', 'mock_output', 'live'],
     modeDescriptions: {
       dry_run: 'Validates and maps the Priority order, uses a mock sales-order confirmation URL, and shows a redacted ITC request without calling Priority or ITC.',
-      test: 'Builds the ITC request with a mock Priority confirmation URL. It does not log in to Priority or send an ITC message.',
+      test: 'Validates the ITC request body without calling Priority or sending an ITC message.',
       mock_output: 'Uses a mock Priority confirmation URL and a mock accepted ITC response. No external system is called.',
       live: 'Logs in with Priority Web SDK, runs WWWSHOWORDER for ORDERS.ORDNAME with print format -109, saves the document on the automation server, then sends the server URL as ITC variable 3 in a real message.',
     },
@@ -200,12 +200,16 @@ module.exports = {
 
   privacy: {
     executionPayloadAllowlistPaths: [
+      'clientName',
+      'msgType',
+      'channelId',
+      'variables',
       'ORDERS.ORDNAME',
       'ORDERS.ZANA_CUSTDES',
       'ORDERS.ZANA_PHONENUM',
     ],
     executionPayloadRedactionPaths: [
-      'ORDERS.ORDNAME',
+      'clientName',
       'ORDERS.ZANA_PHONENUM',
     ],
   },
@@ -213,13 +217,16 @@ module.exports = {
   testPayloads: [
     {
       name: 'Priority customer order',
-      description: 'Maps ZANA_CUSTDES to variable 1 and WWWSHOWORDER input, ORDNAME to variable 2, the generated confirmation URL to variable 3, and ZANA_PHONENUM to the ITC recipient.',
+      description: 'ITC template-message request body used by the direct ITC test.',
       payload: {
-        ORDERS: {
-          ORDNAME: 'SO26000001',
-          ZANA_CUSTDES: 'ירדן',
-          ZANA_PHONENUM: '+972507573753',
-        },
+        clientName: '+972507573753',
+        msgType: 'whatsapp',
+        channelId: 'whatsapp:+97246960480',
+        variables: [
+          { type: 'text', text: 'ירדן' },
+          { type: 'text', text: 'SO26000001' },
+          { type: 'text', text: 'https://automation.example.test/documents/priority-orders/test.pdf' },
+        ],
       },
     },
   ],

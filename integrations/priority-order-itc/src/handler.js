@@ -29,6 +29,31 @@ export async function handler(job, context) {
   }
   const credentials = config.credentials || {};
   const endpoint = String(credentials.ITC_TEMPLATE_MESSAGE_URL || '').trim();
+  const directItcPayload = payload && typeof payload === 'object' && !Array.isArray(payload)
+    && typeof payload.clientName === 'string'
+    && typeof payload.msgType === 'string'
+    && typeof payload.channelId === 'string'
+    && Array.isArray(payload.variables);
+  if (directItcPayload) {
+    const body = payload;
+    const requestSummary = safeRequestSummary(endpoint, body);
+    logger.info('Sent to ITC.', { direction: 'Sent to ITC', messagesPrepared: 1, requestSummary });
+    if (mode === 'dry_run' || mode === 'test') {
+      const responseSummary = { skipped: true, reason: `${mode} mode does not call ITC.` };
+      logger.info('Received from ITC.', { direction: 'Received from ITC', messagesSent: 0, recordsSkipped: 1, errors: 0, responseSummary });
+      return { success: true, skipped: true, requestSummary, responseSummary, counts: { recordsRead: 1, messagesSent: 0, recordsSkipped: 1, errors: 0 } };
+    }
+    if (mode === 'mock_output') {
+      const mockResponse = mocks.itcResponse || { id: 'mock-itc-message-123', status: 'accepted', mocked: true };
+      const responseSummary = safeResponseSummary(mockResponse);
+      logger.info('Received from ITC.', { direction: 'Received from ITC', mocked: true, messagesSent: 0, recordsSkipped: 0, errors: 0, responseSummary });
+      return { success: true, mocked: true, providerMessageId: mockResponse.id == null ? null : sanitizeProviderString(mockResponse.id).slice(0, 160), requestSummary, responseSummary, counts: { recordsRead: 1, messagesSent: 0, recordsSkipped: 0, errors: 0 } };
+    }
+    const result = await sendTemplateMessage(body, credentials, { fetchImpl, beforeSend: beforeProviderDelivery });
+    const responseSummary = safeResponseSummary(result.data);
+    logger.info('Received from ITC.', { direction: 'Received from ITC', httpStatus: result.status, providerMessageId: result.providerMessageId, messagesSent: 1, recordsSkipped: 0, errors: 0, responseSummary });
+    return { success: true, providerMessageId: result.providerMessageId, requestSummary, responseSummary, counts: { recordsRead: 1, messagesSent: 1, recordsSkipped: 0, errors: 0 } };
+  }
   const { orderName, customerDescription } = getOrderFields(payload);
 
   logger.info('Received from Priority.', {
@@ -38,7 +63,7 @@ export async function handler(job, context) {
     recordsRead: 1,
     payload: {
       ORDERS: {
-        ORDNAME: { type: 'redacted', reason: 'sensitive personal data' },
+        ORDNAME: orderName,
         ZANA_CUSTDES: customerDescription,
         ZANA_PHONENUM: { type: 'redacted', reason: 'sensitive personal data' },
       },
@@ -50,7 +75,7 @@ export async function handler(job, context) {
     action: 'WWWSHOWORDER sales order confirmation',
     procedure: 'WWWSHOWORDER',
     requestSummary: {
-      orderName: { type: 'redacted', reason: 'sensitive personal data' },
+      orderName,
       sortOption: String(credentials.PRIORITY_WEB_SDK_ORDER_SORT_OPTION || 'By Order Number'),
     },
   });

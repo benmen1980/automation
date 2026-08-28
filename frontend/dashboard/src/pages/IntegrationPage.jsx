@@ -638,8 +638,11 @@ export default function IntegrationPage() {
       ]);
       setIntegration(i);
       setDefinition(d);
+      setManifest(m);
       setExecutionMode(d?.testing?.defaultMode || modes[0] || 'test');
-      setItcExecutionMode(d?.testing?.defaultMode || modes[0] || 'test');
+      setItcExecutionMode(d?.integrationKey === 'int_7f9a2c8e4b1d6f03'
+        ? 'live'
+        : d?.testing?.defaultMode || modes[0] || 'test');
       setActiveTestConnector({
         webhook: connectorOptions[0] || '',
         messaging: messagingOptions[0] || connectorOptions[0] || '',
@@ -723,6 +726,30 @@ export default function IntegrationPage() {
       setError(err.message);
     } finally {
       setRunning(false);
+    }
+  }
+
+  async function handleHttpTest() {
+    let payload;
+    try {
+      payload = JSON.parse(httpTestPayload || '{}');
+    } catch {
+      setHttpTestError('Enter valid JSON before sending the HTTP test.');
+      return;
+    }
+    if (!httpTestUrl.trim()) {
+      setHttpTestError('Enter a URL before sending the HTTP test.');
+      return;
+    }
+    setHttpTestRunning(true);
+    setHttpTestError('');
+    setHttpTestResult(null);
+    try {
+      setHttpTestResult(await api.test.httpTest(id, { url: httpTestUrl.trim(), payload }));
+    } catch (err) {
+      setHttpTestError(err.message);
+    } finally {
+      setHttpTestRunning(false);
     }
   }
 
@@ -815,6 +842,8 @@ export default function IntegrationPage() {
   const priorityOptions = sectionConnectors(definition, 'priority');
   const credentialBuckets = useMemo(() => splitCredentialFields(credentialFields), [credentialFields]);
   const usesItc = credentialBuckets.messaging.some((field) => String(field.key || '').toUpperCase().startsWith('ITC_'));
+  const isPriorityQuoteItc = definition?.integrationKey === 'int_7f9a2c8e4b1d6f03';
+  const itcTestModes = isPriorityQuoteItc ? ['live'] : allowedModes;
   const messagingSectionTitle = definition?.uiux?.credentialSectionTitle || (usesItc ? 'ITC settings' : 'WhatsApp settings');
   const messagingSectionDescription = usesItc
     ? 'ITC template endpoint, sending channel, and securely masked bearer token. Variable 3 is generated from Priority and is not a static setting.'
@@ -1004,7 +1033,7 @@ export default function IntegrationPage() {
                 <div>
                   <h3 className="text-sm font-semibold text-[#0b5869]">Test ITC message flow</h3>
                   <p className="mt-1 text-xs leading-5 text-slate-600">
-                    Paste the source order JSON to map. Safe modes do not contact Priority or ITC. Live mode generates the Priority document and sends a real ITC message to the phone number in the JSON.
+                    Paste the ITC request JSON. The live test posts this JSON directly to ITC without running Priority first.
                   </p>
                 </div>
                 {!canManage && <ReadOnlyNotice>Your role can view settings, but cannot start an ITC flow test.</ReadOnlyNotice>}
@@ -1038,7 +1067,7 @@ export default function IntegrationPage() {
                     spellCheck={false}
                     className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 font-mono text-sm outline-none focus:border-[#028baa] focus:ring-2 focus:ring-[#97dbf3]/40"
                   />
-                  <p className="mt-1 text-xs text-slate-500">Expected fields for this automation: ORDERS.ORDNAME, ORDERS.ZANA_CUSTDES, and ORDERS.ZANA_PHONENUM.</p>
+                  <p className="mt-1 text-xs text-slate-500">Expected ITC fields: clientName, msgType, channelId, and variables.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <label htmlFor="itc-test-mode" className="sr-only">ITC test mode</label>
