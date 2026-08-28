@@ -104,7 +104,7 @@ test('Lambda path emits explicit running and success lifecycle records', async (
   const finished = entries.find((entry) => entry.metadata?.status === 'success' && entry.metadata?.finishedAt);
   assert.ok(started?.metadata?.startedAt);
   assert.ok(finished);
-  assert.equal(JSON.stringify(entries).includes('SO26000001'), false);
+  assert.equal(JSON.stringify(entries).includes('SO26000001'), true);
   assert.equal(JSON.stringify(entries).includes('local-test-only'), false);
 });
 

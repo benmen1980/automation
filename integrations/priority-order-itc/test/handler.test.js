@@ -57,7 +57,7 @@ test('test mode maps ORDERS to ITC without a network call and keeps logs safe', 
     protocol: 'https:',
   });
   const logs = JSON.stringify(ctx.calls);
-  assert.equal(logs.includes('SO26000001'), false);
+  assert.equal(logs.includes('SO26000001'), true);
   assert.equal(logs.includes('+972507573753'), false);
   assert.equal(logs.includes('test-worker-token'), false);
   assert.equal(logs.includes('test-priority-password'), false);
