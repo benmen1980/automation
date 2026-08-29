@@ -614,10 +614,10 @@ export default function IntegrationPage() {
     priority: '',
   });
   const [sectionOpenState, setSectionOpenState] = useState({
-    webhook: true,
-    messaging: true,
-    priority: true,
-    logs: true,
+    webhook: false,
+    messaging: false,
+    priority: false,
+    logs: false,
   });
   const [selectedActivityExecutionId, setSelectedActivityExecutionId] = useState('');
   async function loadAll() {
