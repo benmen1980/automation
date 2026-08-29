@@ -76,8 +76,10 @@ export const api = {
     create: (payload) => request('/api/integrations', { method: 'POST', body: payload }),
     get: (id) => request(`/api/integrations/${id}`),
     update: (id, payload) => request(`/api/integrations/${id}`, { method: 'PATCH', body: payload }),
+    assignment: (id, userUid) => request(`/api/integrations/${id}/assignment`, { method: 'PATCH', body: { userUid } }),
     delete: (id) => request(`/api/integrations/${id}`, { method: 'DELETE' }),
     definition: (id) => request(`/api/integrations/${id}/definition`),
+    manifest: (id) => request(`/api/integrations/${id}/manifest`),
     credentials: {
       list: (id) => request(`/api/integrations/${id}/credentials`),
       save: (id, values) => request(`/api/integrations/${id}/credentials`, { method: 'POST', body: { values } }),
@@ -94,6 +96,7 @@ export const api = {
   },
   test: {
     test: (id, payload) => request(`/api/integrations/${id}/test`, { method: 'POST', body: payload }),
+    httpTest: (id, payload) => request(`/api/integrations/${id}/http-test`, { method: 'POST', body: payload }),
     dryRun: (id, payload) => request(`/api/integrations/${id}/dry-run`, { method: 'POST', body: payload }),
     testConnector: (id, connector, credentials) =>
       request(`/api/integrations/${id}/test-connector`, { method: 'POST', body: { connector, credentials } }),

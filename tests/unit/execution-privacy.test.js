@@ -15,7 +15,7 @@ describe('execution payload privacy', () => {
 
     expect(safe).toEqual({
       ORDERS: {
-        ORDNAME: { type: 'redacted', reason: 'sensitive personal data' },
+        ORDNAME: 'SO26000001',
         ZANA_CUSTDES: 'ירדן',
         ZANA_PHONENUM: { type: 'redacted', reason: 'sensitive personal data' },
       },
@@ -35,7 +35,7 @@ describe('execution payload privacy', () => {
     const safeExecution = redactExecutionForDisplay(integration, execution);
     const safePayload = JSON.parse(safeExecution.inputPayload);
 
-    expect(safePayload.ORDERS.ORDNAME).toMatchObject({ type: 'redacted' });
+    expect(safePayload.ORDERS.ORDNAME).toBe('SO26000001');
     expect(safePayload.ORDERS.ZANA_PHONENUM).toMatchObject({ type: 'redacted' });
     expect(safePayload.ORDERS.ZANA_CUSTDES).toBe('ירדן');
     expect(execution.inputPayload).toContain('SO26000001');

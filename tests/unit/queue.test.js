@@ -125,6 +125,20 @@ describe('queue SQS mode', () => {
     })).toThrow('Credential storage classification mismatch for API_TOKEN');
   });
 
+  test('accepts a permanent automation-id secret reference and rejects another automation', () => {
+    const { isScopedSecretReference } = require('../../src/core/queue');
+    const integration = { id: 'int-1', automationId: 'aut_0123456789abcdef' };
+    expect(isScopedSecretReference(
+      'automation/aut_0123456789abcdef/API_TOKEN', integration, 'API_TOKEN'
+    )).toBe(true);
+    expect(isScopedSecretReference(
+      'automation/aut_other_automation/API_TOKEN', integration, 'API_TOKEN'
+    )).toBe(false);
+    expect(isScopedSecretReference(
+      'automation/int-1/API_TOKEN', integration, 'API_TOKEN'
+    )).toBe(true);
+  });
+
   test('fails closed before serialization for plaintext and malformed secret-reference lookalikes', () => {
     const { buildSqsJobMessage } = require('../../src/core/queue');
     const serializationSpy = jest.spyOn(JSON, 'stringify');

@@ -1,0 +1,15 @@
+{
+  "manifest_schema": 1,
+  "automation_id": "aut_bf16311b2c39c038",
+  "slug": "priority-inventory-to-file",
+  "name": "Priority inventory to file",
+  "version": "1.0.0",
+  "runtime": { "type": "scheduled", "language": "javascript", "entrypoint": "src/integrations/user_001/priority-inventory-to-file/handler.js", "definition": "src/integrations/user_001/priority-inventory-to-file/integration.js" },
+  "connections": { "legacy": { "credential_keys": ["PRIORITY_INVENTORY_URL", "PRIORITY_BASIC_USERNAME", "PRIORITY_BASIC_PASSWORD", "LOCAL_OUTPUT_DIR"] } },
+  "config": { "schema": "legacy integration.js credentials" },
+  "ui": { "mode": "generic", "fallback": true, "modules": [], "reference": "generic dashboard integration settings" },
+  "observability": { "scope": "automation_id", "eventSchema": "automation.log", "metrics": ["execution.duration_ms", "execution.status", "execution.errors"], "alerts": ["execution.failed"], "reference": "integration.js logging metadata" },
+  "tests": { "references": ["tests/integration/integration-management.test.js", "tests/integration/phase1-compatibility.test.js", "tests/integration/phase2-assignment.test.js"] },
+  "deployment": { "mode": "existing deployment configuration" },
+  "compatibility": { "legacy": { "slug": "priority-inventory-to-file", "user_slug": "user_001", "integration_key": "int_c91a7e4f28b603d5", "code_folder": "src/integrations/user_001/priority-inventory-to-file" } }
+}

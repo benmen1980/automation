@@ -61,6 +61,7 @@ async function runIndependentLocalWorker(execution, workerName, overrides = {}) 
   const logger = overrides.logger || createLogger({
     userId: execution.userId,
     integrationId: execution.integrationId,
+    automationId: integration.automationId || null,
     executionId: execution.id,
     executionMode: execution.executionMode,
     isTest: execution.executionMode !== 'live',

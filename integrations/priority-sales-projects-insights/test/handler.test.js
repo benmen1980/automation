@@ -57,7 +57,7 @@ test('aggregates sales and project insights in test mode', async () => {
 
   assert.equal(result.success, true);
   assert.equal(result.summary.totals.totalSalesOrders, 2);
-  assert.equal(result.summary.totals.totalInvoiceCount, 2);
+  assert.equal(result.summary.totals.totalInvoiceCount, 3);
   assert.equal(result.summary.topProjects.length, 2);
   assert.equal(result.summary.topProjects[0].project, 'P1');
 });

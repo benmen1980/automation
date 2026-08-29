@@ -1,0 +1,15 @@
+{
+  "manifest_schema": 1,
+  "automation_id": "aut_173beae508c1a190",
+  "slug": "priority-whatsapp",
+  "name": "Priority Balance to WhatsApp",
+  "version": "1.0.0",
+  "runtime": { "type": "webhook", "language": "javascript", "entrypoint": "src/integrations/user_001/priority-whatsapp/handler.js", "definition": "src/integrations/user_001/priority-whatsapp/integration.js" },
+  "connections": { "legacy": { "credential_keys": ["PRIORITY_API_URL", "PRIORITY_API_KEY", "WHATSAPP_TOKEN", "WHATSAPP_API_URL"] } },
+  "config": { "schema": "legacy integration.js credentials" },
+  "ui": { "mode": "generic", "fallback": true, "modules": [], "reference": "generic dashboard integration settings" },
+  "observability": { "scope": "automation_id", "eventSchema": "automation.log", "metrics": ["execution.duration_ms", "execution.status", "execution.errors"], "alerts": ["execution.failed"], "reference": "integration.js logging metadata" },
+  "tests": { "references": ["tests/integration/integration-management.test.js", "tests/integration/phase1-compatibility.test.js", "tests/integration/phase2-assignment.test.js"] },
+  "deployment": { "mode": "existing deployment configuration" },
+  "compatibility": { "legacy": { "slug": "priority-whatsapp", "user_slug": "user_001", "integration_key": "int_a8c5e2f7d0396b41", "code_folder": "src/integrations/user_001/priority-whatsapp" } }
+}

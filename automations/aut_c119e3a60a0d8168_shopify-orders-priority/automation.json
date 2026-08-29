@@ -1,0 +1,15 @@
+{
+  "manifest_schema": 1,
+  "automation_id": "aut_c119e3a60a0d8168",
+  "slug": "shopify-orders-priority",
+  "name": "Shopify Orders to Priority",
+  "version": "1.0.0",
+  "runtime": { "type": "webhook", "language": "javascript", "entrypoint": "src/integrations/user_001/shopify-orders-priority/handler.js", "definition": "src/integrations/user_001/shopify-orders-priority/integration.js" },
+  "connections": { "legacy": { "credential_keys": ["PRIORITY_API_URL", "PRIORITY_API_KEY"] }, "worker_adapter": { "package": "integrations/shopify-priority" } },
+  "config": { "schema": "legacy integration.js credentials" },
+  "ui": { "mode": "generic", "fallback": true, "modules": [], "reference": "generic dashboard integration settings" },
+  "observability": { "scope": "automation_id", "eventSchema": "automation.log", "metrics": ["execution.duration_ms", "execution.status", "execution.errors"], "alerts": ["execution.failed"], "reference": "integration.js logging metadata" },
+  "tests": { "references": ["tests/integration/integration-management.test.js", "tests/integration/phase1-compatibility.test.js", "tests/integration/phase2-assignment.test.js", "integrations/shopify-priority/test/handler.test.js"] },
+  "deployment": { "mode": "existing deployment configuration" },
+  "compatibility": { "legacy": { "slug": "shopify-orders-priority", "user_slug": "user_001", "integration_key": "int_2f7d9c4a6b1e8350", "code_folder": "src/integrations/user_001/shopify-orders-priority" } }
+}

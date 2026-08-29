@@ -1,0 +1,15 @@
+{
+  "manifest_schema": 1,
+  "automation_id": "aut_2783d95063be2f25",
+  "slug": "whatsapp-order",
+  "name": "WhatsApp Order Notification",
+  "version": "1.0.0",
+  "runtime": { "type": "webhook", "language": "javascript", "entrypoint": "src/integrations/user_001/whatsapp-order/handler.js", "definition": "src/integrations/user_001/whatsapp-order/integration.js" },
+  "connections": { "legacy": { "credential_keys": ["WHATSAPP_TOKEN", "WHATSAPP_API_URL", "DEFAULT_COUNTRY_CODE"] } },
+  "config": { "schema": "legacy integration.js credentials" },
+  "ui": { "mode": "generic", "fallback": true, "modules": [], "reference": "generic dashboard integration settings" },
+  "observability": { "scope": "automation_id", "eventSchema": "automation.log", "metrics": ["execution.duration_ms", "execution.status", "execution.errors"], "alerts": ["execution.failed"], "reference": "integration.js logging metadata" },
+  "tests": { "references": ["tests/integration/integration-management.test.js", "tests/integration/phase1-compatibility.test.js", "tests/integration/phase2-assignment.test.js"] },
+  "deployment": { "mode": "existing deployment configuration" },
+  "compatibility": { "legacy": { "slug": "whatsapp-order", "user_slug": "user_001", "integration_key": "int_e3c8f1a6d5b20974", "code_folder": "src/integrations/user_001/whatsapp-order" } }
+}

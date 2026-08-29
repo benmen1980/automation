@@ -115,7 +115,7 @@ export async function handler(job = {}, context = {}) {
       mode,
       transorderCount: sales.length,
       baseinvoicerepCount: invoices.length,
-      baseinvoicerepSONCount: invoiceLines.length,
+      baseinvoicerepsonCount: invoiceLines.length,
       insights: aggregate({
         sales: sales.map((row) => ({ raw: row })),
         invoices: invoices.map((row) => ({ raw: row })),

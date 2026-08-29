@@ -5,6 +5,7 @@ import ActivityPanel from '../components/ActivityPanel.jsx';
 import Badge from '../components/Badge.jsx';
 import CredentialForm from '../components/CredentialForm.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import AutomationModules from '../components/AutomationModules.jsx';
 
 const FALLBACK_EXECUTION_MODES = ['dummy', 'test', 'dry_run', 'mock_output', 'mock_input', 'live'];
 const DEFAULT_TIMEZONE = 'Asia/Jerusalem';
@@ -586,6 +587,7 @@ export default function IntegrationPage() {
   const { user } = useAuth();
   const [integration, setIntegration] = useState(null);
   const [definition, setDefinition] = useState(null);
+  const [manifest, setManifest] = useState(null);
   const [credentialFields, setCredentialFields] = useState([]);
   const [executions, setExecutions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -599,6 +601,11 @@ export default function IntegrationPage() {
   const [itcRunning, setItcRunning] = useState(false);
   const [itcTestResult, setItcTestResult] = useState(null);
   const [itcTestError, setItcTestError] = useState('');
+  const [httpTestUrl, setHttpTestUrl] = useState('');
+  const [httpTestPayload, setHttpTestPayload] = useState('{\n  "test": "automation outbound"\n}');
+  const [httpTestRunning, setHttpTestRunning] = useState(false);
+  const [httpTestResult, setHttpTestResult] = useState(null);
+  const [httpTestError, setHttpTestError] = useState('');
   const [connectorTesting, setConnectorTesting] = useState(false);
   const [connectorResultMap, setConnectorResultMap] = useState({ webhook: null, messaging: null, priority: null });
   const [activeTestConnector, setActiveTestConnector] = useState({
@@ -617,9 +624,10 @@ export default function IntegrationPage() {
     setLoading(true);
     setError('');
     try {
-      const [{ integration: i }, { definition: d }, { credentials: c }, { executions: e }] = await Promise.all([
+      const [{ integration: i }, { definition: d }, { manifest: m }, { credentials: c }, { executions: e }] = await Promise.all([
         api.integrations.get(id),
         api.integrations.definition(id),
+        api.integrations.manifest(id),
         api.integrations.credentials.list(id),
         api.executions.listForIntegration(id),
       ]);
@@ -766,27 +774,35 @@ export default function IntegrationPage() {
       return;
     }
 
-    const order = payload.ORDERS;
-    const requiredOrderFields = ['ORDNAME', 'ZANA_CUSTDES', 'ZANA_PHONENUM'];
-    const missingFields = requiredOrderFields.filter((field) => (
-      !order || typeof order !== 'object' || Array.isArray(order) ||
-      typeof order[field] !== 'string' || !order[field].trim()
-    ));
-    if (missingFields.length) {
-      setItcTestError(`Add non-empty text values for: ${missingFields.map((field) => `ORDERS.${field}`).join(', ')}.`);
-      return;
+    if (isPriorityQuoteItc) {
+      const requiredItcFields = ['clientName', 'msgType', 'channelId'];
+      const missingFields = requiredItcFields.filter((field) => (
+        typeof payload[field] !== 'string' || !payload[field].trim()
+      ));
+      if (!Array.isArray(payload.variables) || payload.variables.length === 0) missingFields.push('variables');
+      if (missingFields.length) {
+        setItcTestError(`Add non-empty ITC values for: ${missingFields.join(', ')}.`);
+        return;
+      }
+    } else {
+      const order = payload.ORDERS;
+      const requiredOrderFields = ['ORDNAME', 'ZANA_CUSTDES', 'ZANA_PHONENUM'];
+      const missingFields = requiredOrderFields.filter((field) => (
+        !order || typeof order !== 'object' || Array.isArray(order) ||
+        typeof order[field] !== 'string' || !order[field].trim()
+      ));
+      if (missingFields.length) {
+        setItcTestError(`Add non-empty text values for: ${missingFields.map((field) => `ORDERS.${field}`).join(', ')}.`);
+        return;
+      }
+      payload = { ORDERS: { ORDNAME: order.ORDNAME, ZANA_CUSTDES: order.ZANA_CUSTDES, ZANA_PHONENUM: order.ZANA_PHONENUM } };
     }
-    payload = {
-      ORDERS: {
-        ORDNAME: order.ORDNAME,
-        ZANA_CUSTDES: order.ZANA_CUSTDES,
-        ZANA_PHONENUM: order.ZANA_PHONENUM,
-      },
-    };
 
     if (
       itcExecutionMode === 'live' &&
-      !window.confirm('This live test will generate a real Priority sales-order confirmation and send a real ITC message to the phone number in the JSON. Continue?')
+      !window.confirm(isPriorityQuoteItc
+        ? 'This live test will send the ITC JSON directly as a real ITC message. Continue?'
+        : 'This live test will generate a real Priority sales-order confirmation and send its URL in a real ITC message. Continue?')
     ) return;
 
     setError('');
@@ -927,6 +943,7 @@ export default function IntegrationPage() {
       </div>
 
       <div className="space-y-6">
+        <AutomationModules manifest={manifest} />
         <CollapsibleCard
           title="Webhook settings"
           description="Webhook configuration, webhook credentials, and workflow test."
@@ -1005,6 +1022,53 @@ export default function IntegrationPage() {
                 {testResult.outputPayload && <pre className="max-h-64 overflow-auto rounded-md border border-slate-300 bg-white p-2 text-xs">{testResult.outputPayload}</pre>}
               </div>
             )}
+            <section className="mt-5 space-y-3 rounded-lg border border-[#97dbf3]/70 bg-[#f5fcff] p-4">
+              <div>
+                <h3 className="text-sm font-semibold text-[#0b5869]">Outbound HTTP test</h3>
+                <p className="mt-1 text-xs leading-5 text-slate-600">
+                  Sends a POST request from the automation worker to the URL you provide and displays the response. Use a public ngrok URL to verify the worker&apos;s outbound IP.
+                </p>
+              </div>
+              {!canManage && <ReadOnlyNotice>Your role can view this section, but cannot send test requests.</ReadOnlyNotice>}
+              <div>
+                <label htmlFor="http-test-url" className="block text-xs font-medium text-slate-700">POST URL</label>
+                <input
+                  id="http-test-url"
+                  value={httpTestUrl}
+                  onChange={(event) => { setHttpTestUrl(event.target.value); setHttpTestError(''); setHttpTestResult(null); }}
+                  placeholder="https://your-ngrok-url.ngrok-free.app/echo"
+                  readOnly={!canManage}
+                  className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-[#028baa] focus:ring-2 focus:ring-[#97dbf3]/40"
+                />
+              </div>
+              <div>
+                <label htmlFor="http-test-payload" className="block text-xs font-medium text-slate-700">JSON body</label>
+                <textarea
+                  id="http-test-payload"
+                  value={httpTestPayload}
+                  onChange={(event) => { setHttpTestPayload(event.target.value); setHttpTestError(''); setHttpTestResult(null); }}
+                  rows={5}
+                  readOnly={!canManage}
+                  spellCheck={false}
+                  className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 font-mono text-sm outline-none focus:border-[#028baa] focus:ring-2 focus:ring-[#97dbf3]/40"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleHttpTest}
+                disabled={httpTestRunning || !canManage}
+                className="rounded-md bg-[#306cb4] px-4 py-2 text-sm font-semibold text-white hover:bg-[#028baa] disabled:opacity-50"
+              >
+                {httpTestRunning ? 'Posting...' : 'Send POST test'}
+              </button>
+              {httpTestError && <p role="alert" className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{httpTestError}</p>}
+              {httpTestResult && (
+                <div role="status" aria-live="polite" className="rounded-md border border-slate-200 bg-white p-3 text-sm">
+                  <p className="font-medium">HTTP {httpTestResult.response.status} {httpTestResult.response.statusText}</p>
+                  <pre className="mt-2 max-h-64 overflow-auto rounded-md border border-slate-300 bg-slate-50 p-2 text-xs">{httpTestResult.response.body || '(empty response)'}</pre>
+                </div>
+              )}
+            </section>
           </section>
         </CollapsibleCard>
 
@@ -1082,7 +1146,7 @@ export default function IntegrationPage() {
                     disabled={!canManage}
                     className="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm"
                   >
-                    {allowedModes.map((mode) => <option key={mode} value={mode}>{executionModeLabel(definition, mode)}</option>)}
+                    {itcTestModes.map((mode) => <option key={mode} value={mode}>{executionModeLabel(definition, mode)}</option>)}
                   </select>
                   <button
                     type="button"

@@ -1,0 +1,15 @@
+{
+  "manifest_schema": 1,
+  "automation_id": "aut_7ac59552336b85bd",
+  "slug": "priority-shopify-inventory",
+  "name": "Priority to Shopify Inventory Sync",
+  "version": "1.0.0",
+  "runtime": { "type": "scheduled", "language": "javascript", "entrypoint": "src/integrations/user_001/priority-shopify-inventory/handler.js", "definition": "src/integrations/user_001/priority-shopify-inventory/integration.js" },
+  "connections": { "legacy": { "credential_keys": ["PRIORITY_API_URL", "PRIORITY_API_KEY", "SHOPIFY_API_URL", "SHOPIFY_ACCESS_TOKEN"] } },
+  "config": { "schema": "legacy integration.js credentials" },
+  "ui": { "mode": "generic", "fallback": true, "modules": [], "reference": "generic dashboard integration settings" },
+  "observability": { "scope": "automation_id", "eventSchema": "automation.log", "metrics": ["execution.duration_ms", "execution.status", "execution.errors"], "alerts": ["execution.failed"], "reference": "integration.js logging metadata" },
+  "tests": { "references": ["tests/integration/integration-management.test.js", "tests/integration/phase1-compatibility.test.js", "tests/integration/phase2-assignment.test.js"] },
+  "deployment": { "mode": "existing deployment configuration" },
+  "compatibility": { "legacy": { "slug": "priority-shopify-inventory", "user_slug": "user_001", "integration_key": "int_f0b63a9d1e7c4285", "code_folder": "src/integrations/user_001/priority-shopify-inventory" } }
+}

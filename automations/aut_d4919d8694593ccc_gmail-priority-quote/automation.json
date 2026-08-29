@@ -1,0 +1,15 @@
+{
+  "manifest_schema": 1,
+  "automation_id": "aut_d4919d8694593ccc",
+  "slug": "gmail-priority-quote",
+  "name": "Gmail Quote Request to Priority",
+  "version": "1.0.0",
+  "runtime": { "type": "webhook", "language": "javascript", "entrypoint": "src/integrations/user_001/gmail-priority-quote/handler.js", "definition": "src/integrations/user_001/gmail-priority-quote/integration.js" },
+  "connections": { "legacy": { "credential_keys": ["PRIORITY_API_URL", "PRIORITY_API_KEY"] }, "worker_adapter": { "package": "integrations/gmail-priority" } },
+  "config": { "schema": "legacy integration.js credentials" },
+  "ui": { "mode": "generic", "fallback": true, "modules": [], "reference": "generic dashboard integration settings" },
+  "observability": { "scope": "automation_id", "eventSchema": "automation.log", "metrics": ["execution.duration_ms", "execution.status", "execution.errors"], "alerts": ["execution.failed"], "reference": "integration.js logging metadata" },
+  "tests": { "references": ["tests/integration/integration-management.test.js", "tests/integration/phase1-compatibility.test.js", "tests/integration/phase2-assignment.test.js", "integrations/gmail-priority/test/handler.test.js"] },
+  "deployment": { "mode": "existing deployment configuration" },
+  "compatibility": { "legacy": { "slug": "gmail-priority-quote", "user_slug": "user_001", "integration_key": "int_b4d7a19c6e2f8035", "code_folder": "src/integrations/user_001/gmail-priority-quote" } }
+}

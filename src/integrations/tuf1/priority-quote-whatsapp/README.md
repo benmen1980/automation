@@ -88,7 +88,7 @@ Logs use these directional steps:
 - `Sent to ITC`
 - `Received from ITC`
 
-`ORDNAME`, `ZANA_PHONENUM`, `clientName`, generated document paths, passwords, bearer tokens, and authorization headers are redacted. Logs retain only the document URL host/protocol and keep `ZANA_CUSTDES` visible as requested. Priority failures identify the exact failed stage, safe HTTP status/error code when available, and an actionable next step. Authentication/configuration failures are terminal; transient network, timeout, throttling, and server failures remain retryable before any ITC delivery.
+`ZANA_PHONENUM`, `clientName`, generated document paths, passwords, bearer tokens, and authorization headers are redacted. Logs retain the non-personal `ORDNAME`, only the document URL host/protocol, and keep `ZANA_CUSTDES` visible as requested. Priority failures identify the exact failed stage, safe HTTP status/error code when available, and an actionable next step. Authentication/configuration failures are terminal; transient network, timeout, throttling, and server failures remain retryable before any ITC delivery.
 
 The connector has a 15-second request timeout and does not retry automatically because a timed-out request may already have been accepted. Queue-level retry and deduplication policy must be configured in the independent worker deployment.
 

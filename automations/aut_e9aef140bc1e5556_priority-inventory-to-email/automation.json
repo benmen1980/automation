@@ -1,0 +1,15 @@
+{
+  "manifest_schema": 1,
+  "automation_id": "aut_e9aef140bc1e5556",
+  "slug": "priority-inventory-to-email",
+  "name": "Priority inventory to email",
+  "version": "1.0.0",
+  "runtime": { "type": "scheduled", "language": "javascript", "entrypoint": "src/integrations/user_001/priority-inventory-to-email/handler.js", "definition": "src/integrations/user_001/priority-inventory-to-email/integration.js" },
+  "connections": { "legacy": { "credential_keys": ["PRIORITY_INVENTORY_URL", "PRIORITY_BASIC_USERNAME", "PRIORITY_BASIC_PASSWORD", "EMAIL_PROVIDER", "SES_FROM_EMAIL", "SES_REGION", "GMAIL_USE_LOCAL_FILES", "GMAIL_USER_EMAIL", "GMAIL_CLIENT_ID", "GMAIL_CLIENT_SECRET", "GMAIL_REFRESH_TOKEN", "EMAIL_TO_GROUP", "EMAIL_SUBJECT_PREFIX"] } },
+  "config": { "schema": "legacy integration.js credentials" },
+  "ui": { "mode": "generic", "fallback": true, "modules": [], "reference": "generic dashboard integration settings" },
+  "observability": { "scope": "automation_id", "eventSchema": "automation.log", "metrics": ["execution.duration_ms", "execution.status", "execution.errors"], "alerts": ["execution.failed"], "reference": "integration.js logging metadata" },
+  "tests": { "references": ["tests/integration/integration-management.test.js", "tests/integration/phase1-compatibility.test.js", "tests/integration/phase2-assignment.test.js"] },
+  "deployment": { "mode": "existing deployment configuration" },
+  "compatibility": { "legacy": { "slug": "priority-inventory-to-email", "user_slug": "user_001", "integration_key": "int_3e8f1c6a9d2b0475", "code_folder": "src/integrations/user_001/priority-inventory-to-email" } }
+}

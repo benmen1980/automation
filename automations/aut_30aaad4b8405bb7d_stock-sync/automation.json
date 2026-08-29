@@ -1,0 +1,15 @@
+{
+  "manifest_schema": 1,
+  "automation_id": "aut_30aaad4b8405bb7d",
+  "slug": "stock-sync",
+  "name": "Stock Sync",
+  "version": "1.0.0",
+  "runtime": { "type": "scheduled", "language": "javascript", "entrypoint": "src/integrations/user_001/stock-sync/handler.js", "definition": "src/integrations/user_001/stock-sync/integration.js" },
+  "connections": { "legacy": { "credential_keys": ["API_BASE_URL", "API_KEY", "LOW_STOCK_THRESHOLD", "EMAIL_API_URL", "EMAIL_API_KEY", "ALERT_RECIPIENT"] } },
+  "config": { "schema": "legacy integration.js credentials" },
+  "ui": { "mode": "generic", "fallback": true, "modules": [], "reference": "generic dashboard integration settings" },
+  "observability": { "scope": "automation_id", "eventSchema": "automation.log", "metrics": ["execution.duration_ms", "execution.status", "execution.errors"], "alerts": ["execution.failed"], "reference": "integration.js logging metadata" },
+  "tests": { "references": ["tests/integration/integration-management.test.js", "tests/integration/phase1-compatibility.test.js", "tests/integration/phase2-assignment.test.js"] },
+  "deployment": { "mode": "existing deployment configuration" },
+  "compatibility": { "legacy": { "slug": "stock-sync", "user_slug": "user_001", "integration_key": "int_d5a17c9e4f02b638", "code_folder": "src/integrations/user_001/stock-sync" } }
+}
