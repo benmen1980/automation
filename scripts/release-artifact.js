@@ -15,8 +15,26 @@ function option(name, fallback) {
 }
 
 function trackedFiles() {
-  const output = execFileSync('git', ['-C', root, 'ls-files', '-co', '--exclude-standard'], { encoding: 'utf8' });
-  return output.split(/\r?\n/).filter(Boolean);
+  try {
+    const output = execFileSync('git', ['-C', root, 'ls-files', '-co', '--exclude-standard'], { encoding: 'utf8' });
+    return output.split(/\r?\n/).filter(Boolean);
+  } catch (error) {
+    if (fs.existsSync(path.join(root, '.git'))) throw error;
+    const files = [];
+    function visit(directory) {
+      for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+        const fullPath = path.join(directory, entry.name);
+        const relativePath = path.relative(root, fullPath).replace(/\\/g, '/');
+        if (entry.isDirectory()) {
+          if (!['node_modules', '.git', 'dist', 'local-data', 'logs'].includes(entry.name)) visit(fullPath);
+        } else {
+          files.push(relativePath);
+        }
+      }
+    }
+    visit(root);
+    return files;
+  }
 }
 
 function commitSha() {
