@@ -57,7 +57,7 @@ function fileAllowedForAutomation(file, manifest) {
   return manifestAllowedPaths(manifest).some((allowed) => pathIsWithin(normalized, allowed));
 }
 
-function validateWorkspaceScope({ scope, automationId, branch, changedFiles, allowAutomationId } = {}) {
+function validateWorkspaceScope({ scope, automationId, branch, changedFiles, allowAutomationId, foundationalInfrastructure = false } = {}) {
   const normalizedScope = String(scope || '').toUpperCase();
   if (![PLATFORM_SCOPE, AUTOMATION_SCOPE].includes(normalizedScope)) {
     throw new Error(`Scope must be ${PLATFORM_SCOPE} or ${AUTOMATION_SCOPE}.`);
@@ -73,7 +73,7 @@ function validateWorkspaceScope({ scope, automationId, branch, changedFiles, all
   if (normalizedScope === AUTOMATION_SCOPE && !manifest) throw new Error(`No manifest found for ${automationId}.`);
 
   const normalizedFiles = (changedFiles || []).map((file) => assertSafeRelativePath(file));
-  const automationManifests = normalizedScope === PLATFORM_SCOPE ? registry.discoverAutomations() : [];
+  const automationManifests = normalizedScope === PLATFORM_SCOPE && !foundationalInfrastructure ? registry.discoverAutomations() : [];
   const violations = normalizedFiles.filter((file) => {
     if (normalizedScope === AUTOMATION_SCOPE) return !fileAllowedForAutomation(file, manifest);
     const target = automationManifests.find((candidate) => fileAllowedForAutomation(file, candidate));
@@ -86,7 +86,7 @@ function validateWorkspaceScope({ scope, automationId, branch, changedFiles, all
   if (violations.length) {
     throw new Error(`Workspace scope violation: ${violations.join(', ')}`);
   }
-  return { scope: normalizedScope, automationId: automationId || null, branch, changedFiles: normalizedFiles };
+  return { scope: normalizedScope, automationId: automationId || null, branch, changedFiles: normalizedFiles, foundationalInfrastructure: Boolean(foundationalInfrastructure) };
 }
 
 module.exports = {

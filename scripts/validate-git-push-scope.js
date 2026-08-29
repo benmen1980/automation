@@ -48,6 +48,7 @@ function main() {
     branch: process.env.CODEX_BRANCH || git(['branch', '--show-current']),
     changedFiles: files,
     allowAutomationId: process.env.CODEX_ALLOW_AUTOMATION_ID,
+    foundationalInfrastructure: process.env.CODEX_FOUNDATIONAL_INFRA === 'true',
   });
   console.log(`Scope validation passed: ${scope.scope}${scope.automationId ? ` ${scope.automationId}` : ''}; ${files.length} pushed path(s) checked.`);
 }

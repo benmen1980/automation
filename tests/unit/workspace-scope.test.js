@@ -74,6 +74,19 @@ describe('workspace and Git scope enforcement', () => {
     })).toThrow('Workspace scope violation');
   });
 
+  test('foundational infrastructure scope may span automation packages', () => {
+    const result = validateWorkspaceScope({
+      scope: PLATFORM_SCOPE,
+      branch: 'codex/platform/stage-alignment',
+      foundationalInfrastructure: true,
+      changedFiles: [
+        'src/core/workspace-scope.js',
+        'automations/aut_ea71be6b4ff0780f_priority-order-itc/automation.json',
+      ],
+    });
+    expect(result.foundationalInfrastructure).toBe(true);
+  });
+
   test('rejects traversal paths and mismatched branch names', () => {
     expect(() => validateWorkspaceScope({
       scope: AUTOMATION_SCOPE,
