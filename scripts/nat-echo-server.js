@@ -21,6 +21,7 @@ const server = http.createServer((req, res) => {
     const result = {
       ok: true,
       method: req.method,
+      path: req.url,
       sourceIp: firstForwardedIp(req.headers['x-forwarded-for']) || req.socket.remoteAddress,
       forwardedFor: req.headers['x-forwarded-for'] || null,
       realIp: req.headers['x-real-ip'] || null,
