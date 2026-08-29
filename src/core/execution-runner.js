@@ -39,6 +39,7 @@ async function runExecutionJob(executionId) {
   const logger = createLogger({
     userId: integration.userId,
     integrationId: integration.id,
+    automationId: integration.automationId || null,
     executionId: execution.id,
     executionMode: execution.executionMode,
     isTest,
@@ -56,7 +57,7 @@ async function runExecutionJob(executionId) {
       startedAt: new Date().toISOString(),
       sourceExecutionId: execution.sourceExecutionId || undefined,
       requestPayloadSummary: summarizePayload(payload),
-    });
+    }, { eventType: 'automation.execution.started', attempt: execution.retryCount + 1 });
 
     if (integration.status !== 'active') {
       throw new Error(`Integration "${integration.slug}" is not active.`);
@@ -97,7 +98,7 @@ async function runExecutionJob(executionId) {
       endedAt: new Date().toISOString(),
       responsePayloadSummary: summarizePayload(result),
       ...counts,
-    });
+    }, { eventType: 'automation.execution.completed', durationMs: execution.startedAt ? Date.now() - new Date(execution.startedAt).getTime() : null });
   } catch (err) {
     const failureDetails = {
       error: err.message,
@@ -127,7 +128,11 @@ async function runExecutionJob(executionId) {
       executionId: execution.id,
     };
     await executionService.markFailed(execution.id, err.message);
-    await logger.error('Execution failed.', failureDetails);
+    await logger.error('Execution failed.', failureDetails, {
+      eventType: 'automation.execution.failed',
+      attempt: execution.retryCount + 1,
+      durationMs: execution.startedAt ? Date.now() - new Date(execution.startedAt).getTime() : null,
+    });
   }
 
   return executionService.getExecutionById(execution.id);

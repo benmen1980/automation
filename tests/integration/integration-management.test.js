@@ -137,6 +137,25 @@ describe('integration management', () => {
     expect(res.status).toBe(200);
     expect(res.body.integration.id).toBe(integration.id);
     expect(res.body.integration.integrationKey).toBe(echoIntegrationKey);
+    expect(res.body.integration.automationId).toMatch(/^aut_[a-f0-9]{16}$/);
+    expect((await prisma.user.findUnique({ where: { id: keyUser.id } })).userUid).toMatch(/^usr_[a-f0-9]{16}$/);
+  });
+
+  test('users can open an owned integration by its permanent automation id', async () => {
+    const identityUser = await createUser({ slug: 'mgmt_identity_user', email: 'mgmt-identity-user@test.local' });
+    const identityIntegration = await createIntegration({
+      user: identityUser,
+      slug: 'identity-echo',
+      codeFolder: 'src/integrations/test_fixtures/echo',
+    });
+
+    const res = await request(app)
+      .get(`/api/integrations/${identityIntegration.automationId}`)
+      .set('Authorization', authHeader(identityUser));
+
+    expect(res.status).toBe(200);
+    expect(res.body.integration.id).toBe(identityIntegration.id);
+    expect(res.body.integration.automationId).toBe(identityIntegration.automationId);
   });
 
   test('viewer can inspect but cannot mutate or run an owned integration', async () => {

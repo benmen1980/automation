@@ -11,6 +11,8 @@ phases:
     commands:
       - npm run test:api
       - npm --prefix frontend/dashboard run build
+      - node scripts/release-artifact.js build --output dist/release-manifest.json
+      - node scripts/release-artifact.js verify --manifest dist/release-manifest.json
 artifacts:
   files:
     - '**/*'

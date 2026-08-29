@@ -6,16 +6,24 @@
  */
 const bcrypt = require('bcryptjs');
 const prisma = require('../../src/db/client');
+const { deriveUserUid, deriveAutomationId } = require('../../src/core/identity');
 
 async function createUser({ slug, email, name = 'Test User', role = 'user', password = 'Password123!', status = 'active' }) {
   const passwordHash = await bcrypt.hash(password, 4); // low cost factor - tests don't need real-world hashing cost
-  return prisma.user.create({ data: { slug, email, name, role, passwordHash, status } });
+  return prisma.user.create({ data: { slug, email, name, role, passwordHash, status, userUid: deriveUserUid(slug) } });
 }
 
 async function createIntegration({ user, slug, codeFolder, type = 'webhook', name, version, status = 'active', manualRunEnabled = true }) {
   return prisma.integration.create({
     data: {
       userId: user.id,
+      assignedUserUid: user.userUid,
+      automationId: deriveAutomationId({
+        integrationKey: require(`../../${codeFolder}/integration`).integrationKey,
+        userUid: user.userUid,
+        slug,
+        codeFolder,
+      }),
       name: name || slug,
       version,
       description: 'Created by the automated test suite.',

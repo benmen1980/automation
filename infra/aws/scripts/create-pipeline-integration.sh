@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-INTEGRATION_NAME="${1:?Usage: create-pipeline-integration.sh <integration-name>}"
+INTEGRATION_NAME="${1:?Usage: create-pipeline-integration.sh <integration-name> [automation-id]}"
+AUTOMATION_ID="${2:-${AUTOMATION_ID:-}}"
 : "${AWS_REGION:=eu-west-1}"
 : "${REPO_ID:=benmen1980/automation}"
 : "${BRANCH:=master}"
@@ -18,11 +19,17 @@ fi
 PROJECT_NAME="integration-${INTEGRATION_NAME}"
 PIPELINE_NAME="integration-${INTEGRATION_NAME}"
 SOURCE_ACTION_NAME="Source"
-EXTRA_SOURCE_PATHS_JSON=""
-EXTRA_SOURCE_PATHS_LABEL=""
+AUTOMATION_SOURCE_PATH_JSON=""
+AUTOMATION_SOURCE_PATH_LABEL=""
+if [[ -n "${AUTOMATION_ID}" ]]; then
+  AUTOMATION_SOURCE_PATH_JSON=", \"automations/${AUTOMATION_ID}_*/**\""
+  AUTOMATION_SOURCE_PATH_LABEL=", automations/${AUTOMATION_ID}_*/**"
+fi
+LEGACY_SOURCE_PATH_JSON=""
+LEGACY_SOURCE_PATH_LABEL=""
 if [[ "${INTEGRATION_NAME}" == "priority-order-itc" ]]; then
-  EXTRA_SOURCE_PATHS_JSON=', "src/integrations/tuf1/priority-quote-whatsapp/**", "scripts/sync-integration-db.js"'
-  EXTRA_SOURCE_PATHS_LABEL=", src/integrations/tuf1/priority-quote-whatsapp/**, scripts/sync-integration-db.js"
+  LEGACY_SOURCE_PATH_JSON=', "src/integrations/tuf1/priority-quote-whatsapp/**", "scripts/sync-integration-db.js"'
+  LEGACY_SOURCE_PATH_LABEL=", src/integrations/tuf1/priority-quote-whatsapp/**, scripts/sync-integration-db.js"
 fi
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "${TMP_DIR}"' EXIT
@@ -96,7 +103,7 @@ cat >"${TMP_DIR}/pipeline.json" <<JSON
             "integrations/${INTEGRATION_NAME}/**",
             "packages/shared/**",
             "infra/aws/integrations/${INTEGRATION_NAME}/**",
-            "buildspec-lambda-integration.yml"${EXTRA_SOURCE_PATHS_JSON}
+            "buildspec-lambda-integration.yml"${AUTOMATION_SOURCE_PATH_JSON}${LEGACY_SOURCE_PATH_JSON}
           ] }
         }]
       }
@@ -112,4 +119,4 @@ else
 fi
 
 echo "Created or updated independent pipeline ${PIPELINE_NAME}."
-echo "Watched paths: integrations/${INTEGRATION_NAME}/**, packages/shared/**, infra/aws/integrations/${INTEGRATION_NAME}/**, buildspec-lambda-integration.yml${EXTRA_SOURCE_PATHS_LABEL}"
+echo "Watched paths: integrations/${INTEGRATION_NAME}/**, packages/shared/**, infra/aws/integrations/${INTEGRATION_NAME}/**, buildspec-lambda-integration.yml${AUTOMATION_SOURCE_PATH_LABEL}${LEGACY_SOURCE_PATH_LABEL}"

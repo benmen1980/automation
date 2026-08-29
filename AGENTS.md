@@ -24,6 +24,33 @@ For every request:
 * Do not solve unrelated problems.
 * Ignore potential improvements unless they are required to complete the requested task.
 
+## Chat Scope Lock
+
+At the beginning of every new chat, classify the first user request into exactly one scope:
+
+* `PLATFORM/ADMIN` — platform, the Admin panel, shared infrastructure, migration, or repository-wide work. Shared dashboard code that implements an automation’s UI is not automatically platform/admin scope.
+* `AUTOMATION:<integration_id>` — work for one specific integration only.
+
+The assistant must state the selected scope before taking project actions. The scope is immutable for the chat.
+
+An `AUTOMATION:<integration_id>` chat must refuse requests to modify or discuss another integration, platform code, Admin code, shared infrastructure, deployment configuration, or repository-wide behavior. A `PLATFORM/ADMIN` chat must refuse automation-specific implementation work. Work for a different scope requires a new chat.
+
+Automation-specific forms, modules, API wiring, dashboard pages, and components under `frontend/dashboard` belong to the matching automation scope. `frontend/dashboard/src/pages/AdminPage.jsx` and genuinely shared platform/dashboard infrastructure remain `PLATFORM/ADMIN`.
+
+Before editing, committing, or pushing, run the applicable project scope validator:
+
+```powershell
+npm run validate:workspace-scope -- --scope PLATFORM/ADMIN --branch main
+```
+
+For integration work, also provide the exact permanent integration ID:
+
+```powershell
+npm run validate:workspace-scope -- --scope AUTOMATION --automation-id <integration_id> --branch automation/<integration_id>/work
+```
+
+Never combine Admin/platform and automation work, or two automation scopes, in one chat, commit, or push. If the request changes scope, stop and instruct the user to open a new chat.
+
 ---
 
 # Code Search Strategy

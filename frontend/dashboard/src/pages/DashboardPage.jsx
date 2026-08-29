@@ -58,7 +58,7 @@ function NewIntegrationForm({ onCreated }) {
       </p>
       <div className="grid grid-cols-2 gap-3">
         <label className="col-span-2 text-xs font-medium text-slate-600">
-          Owner
+          Assigned user
           <select
             required
             value={form.userId}
@@ -70,7 +70,7 @@ function NewIntegrationForm({ onCreated }) {
             ))}
           </select>
           <span className="mt-1 block text-xs font-normal text-slate-400">
-            The selected user will see and own this integration.
+            The selected user will see and access this integration.
           </span>
         </label>
         <input

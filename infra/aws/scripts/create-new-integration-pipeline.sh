@@ -9,6 +9,7 @@ GITHUB_REPO="${GITHUB_REPO:-automation}"
 AWS_REGION="${AWS_REGION:-eu-west-1}"
 CODECONNECTION_ARN="${CODECONNECTION_ARN:-}"
 API_QUEUE_ENV_SUFFIX="${API_QUEUE_ENV_SUFFIX:-}"
+AUTOMATION_ID="${AUTOMATION_ID:-}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -19,6 +20,7 @@ while [[ $# -gt 0 ]]; do
     --github-repo) GITHUB_REPO="${2:?}"; shift 2 ;;
     --codeconnection-arn) CODECONNECTION_ARN="${2:?}"; shift 2 ;;
     --api-queue-env-suffix) API_QUEUE_ENV_SUFFIX="${2:?}"; shift 2 ;;
+    --automation-id) AUTOMATION_ID="${2:?}"; shift 2 ;;
     --region) AWS_REGION="${2:?}"; shift 2 ;;
     *) echo "Unknown argument: $1" >&2; exit 2 ;;
   esac
@@ -41,7 +43,7 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ID="${GITHUB_OWNER}/${GITHUB_REPO}"
-export AWS_REGION BRANCH CODECONNECTION_ARN PIPELINE_ROLE_ARN CODEBUILD_ROLE_ARN ARTIFACT_BUCKET REPO_ID
+export AWS_REGION BRANCH CODECONNECTION_ARN PIPELINE_ROLE_ARN CODEBUILD_ROLE_ARN ARTIFACT_BUCKET REPO_ID AUTOMATION_ID
 export API_QUEUE_ENV_SUFFIX="${API_QUEUE_ENV_SUFFIX:-$(echo "${INTEGRATION_NAME}" | tr '[:lower:]-' '[:upper:]_')}"
 
 "${SCRIPT_DIR}/create-sqs-for-integration.sh" "${INTEGRATION_NAME}"
@@ -58,5 +60,5 @@ else
   "${SCRIPT_DIR}/create-fargate-integration.sh" "${INTEGRATION_NAME}"
 fi
 
-"${SCRIPT_DIR}/create-pipeline-integration.sh" "${INTEGRATION_NAME}"
+"${SCRIPT_DIR}/create-pipeline-integration.sh" "${INTEGRATION_NAME}" "${AUTOMATION_ID}"
 echo "Provisioned independent ${RUNTIME} resources and pipeline for ${INTEGRATION_NAME}."

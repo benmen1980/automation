@@ -66,7 +66,14 @@ async function saveCredentials(integration, values) {
     validateField(field, value);
 
     if (isSecretField(field)) {
-      const refName = await secrets.setSecret(integration.id, field.key, String(value));
+      const existing = await prisma.credential.findUnique({
+        where: { integrationId_key: { integrationId: integration.id, key: field.key } },
+        select: { valueReference: true },
+      });
+      const canonicalReference = await secrets.setSecret(integration, field.key, String(value));
+      // Keep an existing legacy DB reference stable. The secret adapter writes
+      // both aliases, so old rows and callers remain valid during migration.
+      const refName = existing?.valueReference || canonicalReference;
       await prisma.credential.upsert({
         where: { integrationId_key: { integrationId: integration.id, key: field.key } },
         update: { valueReference: refName, type: field.type, isSecret: true },
@@ -116,7 +123,7 @@ async function loadCredentialsForExecution(integration) {
 
     if (row) {
       if (row.isSecret) {
-        value = await secrets.getSecret(integration.id, field.key);
+        value = await secrets.getSecret(integration, field.key, row.valueReference);
       } else {
         value = JSON.parse(row.valueReference);
       }
@@ -166,7 +173,7 @@ async function listCredentialsForDisplay(integration) {
       return { ...base, saved: false, value: field.defaultValue !== undefined ? field.defaultValue : null };
     }
     if (row.isSecret) {
-      return { ...base, saved: true, value: await secrets.getSecret(integration.id, field.key) };
+      return { ...base, saved: true, value: await secrets.getSecret(integration, field.key, row.valueReference) };
     }
     return { ...base, saved: true, value: JSON.parse(row.valueReference) };
   }));

@@ -4,13 +4,13 @@
  * the ownership check (docs/product/product-architecture-spec.md 10.1) is implemented exactly once.
  */
 const prisma = require('../db/client');
-const { assertOwnsOrAdmin, assertCanMutate } = require('../core/permissions');
+const { assertOwnsOrAdmin, assertCanMutate, integrationAccessWhere } = require('../core/permissions');
 const { isAdmin } = require('../core/permissions');
 const integrationLoader = require('../core/integration-loader');
 
 async function findIntegrationByCodeKey(req, options) {
   const integrations = await prisma.integration.findMany({
-    where: isAdmin(req.user) ? {} : { userId: req.user.id },
+    where: integrationAccessWhere(req.user),
     include: options.include,
   });
   return integrations.find((candidate) => {
@@ -22,12 +22,17 @@ async function findIntegrationByCodeKey(req, options) {
   });
 }
 
+async function findIntegrationByIdentity(req, options) {
+  return prisma.integration.findFirst({
+    where: { automationId: req.params.id },
+    include: options.include,
+  });
+}
+
 function loadIntegration(options = {}) {
   return async function (req, res, next) {
-    let integration = await prisma.integration.findUnique({
-      where: { id: req.params.id },
-      include: options.include,
-    });
+    let integration = await prisma.integration.findUnique({ where: { id: req.params.id }, include: options.include });
+    if (!integration) integration = await findIntegrationByIdentity(req, options);
     if (!integration) integration = await findIntegrationByCodeKey(req, options);
     if (!integration) return res.status(404).json({ error: 'Integration not found.' });
     try {

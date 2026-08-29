@@ -25,7 +25,8 @@ async function findWebhookIntegrationByKey(integrationKey) {
   const integration = integrations.find((candidate) => {
     if (candidate.type !== 'webhook') return false;
     try {
-      return integrationLoader.loadDefinition(candidate)?.integrationKey === integrationKey;
+      return candidate.automationId === integrationKey
+        || integrationLoader.loadDefinition(candidate)?.integrationKey === integrationKey;
     } catch {
       return false;
     }
@@ -69,7 +70,7 @@ async function runWebhook({
     : await findWebhookIntegration(userSlug, integrationSlug);
   if (!found) throw httpError('Webhook not found.', 404);
   const { user, integration } = found;
-  const logger = createLogger({ userId: user.id, integrationId: integration.id, executionMode, isTest: false });
+  const logger = createLogger({ userId: user.id, integrationId: integration.id, automationId: integration.automationId || null, executionMode, isTest: false });
   let acceptedWebhookDiagnostics = null;
 
   if (integration.status !== 'active') throw httpError('Integration is not active.', 403);
@@ -90,7 +91,7 @@ async function runWebhook({
           reason: 'invalid_or_missing_priority_bpm_token',
           acceptedHeader: 'Priority-BPM-Token',
           nextStep: 'Open Webhook settings, save the exact Priority BPM value from Priority, then send it using header Priority-BPM-Token.',
-        });
+        }, { eventType: 'automation.webhook.rejected', statusCode: 401 });
         throw httpError('Invalid or missing webhook token.', 401);
       }
       acceptedWebhookDiagnostics = {
@@ -109,6 +110,7 @@ async function runWebhook({
     const executionLogger = createLogger({
       userId: user.id,
       integrationId: integration.id,
+      automationId: integration.automationId || null,
       executionId: execution.id,
       executionMode,
       isTest: executionMode !== 'live',
@@ -116,13 +118,16 @@ async function runWebhook({
     await executionLogger.info('Accepted Priority webhook request for this execution.', {
       ...acceptedWebhookDiagnostics,
       jobId: execution.id,
-    });
+    }, { eventType: 'automation.webhook.accepted', statusCode: 200 });
   }
   return redactExecutionForDisplay(integration, execution);
 }
 
 async function setWebhookToken(integration, token) {
-  return secretsStore.setSecret(integration.id, WEBHOOK_TOKEN_KEY, String(token));
+  await secretsStore.setSecret(integration, WEBHOOK_TOKEN_KEY, String(token));
+  // Preserve the established webhook reference format while both aliases
+  // remain available to old and new callers.
+  return secretsStore.legacyRefName(integration.id, WEBHOOK_TOKEN_KEY);
 }
 
 async function getWebhookToken(integration) {
@@ -139,7 +144,7 @@ async function getWebhookToken(integration) {
     if (integration.webhookSettings) integration.webhookSettings.secretTokenReference = safeReference;
     return legacyPlaintext;
   }
-  return secretsStore.getSecret(integration.id, WEBHOOK_TOKEN_KEY);
+  return secretsStore.getSecret(integration, WEBHOOK_TOKEN_KEY, saved);
 }
 
 module.exports = { runWebhook, findWebhookIntegration, findWebhookIntegrationByKey, setWebhookToken, getWebhookToken, WEBHOOK_TOKEN_KEY };

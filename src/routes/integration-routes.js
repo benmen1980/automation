@@ -1,9 +1,9 @@
 ﻿const express = require('express');
 const router = express.Router();
 const prisma = require('../db/client');
-const { requireAuth } = require('../middleware/auth-middleware');
+const { requireAuth, requireAdmin } = require('../middleware/auth-middleware');
 const { loadIntegration } = require('../middleware/load-integration');
-const { isAdmin } = require('../core/permissions');
+const { isAdmin, integrationAccessWhere } = require('../core/permissions');
 const integrationLoader = require('../core/integration-loader');
 const credentialsService = require('../core/credentials');
 const secrets = require('../core/secrets');
@@ -11,6 +11,8 @@ const { slugify } = require('../utils/slugify');
 const { buildPublicUrl } = require('../core/public-url');
 const webhookRunner = require('../core/webhook-runner');
 const scheduler = require('../core/scheduler');
+const { deriveAutomationId, deriveUserUid, getIntegrationKeyFromDefinition } = require('../core/identity');
+const { findByAutomationId, publicManifest } = require('../core/automation-registry');
 
 router.use(requireAuth);
 
@@ -45,7 +47,11 @@ function withIntegrationCodeKey(integration) {
 }
 
 router.get('/', async (req, res) => {
-  const where = req.query.scope === 'all' && isAdmin(req.user) ? {} : { userId: req.user.id };
+  const where = req.query.scope === 'all' && isAdmin(req.user)
+    ? {}
+    : isAdmin(req.user)
+      ? { userId: req.user.id }
+      : integrationAccessWhere(req.user);
   const integrations = await prisma.integration.findMany({
     where,
     orderBy: [{ name: 'asc' }, { codeFolder: 'asc' }],
@@ -88,9 +94,21 @@ router.post('/', async (req, res) => {
   const finalSlug = slugify(slug || name);
 
   try {
+    const owner = await prisma.user.findUnique({ where: { id: ownerId } });
+    if (!owner) return res.status(400).json({ error: 'Selected user does not exist.' });
+    const definition = integrationLoader.loadDefinitionFromPath(
+      integrationLoader.validateIntegrationFiles(codeFolder, definitionFile, handlerFile).definitionPath
+    );
     const integration = await prisma.integration.create({
       data: {
         userId: ownerId,
+        assignedUserUid: owner.userUid || deriveUserUid(owner.slug),
+        automationId: deriveAutomationId({
+          integrationKey: getIntegrationKeyFromDefinition(definition),
+          userUid: owner.userUid || deriveUserUid(owner.slug),
+          slug: finalSlug,
+          codeFolder,
+        }),
         name,
         version: version ? String(version).trim() : undefined,
         description,
@@ -140,7 +158,7 @@ router.delete('/:id', loadIntegration({ mutate: true }), async (req, res) => {
 
     await Promise.all(
       [...(req.deletedSecretKeys || []), 'WEBHOOK_TOKEN'].map((key) =>
-        secrets.deleteSecret(req.integration.id, key).catch(() => {})
+        secrets.deleteSecret(req.integration, key).catch(() => {})
       )
     );
     res.json({ deleted: true });
@@ -151,6 +169,18 @@ router.delete('/:id', loadIntegration({ mutate: true }), async (req, res) => {
 
 router.get('/:id', loadIntegration({ include: WITH_SETTINGS }), (req, res) => {
   res.json({ integration: withIntegrationCodeKey(withPublicWebhookUrl(req.integration, req)) });
+});
+
+router.get('/:id/manifest', loadIntegration(), (req, res) => {
+  const manifest = req.integration.automationId ? findByAutomationId(req.integration.automationId) : null;
+  res.json({
+    manifest: manifest ? publicManifest(manifest) : {
+      manifest_schema: 1,
+      automation_id: req.integration.automationId || null,
+      ui: { mode: 'generic', fallback: true, modules: [] },
+      observability: { mode: 'generic', fallback: true, eventSchema: 'automation.log', metrics: [], alerts: [] },
+    },
+  });
 });
 
 router.patch('/:id', loadIntegration({ mutate: true }), async (req, res) => {
@@ -178,6 +208,7 @@ router.patch('/:id', loadIntegration({ mutate: true }), async (req, res) => {
     const owner = await prisma.user.findUnique({ where: { id: trimmedUserId } });
     if (!owner) return res.status(400).json({ error: 'Selected user does not exist.' });
     data.userId = owner.id;
+    data.assignedUserUid = owner.userUid || deriveUserUid(owner.slug);
   }
 
   try {
@@ -185,6 +216,29 @@ router.patch('/:id', loadIntegration({ mutate: true }), async (req, res) => {
     res.json({ integration: withIntegrationCodeKey(integration) });
   } catch (err) {
     if (err.code === 'P2002') return res.status(409).json({ error: 'An integration with this slug already exists for this user.' });
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+});
+
+router.patch('/:id/assignment', requireAdmin, loadIntegration(), async (req, res) => {
+  const rawUserUid = req.body && req.body.userUid;
+  if (rawUserUid !== null && rawUserUid !== undefined && !String(rawUserUid).trim()) {
+    return res.status(400).json({ error: 'userUid must be a non-empty value or null.' });
+  }
+
+  const userUid = rawUserUid === null || rawUserUid === undefined ? null : String(rawUserUid).trim();
+  if (userUid) {
+    const user = await prisma.user.findUnique({ where: { userUid } });
+    if (!user) return res.status(400).json({ error: 'Selected user does not exist.' });
+  }
+
+  try {
+    const integration = await prisma.integration.update({
+      where: { id: req.integration.id },
+      data: { assignedUserUid: userUid },
+    });
+    res.json({ integration: withIntegrationCodeKey(integration) });
+  } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message });
   }
 });

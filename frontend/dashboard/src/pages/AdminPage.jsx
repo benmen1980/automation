@@ -167,13 +167,13 @@ export default function AdminPage() {
     }
   }
 
-  async function handleReassignIntegration(integrationId, ownerId) {
+  async function handleReassignIntegration(integrationId, userUid) {
     setError('');
     setReassigningIntegrationId(integrationId);
     try {
-      const { integration: updated } = await api.integrations.update(integrationId, { userId: ownerId });
+      const { integration: updated } = await api.integrations.assignment(integrationId, userUid || null);
       setIntegrations((previous) =>
-        previous.map((integration) => (integration.id === updated.id ? { ...integration, userId: updated.userId } : integration))
+        previous.map((integration) => (integration.id === updated.id ? { ...integration, assignedUserUid: updated.assignedUserUid } : integration))
       );
     } catch (err) {
       setError(err.message);
@@ -182,8 +182,6 @@ export default function AdminPage() {
       setReassigningIntegrationId('');
     }
   }
-
-  const usersById = Object.fromEntries(users.map((u) => [u.id, u]));
 
   if (loading) return <p className="text-slate-500">Loading…</p>;
 
@@ -255,19 +253,17 @@ export default function AdminPage() {
                 <span className="font-mono text-[11px] text-slate-500">({integration.integrationKey || integration.id})</span>
               </div>
               <div className="flex items-center gap-2 min-w-0">
-                <label className="sr-only" htmlFor={`assign-${integration.id}`}>Assign owner</label>
+                <label className="sr-only" htmlFor={`assign-${integration.id}`}>Assign user</label>
                 <select
                   id={`assign-${integration.id}`}
-                  value={integration.userId}
+                  value={integration.assignedUserUid || ''}
                   onChange={(event) => handleReassignIntegration(integration.id, event.target.value)}
                   disabled={reassigningIntegrationId === integration.id}
                   className="min-w-40 rounded border border-slate-300 bg-white px-2 py-1.5 text-xs"
                 >
-                  <option value={integration.userId}>
-                    {usersById[integration.userId]?.name || integration.userId}
-                  </option>
-                  {users.filter((item) => item.id !== integration.userId).map((item) => (
-                    <option key={item.id} value={item.id}>
+                  <option value="">Unassigned (Admin only)</option>
+                  {users.filter((item) => item.status === 'active').map((item) => (
+                    <option key={item.userUid} value={item.userUid}>
                       {item.name}
                     </option>
                   ))}

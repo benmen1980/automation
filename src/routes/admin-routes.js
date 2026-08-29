@@ -5,6 +5,7 @@ const { requireAuth, requireAdmin } = require('../middleware/auth-middleware');
 const { hashPassword } = require('../core/auth');
 const { slugify } = require('../utils/slugify');
 const sendgrid = require('../core/sendgrid');
+const { deriveUserUid } = require('../core/identity');
 
 router.use(requireAuth, requireAdmin);
 
@@ -30,7 +31,7 @@ router.post('/sendgrid/test', async (req, res) => {
   }
 });
 
-const PUBLIC_USER_FIELDS = { id: true, slug: true, email: true, name: true, role: true, status: true, createdAt: true };
+const PUBLIC_USER_FIELDS = { id: true, userUid: true, slug: true, email: true, name: true, role: true, status: true, createdAt: true };
 
 router.get('/users', async (req, res) => {
   const users = await prisma.user.findMany({ orderBy: { createdAt: 'asc' }, select: PUBLIC_USER_FIELDS });
@@ -60,8 +61,8 @@ router.post('/users', async (req, res) => {
   const passwordHash = await hashPassword(password);
 
   try {
-    const user = await prisma.user.create({ data: { email, name, role, passwordHash, slug: finalSlug } });
-    res.status(201).json({ user: { id: user.id, slug: user.slug, email: user.email, name: user.name, role: user.role, status: user.status } });
+    const user = await prisma.user.create({ data: { email, name, role, passwordHash, slug: finalSlug, userUid: deriveUserUid(finalSlug) } });
+    res.status(201).json({ user: { id: user.id, userUid: user.userUid, slug: user.slug, email: user.email, name: user.name, role: user.role, status: user.status } });
   } catch (err) {
     if (err.code === 'P2002') return res.status(409).json({ error: 'Email or slug already in use.' });
     res.status(500).json({ error: err.message });
@@ -84,7 +85,7 @@ router.patch('/users/:id', async (req, res) => {
 
   try {
     const user = await prisma.user.update({ where: { id: req.params.id }, data });
-    res.json({ user: { id: user.id, slug: user.slug, email: user.email, name: user.name, role: user.role, status: user.status } });
+    res.json({ user: { id: user.id, userUid: user.userUid, slug: user.slug, email: user.email, name: user.name, role: user.role, status: user.status } });
   } catch (err) {
     res.status(404).json({ error: 'User not found.' });
   }

@@ -17,8 +17,11 @@ phases:
       - mkdir -p dist
       - rm -rf "dist/lambda-${INTEGRATION_NAME}"
       - mkdir -p "dist/lambda-${INTEGRATION_NAME}/node_modules/@automation"
+      - node scripts/release-artifact.js build --output "dist/release-manifest-${INTEGRATION_NAME}.json"
+      - node scripts/release-artifact.js verify --manifest "dist/release-manifest-${INTEGRATION_NAME}.json"
       - cp -R "integrations/${INTEGRATION_NAME}/package.json" "integrations/${INTEGRATION_NAME}/src" "integrations/${INTEGRATION_NAME}/fixtures" "dist/lambda-${INTEGRATION_NAME}/"
       - cp -R packages/shared "dist/lambda-${INTEGRATION_NAME}/node_modules/@automation/shared"
+      - cp "dist/release-manifest-${INTEGRATION_NAME}.json" "dist/lambda-${INTEGRATION_NAME}/release-manifest.json"
       - (cd "dist/lambda-${INTEGRATION_NAME}" && npm install --omit=dev --ignore-scripts)
       - (cd "dist/lambda-${INTEGRATION_NAME}" && zip -r "../${INTEGRATION_NAME}.zip" .)
   post_build:

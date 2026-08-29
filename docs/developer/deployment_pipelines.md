@@ -1,4 +1,9 @@
-Refactor and configure the project so deployment uses many independent pipelines, not one monolithic pipeline.
+Deployment uses independent service pipelines, not one monolithic pipeline. Each
+automation's manifest, runtime, and automation-owned UI changes live under its
+own `automations/<automation-id>_*` package and are watched by that automation's
+pipeline. The shared dashboard renderer remains platform code; automation-specific
+UI modules do not belong under `frontend/dashboard/src/pages` or the shared
+component directories.
 
 Core rule:
 A git push to master must deploy only the service whose files changed.
@@ -13,6 +18,10 @@ Required deployment model:
 6. The API should only enqueue jobs and show job status.
 7. Integrations should run as independent workers, preferably Lambda by default.
 8. Use ECS/Fargate only for long-running or heavy integrations.
+
+For STAGE, the same path-scoped pipelines deploy every matching `master` push to
+the target service's staging resource. A change is therefore promoted to STAGE
+by the pipeline that owns its path; unrelated services are not restarted.
 
 Required pipelines:
 
@@ -114,6 +123,7 @@ This should create a new independent pipeline that watches only:
 
 * integrations/bellboy-priority/**
 * packages/shared/**
+* automations/<automation-id>_*/**
 * buildspec-lambda-integration.yml
 
 Acceptance checklist:
@@ -128,3 +138,18 @@ Acceptance checklist:
 8. A broken integration deployment must not affect the API/dashboard deployment.
 9. A broken integration runtime must not crash the API/dashboard.
 10. Documentation explains exactly what happens on git push master for each folder.
+
+## Push-to-STAGE rules
+
+On every push to `master`, CodePipeline evaluates the changed paths:
+
+* `apps/api/**`, `src/**`, `frontend/dashboard/**`, `prisma/**`, and shared
+  platform files deploy the API/dashboard STAGE environment.
+* `integrations/<name>/**`, its infrastructure, its buildspec, and its
+  `automations/<automation-id>_*` package deploy only that automation's STAGE
+  worker.
+* `AdminPage.jsx` remains platform/admin-owned and is deployed only by the
+  API/dashboard pipeline.
+
+This path ownership is enforced locally by the Git scope hooks and in CI by the
+same changed-path rules.

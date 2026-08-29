@@ -11,7 +11,7 @@ GITHUB_REPO="${GITHUB_REPO:-automation}"
 BRANCH="${BRANCH:-master}"
 CONNECTION_ARN="${CONNECTION_ARN:-}"
 EB_APPLICATION="${EB_APPLICATION:-${PROJECT_NAME}}"
-EB_ENVIRONMENT="${EB_ENVIRONMENT:-automation-api}"
+EB_ENVIRONMENT="${EB_ENVIRONMENT:-automation-stage}"
 CODEPIPELINE_ROLE_ARN="${CODEPIPELINE_ROLE_ARN:-}"
 CODEBUILD_ROLE_ARN="${CODEBUILD_ROLE_ARN:-}"
 CREATE_ROLES="${CREATE_ROLES:-false}"
@@ -49,7 +49,7 @@ Example:
     --github-repo automation \
     --connection-arn arn:aws:codestar-connections:eu-west-1:123456789012:connection/abc \
     --eb-application automation \
-    --eb-environment automation-api \
+    --eb-environment automation-stage \
     --create-roles
 USAGE
 }

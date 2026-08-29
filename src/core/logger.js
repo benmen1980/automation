@@ -8,12 +8,16 @@
  */
 const prisma = require('../db/client');
 const { sanitizeLogEntry } = require('../utils/sanitize-logs');
+const { normalizeObservabilityContext } = require('./observability');
 
 const LOG_MODE = process.env.LOG_MODE || 'console';
 
-function createLogger({ userId, integrationId, executionId, executionMode, isTest = false }) {
-  async function write(level, message, metadata) {
+function createLogger({ userId, integrationId, automationId = null, executionId, executionMode, isTest = false, correlationId } = {}) {
+  const defaultContext = normalizeObservabilityContext({ correlationId });
+
+  async function write(level, message, metadata, context = {}) {
     const safe = sanitizeLogEntry({ message, metadata });
+    const observability = normalizeObservabilityContext({ ...defaultContext, ...context });
 
     if (LOG_MODE === 'console') {
       const prefix = `[${level.toUpperCase()}] [${integrationId}] [${executionId || 'no-exec'}]`;
@@ -26,20 +30,27 @@ function createLogger({ userId, integrationId, executionId, executionMode, isTes
         userId,
         integrationId,
         executionId: executionId || null,
+        automationId,
         level,
         message: safe.message,
         metadata: safe.metadata !== undefined ? JSON.stringify(safe.metadata) : null,
         executionMode: executionMode || null,
         isTest,
+        eventType: observability.eventType,
+        schemaVersion: observability.schemaVersion,
+        correlationId: observability.correlationId,
+        durationMs: observability.durationMs,
+        attempt: observability.attempt,
+        statusCode: observability.statusCode,
       },
     });
   }
 
   return {
-    debug: (message, metadata) => write('debug', message, metadata),
-    info: (message, metadata) => write('info', message, metadata),
-    warning: (message, metadata) => write('warning', message, metadata),
-    error: (message, metadata) => write('error', message, metadata),
+    debug: (message, metadata, context) => write('debug', message, metadata, context),
+    info: (message, metadata, context) => write('info', message, metadata, context),
+    warning: (message, metadata, context) => write('warning', message, metadata, context),
+    error: (message, metadata, context) => write('error', message, metadata, context),
   };
 }
 

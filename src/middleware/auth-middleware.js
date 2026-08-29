@@ -3,8 +3,9 @@
  * Does NOT apply to /webhooks/* (those use their own token/signature
  * check inside webhook-runner.js, per docs/product/product-architecture-spec.md 5.7).
  */
-const { verifyToken } = require('../core/auth');
+const { verifyToken, verifyCognitoToken } = require('../core/auth');
 const prisma = require('../db/client');
+const AUTH_MODE = process.env.AUTH_MODE || (process.env.NODE_ENV === 'production' ? 'cognito' : 'mock');
 
 async function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
@@ -13,12 +14,23 @@ async function requireAuth(req, res, next) {
     return res.status(401).json({ error: 'Missing or malformed Authorization header.' });
   }
   try {
-    const payload = verifyToken(token);
-    const user = await prisma.user.findUnique({ where: { id: payload.sub } });
+    let payload;
+    let cognitoToken = false;
+    try {
+      payload = verifyToken(token);
+    } catch (localTokenError) {
+      payload = await verifyCognitoToken(token);
+      cognitoToken = true;
+    }
+    const user = await prisma.user.findUnique({ where: { email: payload.email } });
     if (!user || user.status !== 'active') {
       return res.status(401).json({ error: 'User not found or inactive.' });
     }
-    req.user = { id: user.id, slug: user.slug, email: user.email, name: user.name, role: user.role };
+    if (AUTH_MODE === 'cognito' && ((cognitoToken && user.role !== 'admin') || (!cognitoToken && user.role === 'admin'))) {
+      return res.status(401).json({ error: 'Invalid authentication method for this user.' });
+    }
+    req.user = { id: user.id, userUid: user.userUid, slug: user.slug, email: user.email, name: user.name,
+      role: user.role };
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Invalid or expired token.' });

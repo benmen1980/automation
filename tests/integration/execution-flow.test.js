@@ -205,7 +205,7 @@ describe('execution flow (echo fixture)', () => {
         .set('Authorization', authHeader(user1))
         .send({ token: 'fixture-webhook-token' });
       expect(settingsRes.status).toBe(200);
-      expect(settingsRes.body.webhookSettings.webhookUrl).toBe(`/webhooks/${ECHO_INTEGRATION_KEY}`);
+      expect(new URL(settingsRes.body.webhookSettings.webhookUrl).pathname).toBe(`/webhooks/${ECHO_INTEGRATION_KEY}`);
 
       const tokenRes = await request(app)
         .get(`/api/integrations/${integration.id}/webhook-token`)

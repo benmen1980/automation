@@ -70,36 +70,77 @@ function decrypt(payload) {
   return decrypted.toString('utf8');
 }
 
-function refName(integrationId, key) {
+function legacyRefName(integrationId, key) {
   return `${integrationId}::${key}`;
+}
+
+function automationRefName(automationId, key) {
+  return `automation/${automationId}/${key}`;
+}
+
+function isReferenceForScope(reference, integrationOrId, key) {
+  const value = String(reference || '');
+  const integrationId = typeof integrationOrId === 'string' ? integrationOrId : integrationOrId?.id;
+  const automationId = typeof integrationOrId === 'object' ? integrationOrId?.automationId : null;
+  const names = [
+    integrationId ? legacyRefName(integrationId, key) : null,
+    integrationId ? `automation/${integrationId}/${key}` : null,
+    automationId ? automationRefName(automationId, key) : null,
+  ].filter(Boolean);
+  if (names.includes(value)) return true;
+  return names.some((name) => new RegExp(
+    `^arn:[a-z0-9-]+:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-[A-Za-z0-9]{6}$`
+  ).test(value));
+}
+
+function getSecretReferences(integrationOrId, key, preferredReference) {
+  const integrationId = typeof integrationOrId === 'string' ? integrationOrId : integrationOrId?.id;
+  const automationId = typeof integrationOrId === 'object' ? integrationOrId?.automationId : null;
+  return [...new Set([
+    isReferenceForScope(preferredReference, integrationOrId, key) ? preferredReference : null,
+    automationId ? automationRefName(automationId, key) : null,
+    integrationId ? legacyRefName(integrationId, key) : null,
+  ].filter(Boolean))];
 }
 
 const localBackend = {
   async setSecret(integrationId, key, plaintextValue) {
     const store = readStore();
-    const name = refName(integrationId, key);
-    store[name] = encrypt(plaintextValue);
+    const names = getSecretReferences(integrationId, key);
+    const encrypted = encrypt(plaintextValue);
+    names.forEach((name) => { store[name] = encrypted; });
     writeStore(store);
-    return name;
+    return names[0];
   },
 
-  async getSecret(integrationId, key) {
+  async getSecret(integrationId, key, preferredReference) {
     const store = readStore();
-    const name = refName(integrationId, key);
-    if (!(name in store)) return null;
-    return decrypt(store[name]);
+    for (const name of getSecretReferences(integrationId, key, preferredReference)) {
+      if (name in store) return decrypt(store[name]);
+    }
+    return null;
   },
 
   async hasSecret(integrationId, key) {
     const store = readStore();
-    return refName(integrationId, key) in store;
+    return getSecretReferences(integrationId, key).some((name) => name in store);
   },
 
   async deleteSecret(integrationId, key) {
     const store = readStore();
-    const name = refName(integrationId, key);
-    delete store[name];
+    getSecretReferences(integrationId, key).forEach((name) => delete store[name]);
     writeStore(store);
+  },
+
+  async aliasSecret(integrationOrId, key, preferredReference) {
+    const store = readStore();
+    const names = getSecretReferences(integrationOrId, key, preferredReference);
+    const source = names.find((name) => name in store);
+    if (!source) return false;
+    const payload = store[source];
+    names.forEach((name) => { store[name] = payload; });
+    writeStore(store);
+    return true;
   },
 };
 
@@ -129,35 +170,49 @@ function getAwsBackend() {
 
   awsBackend = {
     async setSecret(integrationId, key, plaintextValue) {
-      const name = `automation/${integrationId}/${key}`;
-      try {
-        await client.send(new PutSecretValueCommand({ SecretId: name, SecretString: plaintextValue }));
-      } catch (err) {
-        if (err.name === 'ResourceNotFoundException') {
-          await client.send(new CreateSecretCommand({ Name: name, SecretString: plaintextValue }));
-        } else {
-          throw err;
+      const names = getSecretReferences(integrationId, key);
+      for (const name of names) {
+        try {
+          await client.send(new PutSecretValueCommand({ SecretId: name, SecretString: plaintextValue }));
+        } catch (err) {
+          if (err.name === 'ResourceNotFoundException') {
+            await client.send(new CreateSecretCommand({ Name: name, SecretString: plaintextValue }));
+          } else {
+            throw err;
+          }
         }
       }
-      return name;
+      return names[0];
     },
-    async getSecret(integrationId, key) {
-      const name = `automation/${integrationId}/${key}`;
-      try {
-        const res = await client.send(new GetSecretValueCommand({ SecretId: name }));
-        return res.SecretString ?? null;
-      } catch (err) {
-        if (err.name === 'ResourceNotFoundException') return null;
-        throw err;
+    async getSecret(integrationId, key, preferredReference) {
+      for (const name of getSecretReferences(integrationId, key, preferredReference)) {
+        try {
+          const res = await client.send(new GetSecretValueCommand({ SecretId: name }));
+          return res.SecretString ?? null;
+        } catch (err) {
+          if (err.name !== 'ResourceNotFoundException') throw err;
+        }
       }
+      return null;
     },
     async hasSecret(integrationId, key) {
       const value = await this.getSecret(integrationId, key);
       return value !== null;
     },
     async deleteSecret(integrationId, key) {
-      const name = `automation/${integrationId}/${key}`;
-      await client.send(new DeleteSecretCommand({ SecretId: name, ForceDeleteWithoutRecovery: true }));
+      for (const name of getSecretReferences(integrationId, key)) {
+        try {
+          await client.send(new DeleteSecretCommand({ SecretId: name, ForceDeleteWithoutRecovery: true }));
+        } catch (err) {
+          if (err.name !== 'ResourceNotFoundException') throw err;
+        }
+      }
+    },
+    async aliasSecret(integrationOrId, key, preferredReference) {
+      const value = await this.getSecret(integrationOrId, key, preferredReference);
+      if (value === null) return false;
+      await this.setSecret(integrationOrId, key, value);
+      return true;
     },
   };
 
@@ -173,8 +228,8 @@ module.exports = {
   async setSecret(integrationId, key, value) {
     return getBackend().setSecret(integrationId, key, value);
   },
-  async getSecret(integrationId, key) {
-    return getBackend().getSecret(integrationId, key);
+  async getSecret(integrationId, key, preferredReference) {
+    return getBackend().getSecret(integrationId, key, preferredReference);
   },
   async hasSecret(integrationId, key) {
     return getBackend().hasSecret(integrationId, key);
@@ -182,4 +237,11 @@ module.exports = {
   async deleteSecret(integrationId, key) {
     return getBackend().deleteSecret(integrationId, key);
   },
+  async aliasSecret(integrationId, key, preferredReference) {
+    return getBackend().aliasSecret(integrationId, key, preferredReference);
+  },
+  legacyRefName,
+  automationRefName,
+  getSecretReferences,
+  isReferenceForScope,
 };

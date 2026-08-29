@@ -73,6 +73,10 @@ enum LogLevel {
 
 model User {
   id           String   @id @default(cuid())
+  // Permanent logical identity shared across DEV, STAGING, and PROD.
+  // Nullable during the additive migration; application-created users and the
+  // identity backfill populate it before it becomes mandatory.
+  userUid      String?  @unique
   // Stable, human-readable slug (e.g. "user_001"). Used as :userSlug in the
   // webhook URL and as the folder name under src/integrations/. Decoupled
   // from the internal cuid `id` on purpose, per the folder convention in
@@ -101,7 +105,13 @@ model SystemSetting {
 
 model Integration {
   id               String            @id @default(cuid())
+  // Permanent logical automation identity shared across DEV, STAGING, and PROD.
+  // Nullable during the additive migration for legacy rows being backfilled.
+  automationId     String?           @unique
   userId           String
+  // Current administrative assignment. Legacy userId remains unchanged for
+  // compatibility with existing runtime, credentials, and webhook records.
+  assignedUserUid   String?
   name             String
   version          String            @default("1.0.0")
   description      String?
@@ -203,12 +213,19 @@ model Log {
   id            String        @id @default(cuid())
   userId        String
   integrationId String
+  automationId  String?
   executionId   String?
   level         LogLevel      @default(info)
   message       String
   metadata      String?
   executionMode ExecutionMode?
   isTest        Boolean       @default(false)
+  eventType     String        @default("automation.log")
+  schemaVersion Int           @default(1)
+  correlationId String?
+  durationMs    Int?
+  attempt       Int?
+  statusCode    Int?
   createdAt     DateTime      @default(now())
 
   user          User         @relation(fields: [userId], references: [id])

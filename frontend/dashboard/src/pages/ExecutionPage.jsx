@@ -113,6 +113,8 @@ export default function ExecutionPage() {
           <p className="text-xs text-slate-400">Execution mode</p>
           <p>{execution.executionMode}</p>
         </div>
+        {execution.automationId && <div><p className="text-xs text-slate-400">Automation ID</p><p className="font-mono text-xs">{execution.automationId}</p></div>}
+        {logs[0]?.correlationId && <div><p className="text-xs text-slate-400">Correlation ID</p><p className="font-mono text-xs">{logs[0].correlationId}</p></div>}
         <div>
           <p className="text-xs text-slate-400">Started</p>
           <p>{execution.startedAt ? new Date(execution.startedAt).toLocaleString() : '-'}</p>

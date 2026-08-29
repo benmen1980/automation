@@ -6,6 +6,8 @@ require('dotenv').config();
 
 const bcrypt = require('bcryptjs');
 const { PrismaClient } = require('@prisma/client');
+const integrationLoader = require('../src/core/integration-loader');
+const { deriveUserUid, deriveAutomationId, getIntegrationKeyFromDefinition } = require('../src/core/identity');
 
 const prisma = new PrismaClient();
 
@@ -57,7 +59,7 @@ function integrationDefinitions(usersBySlug) {
 
 async function upsertUser(def) {
   const passwordHash = await bcrypt.hash(def.password, 10);
-  return prisma.user.upsert({
+  const user = await prisma.user.upsert({
     where: { email: def.email },
     update: {
       slug: def.slug,
@@ -71,9 +73,12 @@ async function upsertUser(def) {
       name: def.name,
       role: def.role,
       passwordHash,
+      userUid: deriveUserUid(def.slug),
       status: 'active',
     },
   });
+  if (user.userUid) return user;
+  return prisma.user.update({ where: { id: user.id }, data: { userUid: deriveUserUid(user.slug) } });
 }
 
 async function upsertIntegration(def) {
@@ -91,6 +96,7 @@ async function upsertIntegration(def) {
     create: {
       ...(def.id ? { id: def.id } : {}),
       userId: def.user.id,
+      assignedUserUid: def.user.userUid || deriveUserUid(def.user.slug),
       name: def.name,
       description: def.description,
       slug: def.slug,
@@ -101,6 +107,27 @@ async function upsertIntegration(def) {
       manualRunEnabled: true,
     },
   });
+
+  if (!integration.automationId) {
+    let definition = null;
+    try {
+      definition = integrationLoader.loadDefinition(integration, { bypassCache: true });
+    } catch {
+      // Stable DB fields are sufficient when legacy code is absent in this checkout.
+    }
+    const updatedIntegration = await prisma.integration.update({
+      where: { id: integration.id },
+      data: {
+        automationId: deriveAutomationId({
+          integrationKey: getIntegrationKeyFromDefinition(definition),
+          userUid: def.user.userUid || deriveUserUid(def.user.slug),
+          slug: integration.slug,
+          codeFolder: integration.codeFolder,
+        }),
+      },
+    });
+    integration.automationId = updatedIntegration.automationId;
+  }
 
   if (def.type === 'webhook') {
     await prisma.webhookSettings.upsert({

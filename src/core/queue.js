@@ -47,18 +47,25 @@ function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function isScopedSecretReference(valueReference, integrationId, credentialKey) {
+function isScopedSecretReference(valueReference, integration, credentialKey) {
   const value = String(valueReference || '');
   const scopeComponent = /^[A-Za-z0-9_+=.@-]+$/;
+  const integrationId = typeof integration === 'string' ? integration : integration?.id;
+  const automationId = typeof integration === 'object' ? integration?.automationId : null;
   if (!scopeComponent.test(String(integrationId || '')) || !scopeComponent.test(String(credentialKey || ''))) {
     return false;
   }
-  const expectedName = `automation/${integrationId}/${credentialKey}`;
-  if (value === expectedName) return true;
-  const arnPattern = new RegExp(
-    `^arn:[a-z0-9-]+:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:${escapeRegExp(expectedName)}-[A-Za-z0-9]{6}$`
-  );
-  return arnPattern.test(value);
+  const expectedNames = [
+    automationId ? `automation/${automationId}/${credentialKey}` : null,
+    `automation/${integrationId}/${credentialKey}`,
+  ].filter(Boolean);
+  return expectedNames.some((expectedName) => {
+    if (value === expectedName) return true;
+    const arnPattern = new RegExp(
+      `^arn:[a-z0-9-]+:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:${escapeRegExp(expectedName)}-[A-Za-z0-9]{6}$`
+    );
+    return arnPattern.test(value);
+  });
 }
 
 function buildSqsJobMessage(execution, env = process.env) {
@@ -91,7 +98,7 @@ function buildSqsJobMessage(execution, env = process.env) {
       throw new Error(`Credential storage classification mismatch for ${row.key}. Re-save this integration credential before queueing a worker job.`);
     }
     if (manifestSecret) {
-      if (!isScopedSecretReference(row.valueReference, execution.integrationId, row.key)) {
+      if (!isScopedSecretReference(row.valueReference, execution.integration, row.key)) {
         throw new Error(`Secret reference for ${row.key} is invalid or outside this integration. Re-save this integration credential before queueing a worker job.`);
       }
       credentialReferences[row.key] = row.valueReference;
@@ -105,6 +112,7 @@ function buildSqsJobMessage(execution, env = process.env) {
     id: execution.id,
     executionId: execution.id,
     integrationId: execution.integrationId,
+    automationId: execution.integration.automationId || null,
     integrationKey,
     integrationSlug: execution.integration.slug,
     integrationName: execution.integration.name,
@@ -229,4 +237,5 @@ module.exports = {
   waitForExecution,
   resolveSqsQueueUrl,
   buildSqsJobMessage,
+  isScopedSecretReference,
 };

@@ -135,7 +135,7 @@ AWS console, then pass the connection ARN to the API pipeline script:
   --github-repo automation \
   --connection-arn arn:aws:codestar-connections:eu-west-1:123456789012:connection/example \
   --eb-application automation \
-  --eb-environment automation-api \
+  --eb-environment automation-stage \
   --branch master \
   --region eu-west-1 \
   --create-roles
@@ -166,7 +166,7 @@ You can pass existing roles instead of creating them:
   --github-repo automation \
   --connection-arn <connection-arn> \
   --eb-application automation \
-  --eb-environment automation-api \
+  --eb-environment automation-stage \
   --codepipeline-role-arn <pipeline-role-arn> \
   --codebuild-role-arn <build-role-arn>
 ```

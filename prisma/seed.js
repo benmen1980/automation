@@ -6,6 +6,8 @@ require('dotenv').config();
 const bcrypt = require('bcryptjs');
 const { PrismaClient } = require('@prisma/client');
 const credentialsService = require('../src/core/credentials');
+const integrationLoader = require('../src/core/integration-loader');
+const { deriveUserUid, deriveAutomationId, getIntegrationKeyFromDefinition } = require('../src/core/identity');
 
 const prisma = new PrismaClient();
 
@@ -18,15 +20,17 @@ function webhookUrlFor(user, integration) {
 
 async function upsertUser({ slug, email, name, role, password }) {
   const passwordHash = await bcrypt.hash(password, 10);
-  return prisma.user.upsert({
+  const user = await prisma.user.upsert({
     where: { email },
     update: {},
-    create: { slug, email, name, role, passwordHash, status: 'active' },
+    create: { slug, email, name, role, passwordHash, userUid: deriveUserUid(slug), status: 'active' },
   });
+  if (user.userUid) return user;
+  return prisma.user.update({ where: { id: user.id }, data: { userUid: deriveUserUid(user.slug) } });
 }
 
 async function upsertIntegration(user, def) {
-  return prisma.integration.upsert({
+  const integration = await prisma.integration.upsert({
     where: { userId_slug: { userId: user.id, slug: def.slug } },
     update: {
       name: def.name,
@@ -39,6 +43,7 @@ async function upsertIntegration(user, def) {
     create: {
       ...(def.id ? { id: def.id } : {}),
       userId: user.id,
+      assignedUserUid: user.userUid || deriveUserUid(user.slug),
       name: def.name,
       description: def.description,
       slug: def.slug,
@@ -47,6 +52,19 @@ async function upsertIntegration(user, def) {
       status: 'active',
       codeFolder: def.codeFolder,
       manualRunEnabled: true,
+    },
+  });
+  if (integration.automationId) return integration;
+  const definition = integrationLoader.loadDefinition(integration, { bypassCache: true });
+  return prisma.integration.update({
+    where: { id: integration.id },
+    data: {
+      automationId: deriveAutomationId({
+        integrationKey: getIntegrationKeyFromDefinition(definition),
+        userUid: user.userUid || deriveUserUid(user.slug),
+        slug: integration.slug,
+        codeFolder: integration.codeFolder,
+      }),
     },
   });
 }

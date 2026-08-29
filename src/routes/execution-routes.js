@@ -3,7 +3,7 @@ const router = express.Router();
 const prisma = require('../db/client');
 const { requireAuth } = require('../middleware/auth-middleware');
 const { loadIntegration } = require('../middleware/load-integration');
-const { assertOwnsOrAdmin, assertCanMutate } = require('../core/permissions');
+const { assertCanMutate, canAccessIntegration } = require('../core/permissions');
 const executionService = require('../core/execution-service');
 const { runManual, replayExecution, assertExecutionModeAllowed } = require('../core/manual-runner');
 const { redactExecutionForDisplay } = require('../core/execution-privacy');
@@ -13,8 +13,13 @@ router.use(requireAuth);
 async function loadExecutionOr404(req, res, next) {
   const execution = await executionService.getExecutionById(req.params.executionId);
   if (!execution) return res.status(404).json({ error: 'Execution not found.' });
+  const integration = await prisma.integration.findUnique({ where: { id: execution.integrationId } });
   try {
-    assertOwnsOrAdmin(req.user, execution, 'execution');
+    if (!canAccessIntegration(req.user, integration)) {
+      const err = new Error('You do not have access to this execution.');
+      err.statusCode = 403;
+      throw err;
+    }
   } catch (err) {
     return res.status(err.statusCode || 403).json({ error: err.message });
   }

@@ -2,8 +2,9 @@
 
 This is the concrete, ordered command list to stand up the `testing` environment
 described in the [AWS deployment plan](./aws-deployment-plan.md) (`develop` -> `testing` branch mapping): one
-single-instance Elastic Beanstalk environment running this app, backed by a
-real RDS PostgreSQL instance, secrets in AWS Secrets Manager.
+Elastic Beanstalk application instance in a private subnet with stable NAT
+egress, a public load balancer, a real RDS PostgreSQL instance, and secrets in
+AWS Secrets Manager.
 
 Region: **eu-west-1**. Everything below assumes that region unless noted.
 
@@ -141,13 +142,43 @@ one-off database seed. EB CLI saves the private key locally, typically under
 `%USERPROFILE%\.ssh\`.
 
 ```powershell
-eb create automation-testing --single --instance-type t3.micro
+eb create automation-testing --instance-type t3.micro --scale 1 `
+  --vpc.id <VPC_ID> `
+  --vpc.ec2subnets <PRIVATE_APP_SUBNET_ID> `
+  --vpc.elbsubnets <PUBLIC_ELB_SUBNET_ID_1>,<PUBLIC_ELB_SUBNET_ID_2> `
+  --vpc.elbpublic
 ```
 
-`--single` = one EC2 instance, no load balancer — cheapest option, fine for a
-testing environment (a load-balanced environment can't trivially be
-downgraded to single-instance later, so this is a real choice, not just a
-flag). Under the hood, `eb create` runs a CloudFormation stack that
+`--scale 1` keeps one application instance while retaining a public load
+balancer. The application subnet must be private and its route table must
+contain `0.0.0.0/0` through an existing NAT Gateway. The load-balancer
+subnets must be public and route through an Internet Gateway. Do not place the
+application instance in a public subnet or rely on its public IP for outbound
+access.
+
+Before creating the environment, verify the private subnet's NAT route and
+record the NAT Gateway's public Elastic IP. That is the only outbound IP that
+Priority needs to allow:
+
+```powershell
+aws ec2 describe-route-tables --route-table-ids <PRIVATE_ROUTE_TABLE_ID> `
+  --query "RouteTables[0].Routes[?DestinationCidrBlock=='0.0.0.0/0'].[NatGatewayId,State]" --output table
+aws ec2 describe-nat-gateways --nat-gateway-ids <NAT_GATEWAY_ID> `
+  --query "NatGateways[0].NatGatewayAddresses[0].PublicIp" --output text
+```
+
+After creation, verify that the application instance has no public IP and
+that a request from the instance reports the NAT Elastic IP:
+
+```powershell
+aws elasticbeanstalk describe-environment-resources --environment-name automation-testing
+aws ec2 describe-instances --instance-ids <INSTANCE_ID> `
+  --query "Reservations[0].Instances[0].[SubnetId,PublicIpAddress]" --output table
+eb ssh automation-testing --command "curl --fail --max-time 10 https://api.ipify.org"
+```
+
+The command should return the NAT Elastic IP, not an EC2 public IP. Under the
+hood, `eb create` runs a CloudFormation stack that
 provisions: the EC2 instance, a dedicated security group, an instance
 profile/IAM role (`aws-elasticbeanstalk-ec2-role` — you'll attach a policy to
 this in step 5), an S3 bucket for uploaded app versions
