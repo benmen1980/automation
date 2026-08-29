@@ -35,6 +35,16 @@ The assistant must state the selected scope before taking project actions. The s
 
 An `AUTOMATION:<integration_id>` chat must refuse requests to modify or discuss another integration, platform code, Admin code, shared infrastructure, deployment configuration, or repository-wide behavior. A `PLATFORM/ADMIN` chat must refuse automation-specific implementation work. Work for a different scope requires a new chat.
 
+Exception — foundational infrastructure work: when the user explicitly identifies
+the request as a foundational, repository-wide infrastructure change (for example
+Git/workspace ownership, CI/CD, deployment promotion, shared runtime boundaries,
+or the automation package layout), one `PLATFORM/ADMIN` chat may update the
+platform and multiple automation scopes together. The assistant must declare
+this exception before taking action, keep feature/business logic changes out of
+the same work, and run both platform validation and automation validation before
+completion. This exception permits cross-scope commits and pushes when they are
+required to deliver the infrastructure change.
+
 Automation-specific forms, modules, API wiring, dashboard pages, and components under `frontend/dashboard` belong to the matching automation scope. `frontend/dashboard/src/pages/AdminPage.jsx` and genuinely shared platform/dashboard infrastructure remain `PLATFORM/ADMIN`.
 
 Before editing, committing, or pushing, run the applicable project scope validator:
@@ -49,7 +59,10 @@ For integration work, also provide the exact permanent integration ID:
 npm run validate:workspace-scope -- --scope AUTOMATION --automation-id <integration_id> --branch automation/<integration_id>/work
 ```
 
-Never combine Admin/platform and automation work, or two automation scopes, in one chat, commit, or push. If the request changes scope, stop and instruct the user to open a new chat.
+By default, never combine Admin/platform and automation work, or two automation
+scopes, in one chat, commit, or push. The foundational infrastructure exception
+above is the only allowed override. If the request changes scope without that
+explicit exception, stop and instruct the user to open a new chat.
 
 ---
 
