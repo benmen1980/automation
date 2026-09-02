@@ -1,6 +1,6 @@
 {
   "name": "automation-dashboard",
-  "version": "1.6.7.2",
+  "version": "1.6.7.4",
   "private": true,
   "type": "module",
   "scripts": {
