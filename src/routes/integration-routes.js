@@ -312,9 +312,19 @@ router.post('/:id/webhook-settings', loadIntegration({ mutate: true }), async (r
     create: { integrationId: req.integration.id, ...data },
   });
 
+  let tokenVerified = null;
+  if (token) {
+    const storedToken = await webhookRunner.getWebhookToken({
+      ...req.integration,
+      webhookSettings: settings,
+    });
+    tokenVerified = storedToken === String(token).trim();
+  }
+
   // Never echo back the actual reference name in detail ג€” just whether a
   // token has been configured, same masking rule as secret credentials.
   res.json({
+    tokenVerified,
     webhookSettings: {
       ...settings,
       webhookUrl: buildPublicUrl(settings.webhookUrl, req),

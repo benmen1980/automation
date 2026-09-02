@@ -121,11 +121,13 @@ function WebhookSettingsPanel({ integration, definition, disabled = false }) {
     }
     setSaving(true);
     try {
-      await api.integrations.webhookSettings(integration.id, { token: nextToken });
+      const result = await api.integrations.webhookSettings(integration.id, { token: nextToken });
       setTokenInput('');
       setTokenVisible(false);
       setTokenConfigured(true);
-      setSavedMessage('Priority BPM token saved securely. Incoming webhooks must send the same value in the Priority-BPM-Token header.');
+      setSavedMessage(result.tokenVerified === false
+        ? 'Token was saved, but server verification failed. Do not use it until it is saved again successfully.'
+        : 'Priority BPM token saved and verified securely. Incoming webhooks must send the same value in the Priority-BPM-Token header.');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -1080,18 +1082,19 @@ export default function IntegrationPage() {
             onToggle={(value) => setSectionOpenState((state) => ({ ...state, messaging: value }))}
           >
             <CredentialForm fields={credentialBuckets.messaging} onSave={handleSaveCredentials} disabled={!canManage} />
-            <ConnectorTestPanel
-              title={usesItc ? 'Check ITC settings' : 'WhatsApp test'}
-              description={usesItc ? 'Validates the saved ITC endpoint, token presence, and channel format. It does not contact ITC or send a message.' : undefined}
-              buttonLabel={usesItc ? 'Check settings' : 'Test'}
-              activeConnector={activeTestConnector.messaging}
-              onConnectorChange={(value) => setActiveTestConnector((valueMap) => ({ ...valueMap, messaging: value }))}
-              onTest={(connector) => handleSectionConnectorTest('messaging', connector)}
-              disabled={!canManage}
-              result={connectorResultMap.messaging}
-              testing={connectorTesting}
-              options={messagingOptions}
-            />
+            {!usesItc && (
+              <ConnectorTestPanel
+                title="WhatsApp test"
+                buttonLabel="Test"
+                activeConnector={activeTestConnector.messaging}
+                onConnectorChange={(value) => setActiveTestConnector((valueMap) => ({ ...valueMap, messaging: value }))}
+                onTest={(connector) => handleSectionConnectorTest('messaging', connector)}
+                disabled={!canManage}
+                result={connectorResultMap.messaging}
+                testing={connectorTesting}
+                options={messagingOptions}
+              />
+            )}
             {usesItc && allowManualPayload && (
               <section className="mt-5 space-y-3 rounded-lg border border-[#97dbf3]/70 bg-[#f5fcff] p-4">
                 <div>
