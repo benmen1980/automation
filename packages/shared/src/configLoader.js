@@ -22,18 +22,21 @@ function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function validSecretReference(reference, integrationId, credentialKey) {
+function validSecretReference(reference, integrationId, credentialKey, automationId) {
   const value = String(reference || '');
   const scopeComponent = /^[A-Za-z0-9_+=.@-]+$/;
-  if (!scopeComponent.test(String(integrationId || '')) || !scopeComponent.test(String(credentialKey || ''))) {
+  const scopes = [integrationId, automationId].filter((scope) => scopeComponent.test(String(scope || '')));
+  if (!scopes.length || !scopeComponent.test(String(credentialKey || ''))) {
     return false;
   }
-  const expectedName = `automation/${integrationId}/${credentialKey}`;
-  if (value === expectedName) return true;
-  const arnPattern = new RegExp(
-    `^arn:[a-z0-9-]+:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:${escapeRegExp(expectedName)}-[A-Za-z0-9]{6}$`
-  );
-  return arnPattern.test(value);
+  return scopes.some((scope) => {
+    const expectedName = `automation/${scope}/${credentialKey}`;
+    if (value === expectedName) return true;
+    const arnPattern = new RegExp(
+      `^arn:[a-z0-9-]+:secretsmanager:[a-z0-9-]+:[0-9]{12}:secret:${escapeRegExp(expectedName)}-[A-Za-z0-9]{6}$`
+    );
+    return arnPattern.test(value);
+  });
 }
 
 export async function readSecretByReference(reference, env = process.env) {
@@ -50,7 +53,7 @@ export async function resolveConfig(job = {}, { env = process.env, readSecret = 
   const references = Object.entries(config.credentialReferences || {});
 
   for (const [key, reference] of references) {
-    if (!validSecretReference(reference, job.integrationId, key)) {
+    if (!validSecretReference(reference, job.integrationId, key, job.automationId)) {
       throw new Error(`Worker credential reference for ${key} is not scoped to this integration.`);
     }
     config.credentials[key] = await readSecret(reference, env);

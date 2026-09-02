@@ -74,6 +74,17 @@ test('accepts a complete integration-scoped Secrets Manager ARN', async () => {
   assert.equal(config.credentials.ITC_BEARER_TOKEN, 'resolved');
 });
 
+test('accepts an automation-scoped reference normalized from the legacy UI credential', async () => {
+  const reference = 'automation/aut_ea71be6b4ff0780f/ITC_BEARER_TOKEN';
+  const config = await resolveConfig({
+    integrationId: 'cmrtomudr0001105jk8e1spo6',
+    automationId: 'aut_ea71be6b4ff0780f',
+    credentialReferences: { ITC_BEARER_TOKEN: reference },
+  }, { env: {}, readSecret: async (value) => value === reference ? 'resolved' : 'wrong' });
+
+  assert.equal(config.credentials.ITC_BEARER_TOKEN, 'resolved');
+});
+
 test('Lambda resolves the legacy UI credential reference through the automation secret namespace', async () => {
   const reads = [];
   const response = await lambdaDiagnostics.processJob({
