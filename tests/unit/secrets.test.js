@@ -37,6 +37,7 @@ describe('secret namespace compatibility', () => {
     const names = Object.keys(JSON.parse(fs.readFileSync(storePath, 'utf8')));
     expect(names).toEqual(expect.arrayContaining([
       'automation/aut_0123456789abcdef/API_TOKEN',
+      'automation/clegacy1/API_TOKEN',
       'clegacy1::API_TOKEN',
     ]));
   });
