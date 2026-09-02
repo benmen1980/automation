@@ -87,6 +87,21 @@ describe('workspace and Git scope enforcement', () => {
     expect(result.foundationalInfrastructure).toBe(true);
   });
 
+  test('priority-order-itc automation owns its worker source and tests', () => {
+    const priorityOrderId = 'aut_ea71be6b4ff0780f';
+    const result = validateWorkspaceScope({
+      scope: AUTOMATION_SCOPE,
+      automationId: priorityOrderId,
+      branch: `automation/${priorityOrderId}/work`,
+      changedFiles: [
+        'integrations/priority-order-itc/src/handler.js',
+        'integrations/priority-order-itc/src/manifest.js',
+        'integrations/priority-order-itc/test/handler.test.js',
+      ],
+    });
+    expect(result.changedFiles).toHaveLength(3);
+  });
+
   test('rejects traversal paths and mismatched branch names', () => {
     expect(() => validateWorkspaceScope({
       scope: AUTOMATION_SCOPE,

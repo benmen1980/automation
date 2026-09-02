@@ -47,6 +47,8 @@ function manifestAllowedPaths(manifest) {
     manifest.ui?.path,
     manifest.runtime?.entrypoint,
     manifest.runtime?.definition,
+    manifest.connections?.worker_adapter?.package,
+    ...(manifest.tests?.references || []),
     legacy.code_folder,
   ].filter(Boolean).map(normalizePath);
   return [...new Set(paths)];
