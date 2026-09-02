@@ -1,7 +1,7 @@
 export default {
   name: 'priority-order-itc',
   displayName: 'Priority Customer Order to ITC',
-  version: '1.5.4',
+  version: '1.5.5',
   type: 'worker',
   runtime: 'lambda',
   direction: 'OUTBOUND',

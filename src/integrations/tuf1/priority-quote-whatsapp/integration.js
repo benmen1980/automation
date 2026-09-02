@@ -217,17 +217,27 @@ module.exports = {
   testPayloads: [
     {
       name: 'Priority customer order',
-      description: 'ITC template-message request body used by the direct ITC test.',
+      description: 'Priority customer-order webhook body used by the live Web SDK flow.',
       payload: {
-        clientName: '+972507573753',
-        msgType: 'whatsapp',
-        channelId: 'whatsapp:+97246960480',
-        variables: [
-          { type: 'text', text: 'ירדן' },
-          { type: 'text', text: 'SO26000001' },
-          { type: 'text', text: 'https://automation.example.test/documents/priority-orders/test.pdf' },
-        ],
+        ORDERS: {
+          ORDNAME: 'SO26000001',
+          ZANA_CUSTDES: 'ירדן',
+          ZANA_PHONENUM: '+972507573753',
+        },
       },
     },
   ],
+  itcTestPayload: {
+    name: 'ITC template message',
+    payload: {
+      clientName: '+972507573753',
+      msgType: 'whatsapp',
+      channelId: 'whatsapp:+97246960480',
+      variables: [
+        { type: 'text', text: 'ירדן' },
+        { type: 'text', text: 'SO26000001' },
+        { type: 'text', text: 'https://automation.example.test/documents/priority-orders/test.pdf' },
+      ],
+    },
+  },
 };

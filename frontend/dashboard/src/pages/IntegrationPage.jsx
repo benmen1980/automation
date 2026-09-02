@@ -669,7 +669,7 @@ export default function IntegrationPage() {
       } else if (d?.testPayloads?.[0]?.payload) {
         const samplePayload = JSON.stringify(d.testPayloads[0].payload, null, 2);
         setPayloadText(samplePayload);
-        setItcPayloadText(samplePayload);
+        setItcPayloadText(JSON.stringify(d.itcTestPayload?.payload || d.testPayloads[0].payload, null, 2));
       }
       setCredentialFields(c);
       setExecutions(e);
@@ -1102,11 +1102,11 @@ export default function IntegrationPage() {
                 <div>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <label htmlFor="itc-test-json" className="block text-xs font-medium text-slate-700">JSON to send</label>
-                    {definition?.testPayloads?.[0]?.payload && canManage && (
+                    {(definition?.itcTestPayload?.payload || definition?.testPayloads?.[0]?.payload) && canManage && (
                       <button
                         type="button"
                         onClick={() => {
-                          setItcPayloadText(JSON.stringify(definition.testPayloads[0].payload, null, 2));
+                          setItcPayloadText(JSON.stringify(definition.itcTestPayload?.payload || definition.testPayloads[0].payload, null, 2));
                           setItcTestError('');
                           setItcTestResult(null);
                         }}
