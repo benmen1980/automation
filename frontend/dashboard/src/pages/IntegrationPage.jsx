@@ -697,6 +697,11 @@ export default function IntegrationPage() {
     return saved;
   }
 
+  async function handleRevealSecret(key) {
+    const { value } = await api.integrations.credentials.reveal(id, key);
+    return value;
+  }
+
   async function handleToggleField(field, value) {
     const { integration: updated } = await api.integrations.update(id, { [field]: value });
     setIntegration(updated);
@@ -966,6 +971,7 @@ export default function IntegrationPage() {
                 <CredentialForm
                   fields={credentialBuckets.other}
                   onSave={handleSaveCredentials}
+                  onRevealSecret={handleRevealSecret}
                   disabled={!canManage}
                 />
               </>
@@ -1081,7 +1087,7 @@ export default function IntegrationPage() {
             open={sectionOpenState.messaging}
             onToggle={(value) => setSectionOpenState((state) => ({ ...state, messaging: value }))}
           >
-            <CredentialForm fields={credentialBuckets.messaging} onSave={handleSaveCredentials} disabled={!canManage} />
+            <CredentialForm fields={credentialBuckets.messaging} onSave={handleSaveCredentials} onRevealSecret={handleRevealSecret} disabled={!canManage} />
             {!usesItc && (
               <ConnectorTestPanel
                 title="WhatsApp test"
@@ -1189,7 +1195,7 @@ export default function IntegrationPage() {
             open={sectionOpenState.priority}
             onToggle={(value) => setSectionOpenState((state) => ({ ...state, priority: value }))}
           >
-            <CredentialForm fields={credentialBuckets.priority} onSave={handleSaveCredentials} disabled={!canManage} />
+            <CredentialForm fields={credentialBuckets.priority} onSave={handleSaveCredentials} onRevealSecret={handleRevealSecret} disabled={!canManage} />
             <ConnectorTestPanel
               title={priorityOptions.includes('priorityWebSdk') ? 'Test Priority Web SDK login' : 'Priority test'}
               description={priorityOptions.includes('priorityWebSdk') ? 'Logs in with the saved Priority Web SDK credentials without running WWWSHOWORDER or generating a document.' : undefined}

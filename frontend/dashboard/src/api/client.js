@@ -82,6 +82,7 @@ export const api = {
     manifest: (id) => request(`/api/integrations/${id}/manifest`),
     credentials: {
       list: (id) => request(`/api/integrations/${id}/credentials`),
+      reveal: (id, key) => request(`/api/integrations/${id}/credentials/${encodeURIComponent(key)}/value`),
       save: (id, values) => request(`/api/integrations/${id}/credentials`, { method: 'POST', body: { values } }),
     },
     webhookToken: (id) => request(`/api/integrations/${id}/webhook-token`),

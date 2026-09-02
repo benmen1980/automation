@@ -271,6 +271,15 @@ router.get('/:id/credentials', loadIntegration(), async (req, res) => {
   }
 });
 
+router.get('/:id/credentials/:key/value', loadIntegration({ mutate: true }), async (req, res) => {
+  try {
+    const value = await credentialsService.revealSecretCredential(req.integration, req.params.key);
+    res.json({ value });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message });
+  }
+});
+
 router.post('/:id/credentials', loadIntegration({ mutate: true }), async (req, res) => {
   const values = req.body && req.body.values;
   if (!values || typeof values !== 'object') {

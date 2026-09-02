@@ -58,9 +58,10 @@ function SecretStateHint({ field, justSaved }) {
   );
 }
 
-export default function CredentialForm({ fields, onSave, disabled = false }) {
+export default function CredentialForm({ fields, onSave, onRevealSecret, disabled = false }) {
   const [inputs, setInputs] = useState({});
   const [visibleSecrets, setVisibleSecrets] = useState({});
+  const [revealingSecrets, setRevealingSecrets] = useState({});
   const [lastSavedKeys, setLastSavedKeys] = useState([]);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
@@ -79,6 +80,25 @@ export default function CredentialForm({ fields, onSave, disabled = false }) {
 
   function toggleSecret(key) {
     setVisibleSecrets((prev) => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  async function handleSecretVisibility(field) {
+    if (!field.saved || inputs[field.key] !== SAVED_SECRET_MASK || !onRevealSecret) {
+      toggleSecret(field.key);
+      return;
+    }
+
+    setError('');
+    setRevealingSecrets((prev) => ({ ...prev, [field.key]: true }));
+    try {
+      const value = await onRevealSecret(field.key);
+      setValue(field.key, value);
+      setVisibleSecrets((prev) => ({ ...prev, [field.key]: true }));
+    } catch (err) {
+      setError(`Could not reveal ${field.label || field.key}: ${err.message || 'Unknown error.'}`);
+    } finally {
+      setRevealingSecrets((prev) => ({ ...prev, [field.key]: false }));
+    }
   }
 
   async function handleSubmit(e) {
@@ -205,13 +225,13 @@ export default function CredentialForm({ fields, onSave, disabled = false }) {
               />
               <button
                 type="button"
-                onClick={() => toggleSecret(field.key)}
-                disabled={disabled}
+                onClick={() => handleSecretVisibility(field)}
+                disabled={disabled || revealingSecrets[field.key]}
                 className="shrink-0 border-l border-slate-300 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50"
                 aria-label={visibleSecrets[field.key] ? `Hide ${field.label || field.key}` : `Show ${field.label || field.key}`}
                 title={visibleSecrets[field.key] ? 'Hide password' : 'Show password'}
               >
-                {visibleSecrets[field.key] ? 'Hide' : 'Show'}
+                {revealingSecrets[field.key] ? 'Loading...' : visibleSecrets[field.key] ? 'Hide' : 'Show'}
               </button>
             </div>
           ) : (

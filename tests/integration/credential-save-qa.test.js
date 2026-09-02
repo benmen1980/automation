@@ -70,6 +70,12 @@ describe('QA agent - credential form save contract', () => {
       value: values.GMAIL_CLIENT_ID,
     });
 
+    const revealRes = await request(app)
+      .get(`/api/integrations/${integration.id}/credentials/GMAIL_CLIENT_SECRET/value`)
+      .set('Authorization', authHeader(user));
+    expect(revealRes.status).toBe(200);
+    expect(revealRes.body.value).toBe(values.GMAIL_CLIENT_SECRET);
+
     let loaded = await credentialsService.loadCredentialsForExecution(integration);
     expect(loaded.GMAIL_CLIENT_SECRET).toBe(values.GMAIL_CLIENT_SECRET);
 

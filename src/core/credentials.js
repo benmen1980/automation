@@ -179,10 +179,38 @@ async function listCredentialsForDisplay(integration) {
   }));
 }
 
+async function revealSecretCredential(integration, key) {
+  const field = getDefinitionFields(integration).find((candidate) => candidate.key === key);
+  if (!field || !isSecretField(field)) {
+    const error = new Error('Secret credential not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const row = await prisma.credential.findUnique({
+    where: { integrationId_key: { integrationId: integration.id, key } },
+    select: { valueReference: true, isSecret: true },
+  });
+  if (!row || !row.isSecret) {
+    const error = new Error('Secret credential has not been saved.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const value = await secrets.getSecret(integration, key, row.valueReference);
+  if (value === null) {
+    const error = new Error('Saved secret could not be read.');
+    error.statusCode = 502;
+    throw error;
+  }
+  return value;
+}
+
 module.exports = {
   CredentialValidationError,
   getDefinitionFields,
   saveCredentials,
   loadCredentialsForExecution,
   listCredentialsForDisplay,
+  revealSecretCredential,
 };
