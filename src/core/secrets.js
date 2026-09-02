@@ -103,7 +103,7 @@ function getSecretReferences(integrationOrId, key, preferredReference) {
   return [...new Set([
     isReferenceForScope(preferredReference, integrationOrId, key) ? preferredReference : null,
     automationId ? automationRefName(automationId, key) : null,
-    integrationId ? integrationAutomationRefName(integrationId, key) : null,
+    automationId && integrationId ? integrationAutomationRefName(integrationId, key) : null,
     integrationId ? legacyRefName(integrationId, key) : null,
   ].filter(Boolean))];
 }
