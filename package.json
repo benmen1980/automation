@@ -1,6 +1,6 @@
 {
   "name": "user-automation-platform",
-  "version": "1.6.7.8",
+  "version": "1.6.7.9",
   "private": true,
   "workspaces": [
     "apps/*",
@@ -29,6 +29,7 @@
     "db:reset": "prisma migrate reset --force",
     "validate:integrations": "node scripts/validate-integrations.js",
     "validate:automations": "node scripts/validate-automations.js",
+    "validate:project-manifest": "node scripts/validate-project-manifest.js",
     "validate:workspace-scope": "node scripts/validate-workspace-scope.js",
     "release:artifact": "node scripts/release-artifact.js",
     "release:verify-promotion": "node scripts/verify-release-promotion.js",

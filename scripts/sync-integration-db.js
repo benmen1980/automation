@@ -6,10 +6,14 @@ require('dotenv').config();
 
 const bcrypt = require('bcryptjs');
 const { PrismaClient } = require('@prisma/client');
+const automationRegistry = require('../src/core/automation-registry');
 const integrationLoader = require('../src/core/integration-loader');
 const { deriveUserUid, deriveAutomationId, getIntegrationKeyFromDefinition } = require('../src/core/identity');
 
 const prisma = new PrismaClient();
+const ITC_AUTOMATION_ID = 'aut_ea71be6b4ff0780f';
+const ITC_CODE_FOLDER = 'src/integrations/tuf1/priority-quote-whatsapp';
+const ITC_DEPLOYED_VERSION = '1.2.6.5';
 
 function webhookUrlFor(def) {
   if (def.user.slug === 'tuf1' && def.slug === 'priority-quote-whatsapp') {
@@ -28,7 +32,6 @@ function integrationDefinitions(usersBySlug) {
   const user1 = usersBySlug.get('user_001');
   const user2 = usersBySlug.get('user_002');
   const tuf1 = usersBySlug.get('tuf1');
-
   return [
     { user: user1, name: 'WhatsApp Order Notification', description: 'Receives order data and sends a WhatsApp message.', slug: 'whatsapp-order', type: 'webhook', codeFolder: 'src/integrations/user_001/whatsapp-order' },
     { user: user1, name: 'Stock Sync', description: 'Checks stock levels on a schedule and emails a low-stock alert.', slug: 'stock-sync', type: 'scheduled', codeFolder: 'src/integrations/user_001/stock-sync', cron: '0 2 * * *' },
@@ -49,7 +52,7 @@ function integrationDefinitions(usersBySlug) {
             description: 'שליחת ווצאפ מהזמנת לקוח: יצירת אישור הזמנה דרך Priority Web SDK ושליחת קישור המסמך למערכת ITC.',
             slug: 'priority-quote-whatsapp',
             type: 'webhook',
-            version: '1.5.3',
+            version: ITC_DEPLOYED_VERSION,
             codeFolder: 'src/integrations/tuf1/priority-quote-whatsapp',
           },
         ]
@@ -166,6 +169,22 @@ async function upsertIntegration(def) {
   return integration;
 }
 
+async function syncItcAutomationVersion() {
+  const manifest = automationRegistry.findByAutomationId(ITC_AUTOMATION_ID);
+  const version = manifest?.version === ITC_DEPLOYED_VERSION ? manifest.version : ITC_DEPLOYED_VERSION;
+  const result = await prisma.integration.updateMany({
+    where: {
+      OR: [
+        { automationId: ITC_AUTOMATION_ID },
+        { codeFolder: ITC_CODE_FOLDER },
+      ],
+    },
+    data: { version },
+  });
+  if (result.count) console.log(`- ITC automation ${ITC_AUTOMATION_ID} version ${version}`);
+  return result.count;
+}
+
 async function main() {
   console.log('Syncing integration DB records...');
 
@@ -180,6 +199,7 @@ async function main() {
     const integration = await upsertIntegration(def);
     synced.push(`${def.user.slug}/${integration.slug}`);
   }
+  await syncItcAutomationVersion();
 
   console.log(`Integration DB sync complete. Upserted ${synced.length} integration record(s).`);
   for (const item of synced) console.log(`- ${item}`);
