@@ -725,10 +725,6 @@ export default function IntegrationPage() {
   async function handleRunTest() {
     const payload = parsePayload();
     if (payload === undefined) return;
-    if (
-      executionMode === 'live' &&
-      !window.confirm(usesItc ? 'Live run will generate a real Priority sales-order confirmation and send its URL in a real ITC message. Continue?' : 'Live run may call real external systems. Continue?')
-    ) return;
     setError('');
     setRunning(true);
     setTestResult(null);
@@ -804,13 +800,6 @@ export default function IntegrationPage() {
       }
       payload = { ORDERS: { ORDNAME: order.ORDNAME, ZANA_CUSTDES: order.ZANA_CUSTDES, ZANA_PHONENUM: order.ZANA_PHONENUM } };
     }
-
-    if (
-      itcExecutionMode === 'live' &&
-      !window.confirm(isPriorityQuoteItc
-        ? 'This live test will send the ITC JSON directly as a real ITC message. Continue?'
-        : 'This live test will generate a real Priority sales-order confirmation and send its URL in a real ITC message. Continue?')
-    ) return;
 
     setError('');
     setItcTestError('');
