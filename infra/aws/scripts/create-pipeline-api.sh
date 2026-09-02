@@ -434,19 +434,11 @@ upsert_pipeline() {
                 "includes": ["${BRANCH}"]
               },
               "filePaths": {
-                "includes": [
-                  "apps/api/**",
-                  "src/**",
-                  "frontend/dashboard/**",
-                  "packages/shared/**",
-                  "prisma/**",
-                  ".*/**",
-                  "package*.json",
-                  "buildspec*.yml"
-                ],
+                "includes": ["**"],
                 "excludes": [
                   "integrations/**",
-                  "src/integrations/**"
+                  "src/integrations/**",
+                  "automations/**"
                 ]
               }
             }
@@ -561,7 +553,6 @@ Deploy: Elastic Beanstalk ${EB_APPLICATION}/${EB_ENVIRONMENT}
 Artifact bucket: ${ARTIFACT_BUCKET}
 
 Trigger behavior:
-- Runs on ${BRANCH} pushes touching API/dashboard files.
-- Includes apps/api/**, src/**, frontend/dashboard/**, packages/shared/**, prisma/**, dot-directory EB config, package files, and buildspec files.
+- Runs on ${BRANCH} pushes touching API/dashboard and shared platform paths.
 - Excludes integrations/** and src/integrations/** so integration-only changes do not restart Elastic Beanstalk.
 EOF

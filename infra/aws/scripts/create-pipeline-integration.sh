@@ -119,4 +119,5 @@ else
 fi
 
 echo "Created or updated independent pipeline ${PIPELINE_NAME}."
+echo "Watched branch: ${BRANCH}"
 echo "Watched paths: integrations/${INTEGRATION_NAME}/**, packages/shared/**, infra/aws/integrations/${INTEGRATION_NAME}/**, buildspec-lambda-integration.yml${AUTOMATION_SOURCE_PATH_LABEL}${LEGACY_SOURCE_PATH_LABEL}"
