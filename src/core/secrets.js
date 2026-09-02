@@ -103,6 +103,11 @@ function getSecretReferences(integrationOrId, key, preferredReference) {
   ].filter(Boolean))];
 }
 
+function isValidAwsSecretIdentifier(name) {
+  const value = String(name || '');
+  return value.startsWith('arn:') || /^[A-Za-z0-9/_+=.@!-]+$/.test(value);
+}
+
 const localBackend = {
   async setSecret(integrationId, key, plaintextValue) {
     const store = readStore();
@@ -170,7 +175,7 @@ function getAwsBackend() {
 
   awsBackend = {
     async setSecret(integrationId, key, plaintextValue) {
-      const names = getSecretReferences(integrationId, key);
+      const names = getSecretReferences(integrationId, key).filter(isValidAwsSecretIdentifier);
       for (const name of names) {
         try {
           await client.send(new PutSecretValueCommand({ SecretId: name, SecretString: plaintextValue }));
@@ -185,7 +190,7 @@ function getAwsBackend() {
       return names[0];
     },
     async getSecret(integrationId, key, preferredReference) {
-      for (const name of getSecretReferences(integrationId, key, preferredReference)) {
+      for (const name of getSecretReferences(integrationId, key, preferredReference).filter(isValidAwsSecretIdentifier)) {
         try {
           const res = await client.send(new GetSecretValueCommand({ SecretId: name }));
           return res.SecretString ?? null;
@@ -200,7 +205,7 @@ function getAwsBackend() {
       return value !== null;
     },
     async deleteSecret(integrationId, key) {
-      for (const name of getSecretReferences(integrationId, key)) {
+      for (const name of getSecretReferences(integrationId, key).filter(isValidAwsSecretIdentifier)) {
         try {
           await client.send(new DeleteSecretCommand({ SecretId: name, ForceDeleteWithoutRecovery: true }));
         } catch (err) {
