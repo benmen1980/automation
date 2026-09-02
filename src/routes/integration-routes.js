@@ -12,7 +12,7 @@ const { buildPublicUrl } = require('../core/public-url');
 const webhookRunner = require('../core/webhook-runner');
 const scheduler = require('../core/scheduler');
 const { deriveAutomationId, deriveUserUid, getIntegrationKeyFromDefinition } = require('../core/identity');
-const { findByAutomationId, publicManifest } = require('../core/automation-registry');
+const { discoverAutomations, findByAutomationId, publicManifest } = require('../core/automation-registry');
 
 router.use(requireAuth);
 
@@ -41,9 +41,24 @@ function getIntegrationCodeKey(integration) {
   return integrationKey;
 }
 
+function getAutomationManifest(integration) {
+  if (integration?.automationId) {
+    const manifest = findByAutomationId(integration.automationId);
+    if (manifest) return manifest;
+  }
+  return discoverAutomations().find(
+    (manifest) => manifest.compatibility?.legacy?.code_folder === integration?.codeFolder
+  ) || null;
+}
+
 function withIntegrationCodeKey(integration) {
   if (!integration) return integration;
-  return { ...integration, integrationKey: getIntegrationCodeKey(integration) };
+  const manifest = getAutomationManifest(integration);
+  return {
+    ...integration,
+    ...(manifest?.version ? { version: manifest.version } : {}),
+    integrationKey: getIntegrationCodeKey(integration),
+  };
 }
 
 router.get('/', async (req, res) => {

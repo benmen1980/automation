@@ -6,14 +6,10 @@ require('dotenv').config();
 
 const bcrypt = require('bcryptjs');
 const { PrismaClient } = require('@prisma/client');
-const automationRegistry = require('../src/core/automation-registry');
 const integrationLoader = require('../src/core/integration-loader');
 const { deriveUserUid, deriveAutomationId, getIntegrationKeyFromDefinition } = require('../src/core/identity');
 
 const prisma = new PrismaClient();
-const ITC_AUTOMATION_ID = 'aut_ea71be6b4ff0780f';
-const ITC_CODE_FOLDER = 'src/integrations/tuf1/priority-quote-whatsapp';
-const ITC_DEPLOYED_VERSION = '1.2.6.5';
 
 function webhookUrlFor(def) {
   if (def.user.slug === 'tuf1' && def.slug === 'priority-quote-whatsapp') {
@@ -52,7 +48,6 @@ function integrationDefinitions(usersBySlug) {
             description: 'שליחת ווצאפ מהזמנת לקוח: יצירת אישור הזמנה דרך Priority Web SDK ושליחת קישור המסמך למערכת ITC.',
             slug: 'priority-quote-whatsapp',
             type: 'webhook',
-            version: ITC_DEPLOYED_VERSION,
             codeFolder: 'src/integrations/tuf1/priority-quote-whatsapp',
           },
         ]
@@ -92,7 +87,7 @@ async function upsertIntegration(def) {
       description: def.description,
       type: def.type,
       codeFolder: def.codeFolder,
-      version: def.version || '1.0.0',
+      ...(def.version ? { version: def.version } : {}),
       manualRunEnabled: true,
       status: 'active',
     },
@@ -104,7 +99,7 @@ async function upsertIntegration(def) {
       description: def.description,
       slug: def.slug,
       type: def.type,
-      version: def.version || '1.0.0',
+      ...(def.version ? { version: def.version } : {}),
       status: 'active',
       codeFolder: def.codeFolder,
       manualRunEnabled: true,
@@ -169,22 +164,6 @@ async function upsertIntegration(def) {
   return integration;
 }
 
-async function syncItcAutomationVersion() {
-  const manifest = automationRegistry.findByAutomationId(ITC_AUTOMATION_ID);
-  const version = manifest?.version === ITC_DEPLOYED_VERSION ? manifest.version : ITC_DEPLOYED_VERSION;
-  const result = await prisma.integration.updateMany({
-    where: {
-      OR: [
-        { automationId: ITC_AUTOMATION_ID },
-        { codeFolder: ITC_CODE_FOLDER },
-      ],
-    },
-    data: { version },
-  });
-  if (result.count) console.log(`- ITC automation ${ITC_AUTOMATION_ID} version ${version}`);
-  return result.count;
-}
-
 async function main() {
   console.log('Syncing integration DB records...');
 
@@ -199,8 +178,6 @@ async function main() {
     const integration = await upsertIntegration(def);
     synced.push(`${def.user.slug}/${integration.slug}`);
   }
-  await syncItcAutomationVersion();
-
   console.log(`Integration DB sync complete. Upserted ${synced.length} integration record(s).`);
   for (const item of synced) console.log(`- ${item}`);
 }
