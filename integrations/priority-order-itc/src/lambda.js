@@ -17,6 +17,20 @@ function lifecycleDetails(job) {
   };
 }
 
+function normalizeCredentialReferences(job) {
+  if (!job.automationId || !job.credentialReferences) return job;
+  const legacyPrefix = `${job.integrationId}::`;
+  const credentialReferences = Object.fromEntries(
+    Object.entries(job.credentialReferences).map(([key, reference]) => [
+      key,
+      reference === `${legacyPrefix}${key}`
+        ? `automation/${job.automationId}/${key}`
+        : reference,
+    ])
+  );
+  return { ...job, credentialReferences };
+}
+
 async function processJob(job, recordId, runtime = {}) {
   const jobId = job.id || job.executionId || recordId;
   const logger = createLogger({ service: 'priority-order-itc', jobId });
@@ -159,7 +173,7 @@ async function processJob(job, recordId, runtime = {}) {
 
     const context = {
       logger,
-      config: await configResolver(job),
+      config: await configResolver(normalizeCredentialReferences(job)),
       mocks: job.mocks || {},
       beforeProviderDelivery: liveMode
         ? async () => {

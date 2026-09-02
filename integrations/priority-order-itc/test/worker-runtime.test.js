@@ -74,6 +74,29 @@ test('accepts a complete integration-scoped Secrets Manager ARN', async () => {
   assert.equal(config.credentials.ITC_BEARER_TOKEN, 'resolved');
 });
 
+test('Lambda resolves the legacy UI credential reference through the automation secret namespace', async () => {
+  const reads = [];
+  const response = await lambdaDiagnostics.processJob({
+    id: 'job-legacy-secret-reference',
+    integrationId: 'cmrtomudr0001105jk8e1spo6',
+    automationId: 'aut_ea71be6b4ff0780f',
+    executionMode: 'test',
+    payload: { clientName: '+972507573753', msgType: 'whatsapp', channelId: 'whatsapp:+97246960480', variables: [] },
+    credentialReferences: { ITC_BEARER_TOKEN: 'cmrtomudr0001105jk8e1spo6::ITC_BEARER_TOKEN' },
+    settings: { credentials: { ITC_TEMPLATE_MESSAGE_URL: 'https://itc.example.test/template/1', ITC_CHANNEL_ID: 'whatsapp:+97246960480' } },
+  }, 'job-legacy-secret-reference', {
+    resolveConfig: async (job) => {
+      reads.push(job.credentialReferences.ITC_BEARER_TOKEN);
+      return { credentials: { ITC_BEARER_TOKEN: 'resolved', ITC_TEMPLATE_MESSAGE_URL: 'https://itc.example.test/template/1', ITC_CHANNEL_ID: 'whatsapp:+97246960480' } };
+    },
+    runIntegration: async () => ({ success: true }),
+    reportStatus: async () => ({ accepted: true }),
+  });
+
+  assert.equal(response.success, true);
+  assert.deepEqual(reads, ['automation/aut_ea71be6b4ff0780f/ITC_BEARER_TOKEN']);
+});
+
 test('Lambda path emits explicit running and success lifecycle records', async () => {
   const entries = [];
   const originalLog = console.log;
