@@ -118,6 +118,24 @@ test('live mode posts the exact requested body', async () => {
   assert.equal(requestBody.variables[2].text, 'https://automation.example.test/documents/priority-orders/exec-1.pdf');
 });
 
+test('live mode accepts a bearer token copied with its authorization prefix', async () => {
+  let authorization;
+  const ctx = context({
+    config: { credentials: { ...context().config.credentials, ITC_BEARER_TOKEN: 'Bearer test-worker-token' } },
+    priorityClient: {
+      generateSalesOrderPrintUrl: async () => 'https://priority.example.test/netfiles/SO26000001.pdf',
+    },
+    archiveDocument: async () => 'https://automation.example.test/documents/priority-orders/exec-1.pdf',
+    beforeProviderDelivery: async () => {},
+    fetchImpl: async (_url, options) => {
+      authorization = options.headers.Authorization;
+      return { ok: true, status: 202, text: async () => JSON.stringify({ messageId: 'itc-1' }) };
+    },
+  });
+  await handler({ ...job, mode: 'live' }, ctx);
+  assert.equal(authorization, 'Bearer test-worker-token');
+});
+
 test('Priority client runs WWWSHOWORDER with ORDNAME and the configured sort option', async () => {
   const calls = [];
   const cancel = async () => calls.push(['cancel']);

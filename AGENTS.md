@@ -30,10 +30,11 @@ At the beginning of every new chat, classify the first user request into exactly
 
 * `PLATFORM/ADMIN` — platform, the Admin panel, shared infrastructure, migration, or repository-wide work. Shared dashboard code that implements an automation’s UI is not automatically platform/admin scope.
 * `AUTOMATION:<integration_id>` — work for one specific integration only.
+* `PLATFORM/ADMIN + AUTOMATION:<integration_id>` — one Admin/platform scope and one automation may be handled in the same chat when the request explicitly uses the combined workflow.
 
 The assistant must state the selected scope before taking project actions. The scope is immutable for the chat.
 
-An `AUTOMATION:<integration_id>` chat must refuse requests to modify or discuss another integration, platform code, Admin code, shared infrastructure, deployment configuration, or repository-wide behavior. A `PLATFORM/ADMIN` chat must refuse automation-specific implementation work. Work for a different scope requires a new chat.
+An `AUTOMATION:<integration_id>` chat must refuse requests to modify or discuss another integration, platform code, Admin code, shared infrastructure, deployment configuration, or repository-wide behavior. A `PLATFORM/ADMIN` chat must refuse automation-specific implementation work unless it is the explicitly requested one-automation combined workflow. Work for a different scope requires a new chat.
 
 Exception — foundational infrastructure work: when the user explicitly identifies
 the request as a foundational, repository-wide infrastructure change (for example
@@ -63,6 +64,15 @@ By default, never combine Admin/platform and automation work, or two automation
 scopes, in one chat, commit, or push. The foundational infrastructure exception
 above is the only allowed override. If the request changes scope without that
 explicit exception, stop and instruct the user to open a new chat.
+
+## Git Push Rule
+
+Every Git push must include a version bump matching the changed scope:
+
+* `PLATFORM/ADMIN` changes require an Admin/platform version bump.
+* `AUTOMATION:<integration_id>` changes require a version bump for that automation.
+
+Never push scoped changes without the corresponding version bump.
 
 ---
 

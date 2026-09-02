@@ -1,0 +1,154 @@
+{
+  "manifest_schema": 1,
+  "project": "user-automation-platform",
+  "automation_creation": {
+    "source": "chatgpt_prompt",
+    "admin_creates_automations": false,
+    "required_flow": [
+      "identify_members",
+      "declare_member_credentials",
+      "declare_member_tests",
+      "define_member_data_contracts",
+      "define_full_flow_test",
+      "define_unified_logging",
+      "generate_automation_package",
+      "validate_package",
+      "provision_isolated_resources",
+      "deploy_independent_pipeline",
+      "run_full_flow_verification",
+      "register_automation"
+    ],
+    "block_if": [
+      "member_missing_credentials_declaration",
+      "member_missing_tests",
+      "member_missing_data_contract",
+      "full_flow_test_missing",
+      "unified_logging_missing",
+      "isolation_configuration_missing"
+    ]
+  },
+  "member_contract": {
+    "required_fields": [
+      "id",
+      "purpose",
+      "credentials",
+      "tests",
+      "input_contract",
+      "output_contract",
+      "failure_behavior",
+      "logging"
+    ],
+    "implementation": "automation_specific",
+    "reference_implementations": false
+  },
+  "test_contract": {
+    "member_tests_required": true,
+    "full_flow_test_required": true,
+    "modes": ["offline", "test", "dry_run", "live"],
+    "full_flow_must_verify": [
+      "input_received",
+      "member_sequence",
+      "data_handoffs",
+      "credential_usage_boundaries",
+      "success_or_failure_status",
+      "side_effect_result"
+    ]
+  },
+  "logging_contract": {
+    "event_schema": "automation.log",
+    "required_fields": [
+      "automationId",
+      "executionId",
+      "memberId",
+      "step",
+      "status",
+      "timestamp"
+    ],
+    "required_statuses": ["started", "running", "success", "failed"],
+    "secret_redaction_required": true
+  },
+  "isolation": {
+    "chat": {
+      "admin_with_one_automation_allowed": true,
+      "multiple_automations_in_one_chat": false,
+      "automation_isolation_preserved": true
+    },
+    "code": "one_package_per_automation",
+    "database": "automation_owned_database_or_schema",
+    "credentials": "automation_scoped_secrets_namespace",
+    "runtime": "one_lambda_or_fargate_service_per_automation",
+    "queue": "one_sqs_queue_and_dlq_per_automation_when_required",
+    "logs": "one_cloudwatch_log_group_per_automation",
+    "iam": "automation_scoped_execution_role",
+    "deployment": "one_pipeline_per_automation"
+  },
+  "shared_platform": {
+    "database_contains": [
+      "users",
+      "automation_registry",
+      "ownership_and_permissions",
+      "credential_references",
+      "generic_execution_status",
+      "log_event_index",
+      "deployment_status"
+    ],
+    "database_must_not_contain": [
+      "automation_specific_business_tables",
+      "automation_specific_business_columns"
+    ],
+    "admin_responsibilities": [
+      "view_automations",
+      "manage_access",
+      "view_credentials_metadata",
+      "view_deployment_status",
+      "view_logs",
+      "view_execution_failures",
+      "enable_or_disable_execution"
+    ]
+  },
+  "repository_layout": {
+    "automation_package": "automations/<automation-id>_<slug>/",
+    "automation_runtime": "integrations/<automation-slug>/",
+    "automation_database": "automations/<automation-id>_<slug>/database/",
+    "automation_tests": "automations/<automation-id>_<slug>/tests/",
+    "automation_deployment": "infra/aws/integrations/<automation-slug>/",
+    "shared_runtime": "packages/shared/",
+    "platform_runtime": "apps/api/ and src/",
+    "platform_ui": "frontend/dashboard/"
+  },
+  "provisioning": {
+    "owner": "chatgpt_project",
+    "must_be_repeatable": true,
+    "must_record_resource_references": true,
+    "must_verify_before_registration": true,
+    "database_migration_owner": "automation_package"
+  },
+  "versioning": {
+    "required_for_every_change": true,
+    "must_be_bumped_before_commit_or_deployment": true,
+    "version_ownership": {
+      "admin": {
+        "scope": "platform_admin",
+        "version_location": "package.json",
+        "isolated_from_automations": true,
+        "bump_on_any_admin_change": true
+      },
+      "automation": {
+        "scope": "automation",
+        "version_location": "automation_manifest_and_runtime_package",
+        "isolated_per_automation": true,
+        "bump_only_changed_automation": true
+      }
+    },
+    "scope_rules": {
+      "platform_admin": "any Admin/platform change bumps the Admin version only",
+      "automation": "any change to one automation bumps that automation's version only"
+    },
+    "validation": {
+      "reject_missing_bump": true,
+      "reject_unrelated_version_bump": true,
+      "reject_cross_scope_bump": true,
+      "compare_against": "previous_revision"
+    }
+  }
+}

@@ -159,7 +159,7 @@ function parseResponse(text) {
 
 function configuration(credentials = {}) {
   const endpoint = String(credentials.ITC_TEMPLATE_MESSAGE_URL || '').trim();
-  const bearerToken = String(credentials.ITC_BEARER_TOKEN || '').trim();
+  const bearerToken = String(credentials.ITC_BEARER_TOKEN || '').trim().replace(/^Bearer\s+/i, '').trim();
   if (!endpoint) throw new Error('Missing ITC Template Message URL credential.');
   if (!bearerToken) throw new Error('Missing ITC Bearer Token credential.');
   let parsed;
