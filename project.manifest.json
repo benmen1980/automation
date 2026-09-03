@@ -123,6 +123,18 @@
     "must_verify_before_registration": true,
     "database_migration_owner": "automation_package"
   },
+  "git_workflow": {
+    "repository_count": 1,
+    "canonical_remote": "origin",
+    "branch_count": 1,
+    "branch": "master",
+    "local_development": "localhost",
+    "promotion": "push_to_master_triggers_staging_pipeline",
+    "pull_branch": "master",
+    "push_branch": "master",
+    "feature_branches_allowed": false,
+    "direct_staging_changes_allowed": false
+  },
   "versioning": {
     "required_for_every_change": true,
     "must_be_bumped_before_commit_or_deployment": true,

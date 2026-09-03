@@ -110,6 +110,17 @@ function validate(manifest) {
   if (provisioning.must_verify_before_registration !== true) errors.push('provisioning.must_verify_before_registration must be true.');
   if (provisioning.database_migration_owner !== 'automation_package') errors.push('provisioning.database_migration_owner must be automation_package.');
 
+  const gitWorkflow = requireObject(manifest, 'git_workflow', errors);
+  if (gitWorkflow.repository_count !== 1) errors.push('git_workflow.repository_count must be 1.');
+  if (gitWorkflow.canonical_remote !== 'origin') errors.push('git_workflow.canonical_remote must be origin.');
+  if (gitWorkflow.branch_count !== 1) errors.push('git_workflow.branch_count must be 1.');
+  for (const key of ['branch', 'pull_branch', 'push_branch']) {
+    if (gitWorkflow[key] !== 'master') errors.push(`git_workflow.${key} must be master.`);
+  }
+  if (gitWorkflow.promotion !== 'push_to_master_triggers_staging_pipeline') errors.push('git_workflow.promotion must be push_to_master_triggers_staging_pipeline.');
+  if (gitWorkflow.feature_branches_allowed !== false) errors.push('git_workflow.feature_branches_allowed must be false.');
+  if (gitWorkflow.direct_staging_changes_allowed !== false) errors.push('git_workflow.direct_staging_changes_allowed must be false.');
+
   return errors;
 }
 

@@ -12,7 +12,7 @@ describe('workspace and Git scope enforcement', () => {
     const result = validateWorkspaceScope({
       scope: AUTOMATION_SCOPE,
       automationId,
-      branch: `codex/automation/${automationId}/feature`,
+      branch: 'master',
       changedFiles: [
         `automations/${automationId}_priority-inventory-to-file/automation.json`,
         'src/integrations/user_001/priority-inventory-to-file/handler.js',
@@ -25,7 +25,7 @@ describe('workspace and Git scope enforcement', () => {
     const result = validateWorkspaceScope({
       scope: AUTOMATION_SCOPE,
       automationId,
-      branch: `automation/${automationId}/feature`,
+      branch: 'master',
       changedFiles: [
         `automations/${automationId}_priority-inventory-to-file/ui/AutomationModules.jsx`,
       ],
@@ -34,7 +34,7 @@ describe('workspace and Git scope enforcement', () => {
     expect(() => validateWorkspaceScope({
       scope: AUTOMATION_SCOPE,
       automationId,
-      branch: `automation/${automationId}/feature`,
+      branch: 'master',
       changedFiles: ['frontend/dashboard/src/components/AutomationModules.jsx'],
     })).toThrow('Workspace scope violation');
   });
@@ -43,33 +43,33 @@ describe('workspace and Git scope enforcement', () => {
     expect(() => validateWorkspaceScope({
       scope: AUTOMATION_SCOPE,
       automationId,
-      branch: `automation/${automationId}/feature`,
+      branch: 'master',
       changedFiles: ['src/core/logger.js'],
     })).toThrow('Workspace scope violation');
     expect(() => validateWorkspaceScope({
       scope: AUTOMATION_SCOPE,
       automationId,
-      branch: `automation/${automationId}/feature`,
+      branch: 'master',
       changedFiles: ['automations/aut_13a032daadd81f2e_user-001-whatsapp/automation.json'],
     })).toThrow('Workspace scope violation');
   });
 
   test('platform scope requires explicit automation authorization for automation package writes', () => {
-    expect(branchAllowed(PLATFORM_SCOPE, 'codex/platform/phase6')).toBe(true);
+    expect(branchAllowed(PLATFORM_SCOPE, 'master')).toBe(true);
     expect(() => validateWorkspaceScope({
       scope: PLATFORM_SCOPE,
-      branch: 'codex/platform/phase6',
+      branch: 'master',
       changedFiles: ['automations/aut_bf16311b2c39c038_priority-inventory-to-file/automation.json'],
     })).toThrow('Workspace scope violation');
     expect(validateWorkspaceScope({
       scope: PLATFORM_SCOPE,
-      branch: 'codex/platform/phase6',
+      branch: 'master',
       allowAutomationId: automationId,
       changedFiles: ['automations/aut_bf16311b2c39c038_priority-inventory-to-file/automation.json'],
     }).changedFiles).toHaveLength(1);
     expect(() => validateWorkspaceScope({
       scope: PLATFORM_SCOPE,
-      branch: 'codex/platform/phase6',
+      branch: 'master',
       changedFiles: ['src/integrations/user_001/priority-inventory-to-file/handler.js'],
     })).toThrow('Workspace scope violation');
   });
@@ -77,7 +77,7 @@ describe('workspace and Git scope enforcement', () => {
   test('foundational infrastructure scope may span automation packages', () => {
     const result = validateWorkspaceScope({
       scope: PLATFORM_SCOPE,
-      branch: 'codex/platform/stage-alignment',
+      branch: 'master',
       foundationalInfrastructure: true,
       changedFiles: [
         'src/core/workspace-scope.js',
@@ -92,7 +92,7 @@ describe('workspace and Git scope enforcement', () => {
     const result = validateWorkspaceScope({
       scope: AUTOMATION_SCOPE,
       automationId: priorityOrderId,
-      branch: `automation/${priorityOrderId}/work`,
+      branch: 'master',
       changedFiles: [
         'integrations/priority-order-itc/src/handler.js',
         'integrations/priority-order-itc/src/manifest.js',
@@ -106,13 +106,13 @@ describe('workspace and Git scope enforcement', () => {
     expect(() => validateWorkspaceScope({
       scope: AUTOMATION_SCOPE,
       automationId,
-      branch: 'codex/platform/wrong-scope',
+      branch: 'feature/wrong-scope',
       changedFiles: [],
     })).toThrow('Branch');
     expect(() => validateWorkspaceScope({
       scope: AUTOMATION_SCOPE,
       automationId,
-      branch: `automation/${automationId}/feature`,
+      branch: 'master',
       changedFiles: ['automations/../src/core/logger.js'],
     })).toThrow('Unsafe changed path');
   });

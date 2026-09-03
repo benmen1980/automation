@@ -32,13 +32,7 @@ function assertSafeRelativePath(relativePath, root = process.cwd()) {
 
 function branchAllowed(scope, branch, automationId, allowAutomationId) {
   const value = String(branch || '').trim();
-  if (!value) return false;
-  if (scope === AUTOMATION_SCOPE) {
-    if (automationId === 'aut_ea71be6b4ff0780f' && /^master$/i.test(value)) return true;
-    return new RegExp(`^(?:codex/)?automation/${automationId}(?:/|$)`, 'i').test(value);
-  }
-  if (allowAutomationId) return /^(?:codex\/)?platform(?:\/|$)/i.test(value);
-  return /^(?:codex\/)?platform(?:\/|$)|^(?:main|master|develop|staging)$/i.test(value);
+  return /^master$/i.test(value);
 }
 
 function manifestAllowedPaths(manifest) {

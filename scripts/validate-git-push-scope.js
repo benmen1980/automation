@@ -12,6 +12,7 @@ function git(args) {
 }
 
 function changedFiles(oldRevision, newRevision) {
+  if (/^0+$/.test(newRevision)) return [];
   if (/^0+$/.test(oldRevision)) {
     return git(['diff-tree', '--no-commit-id', '--name-only', '-r', newRevision])
       .split(/\r?\n/).filter(Boolean);
@@ -35,6 +36,13 @@ function main() {
   const scope = requiredScope();
   const input = require('node:fs').readFileSync(0, 'utf8');
   const refs = input.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  for (const line of refs) {
+    const [localRef, localSha, remoteRef] = line.split(/\s+/);
+    const deletingRemoteBranch = /^0+$/.test(localSha || '');
+    if (!deletingRemoteBranch && remoteRef !== 'refs/heads/master') {
+      throw new Error(`Push rejected: remote branch must be refs/heads/master; received ${remoteRef || 'unknown'}.`);
+    }
+  }
   const files = [...new Set(refs.flatMap((line) => {
     const [localRef, localSha, remoteRef, remoteSha] = line.split(/\s+/);
     return localRef && localSha && remoteRef && remoteSha ? changedFiles(remoteSha, localSha) : [];

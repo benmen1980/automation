@@ -51,13 +51,13 @@ Automation-specific forms, modules, API wiring, dashboard pages, and components 
 Before editing, committing, or pushing, run the applicable project scope validator:
 
 ```powershell
-npm run validate:workspace-scope -- --scope PLATFORM/ADMIN --branch main
+npm run validate:workspace-scope -- --scope PLATFORM/ADMIN --branch master
 ```
 
 For integration work, also provide the exact permanent integration ID:
 
 ```powershell
-npm run validate:workspace-scope -- --scope AUTOMATION --automation-id <integration_id> --branch automation/<integration_id>/work
+npm run validate:workspace-scope -- --scope AUTOMATION --automation-id <integration_id> --branch master
 ```
 
 By default, never combine Admin/platform and automation work, or two automation
@@ -65,9 +65,10 @@ scopes, in one chat, commit, or push. The foundational infrastructure exception
 above is the only allowed override. If the request changes scope without that
 explicit exception, stop and instruct the user to open a new chat.
 
-Automation `aut_ea71be6b4ff0780f` is permitted to use `master` because its staging
-deployment pipeline monitors `master`; all other automations remain restricted to
-their automation branches.
+All platform and automation work is developed locally and committed and pushed
+to the single `master` branch. A push to `master` is the staging deployment
+promotion trigger. Feature, automation, platform, and direct staging branches
+are not used.
 
 ## Git Push Rule
 
