@@ -275,6 +275,15 @@ test('Priority client runs WWWSHOWORDER with ORDNAME and the configured sort opt
   assert.equal(calls.some(([name]) => name === 'cancel'), true);
 });
 
+test('Priority client fails a stalled SDK call instead of leaving execution pending', async () => {
+  const sdk = { login: () => new Promise(() => {}) };
+
+  await assert.rejects(
+    generateSalesOrderPrintUrl('SO26000001', context().config.credentials, { sdk, timeoutMs: 10 }),
+    (error) => error.providerError?.stage === 'login' && /timed out after 10ms/.test(error.message)
+  );
+});
+
 test('Priority client reports login as the failed stage without exposing credentials or order data', async () => {
   const sdk = {
     async login() {

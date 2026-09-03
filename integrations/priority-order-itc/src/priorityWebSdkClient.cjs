@@ -5,6 +5,7 @@ const DEFAULT_ORDER_SORT_OPTION = 'By Order Number';
 const PRINT_FORMAT_CODE = -109;
 const PRINT_AS_PDF = 1;
 const MAX_PROCEDURE_STEPS = 12;
+const DEFAULT_PRIORITY_TIMEOUT_MS = 30000;
 
 const STAGE_LABELS = {
   login: 'login',
@@ -211,7 +212,20 @@ function priorityStageError(stage, cause, { credentials, orderName, stepType, me
 
 async function runStage(stage, action, details) {
   try {
-    return await action();
+    const timeoutMs = Number(details?.timeoutMs || DEFAULT_PRIORITY_TIMEOUT_MS);
+    let timeout;
+    const timeoutPromise = new Promise((_, reject) => {
+      timeout = setTimeout(() => {
+        const error = new Error(`Priority Web SDK timed out after ${timeoutMs}ms.`);
+        error.name = 'TimeoutError';
+        reject(error);
+      }, timeoutMs);
+    });
+    try {
+      return await Promise.race([action(), timeoutPromise]);
+    } finally {
+      clearTimeout(timeout);
+    }
   } catch (cause) {
     throw priorityStageError(stage, cause, details);
   }
@@ -512,11 +526,15 @@ async function finishProcedure(procedure, details) {
   });
 }
 
-async function generateSalesOrderPrintUrl(orderName, credentials, { sdk = priority } = {}) {
+async function generateSalesOrderPrintUrl(
+  orderName,
+  credentials,
+  { sdk = priority, timeoutMs = DEFAULT_PRIORITY_TIMEOUT_MS } = {}
+) {
   const normalizedOrderName = normalizeOrderName(orderName);
   const { config, orderSortOption } = getConfiguration(credentials);
   let procedure;
-  const details = { credentials, orderName: normalizedOrderName };
+  const details = { credentials, orderName: normalizedOrderName, timeoutMs };
 
   try {
     await runStage('login', () => sdk.login(config), details);
