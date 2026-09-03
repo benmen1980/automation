@@ -118,6 +118,60 @@ test('live mode posts the exact requested body', async () => {
   assert.equal(requestBody.variables[2].text, 'https://automation.example.test/documents/priority-orders/exec-1.pdf');
 });
 
+test('a non-empty ZANA_FAX sends a second ITC request using ZANA_NAME', async () => {
+  const requests = [];
+  const ctx = context({
+    priorityClient: {
+      generateSalesOrderPrintUrl: async () => 'https://priority.example.test/netfiles/SO26000001.pdf',
+    },
+    archiveDocument: async () => 'https://automation.example.test/documents/priority-orders/exec-1.pdf',
+    fetchImpl: async (_url, options) => {
+      requests.push(JSON.parse(options.body));
+      return { ok: true, status: 202, text: async () => JSON.stringify({ messageId: `itc-${requests.length}` }) };
+    },
+  });
+  const result = await handler({
+    ...job,
+    mode: 'live',
+    payload: { ORDERS: {
+      ...job.payload.ORDERS,
+      ZANA_NAME: 'Fax recipient',
+      ZANA_FAX: '050-757-3754',
+    } },
+  }, ctx);
+
+  assert.equal(requests.length, 2);
+  assert.equal(requests[0].clientName, '+972507573753');
+  assert.equal(requests[0].variables[0].text, 'Customer');
+  assert.equal(requests[1].clientName, '+972507573754');
+  assert.equal(requests[1].variables[0].text, 'Fax recipient');
+  assert.equal(result.counts.messagesSent, 2);
+  assert.equal(result.additionalProviderMessageId, 'itc-2');
+});
+
+test('an empty ZANA_FAX does not send a second ITC request', async () => {
+  let requests = 0;
+  const ctx = context({
+    priorityClient: {
+      generateSalesOrderPrintUrl: async () => 'https://priority.example.test/netfiles/SO26000001.pdf',
+    },
+    archiveDocument: async () => 'https://automation.example.test/documents/priority-orders/exec-1.pdf',
+    fetchImpl: async () => {
+      requests += 1;
+      return { ok: true, status: 202, text: async () => JSON.stringify({ messageId: 'itc-1' }) };
+    },
+  });
+  const result = await handler({
+    ...job,
+    mode: 'live',
+    payload: { ORDERS: { ...job.payload.ORDERS, ZANA_FAX: '' } },
+  }, ctx);
+
+  assert.equal(requests, 1);
+  assert.equal(result.counts.messagesSent, 1);
+  assert.equal(result.additionalRequestSummary, undefined);
+});
+
 test('live mode accepts a bearer token copied with its authorization prefix', async () => {
   let authorization;
   const ctx = context({

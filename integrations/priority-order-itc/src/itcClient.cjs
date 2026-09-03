@@ -53,14 +53,19 @@ function getOrderFields(payload) {
   if (!order || typeof order !== 'object' || Array.isArray(order)) {
     throw new Error('Priority webhook payload must include an ORDERS object.');
   }
+  const fax = order.ZANA_FAX && typeof order.ZANA_FAX === 'object'
+    ? requiredText(order.ZANA_FAX, 'ORDERS.ZANA_FAX')
+    : String(order.ZANA_FAX || '').trim();
   return {
     orderName: requiredText(order.ORDNAME, 'ORDERS.ORDNAME'),
     customerDescription: requiredText(order.ZANA_CUSTDES, 'ORDERS.ZANA_CUSTDES'),
     recipientPhone: normalizeRecipientPhone(order.ZANA_PHONENUM),
+    faxCustomerDescription: fax ? requiredText(order.ZANA_NAME, 'ORDERS.ZANA_NAME') : '',
+    faxRecipientPhone: fax ? normalizeRecipientPhone(fax) : '',
   };
 }
 
-function mapOrder(payload, credentials = {}, priorityDocumentUrl) {
+function mapOrder(payload, credentials = {}, priorityDocumentUrl, overrides = {}) {
   const { orderName, customerDescription, recipientPhone } = getOrderFields(payload);
   const channelId = String(credentials.ITC_CHANNEL_ID || '').trim();
   const documentUrl = String(priorityDocumentUrl || '').trim();
@@ -78,10 +83,11 @@ function mapOrder(payload, credentials = {}, priorityDocumentUrl) {
     msgType: 'whatsapp',
     channelId,
     variables: [
-      { type: 'text', text: customerDescription },
+      { type: 'text', text: overrides.customerDescription || customerDescription },
       { type: 'text', text: orderName },
       { type: 'text', text: documentUrl },
     ],
+    ...(overrides.recipientPhone ? { clientName: overrides.recipientPhone } : {}),
   };
 }
 

@@ -54,7 +54,7 @@ export async function handler(job, context) {
     logger.info('Received from ITC.', { direction: 'Received from ITC', httpStatus: result.status, providerMessageId: result.providerMessageId, messagesSent: 1, recordsSkipped: 0, errors: 0, responseSummary });
     return { success: true, providerMessageId: result.providerMessageId, requestSummary, responseSummary, counts: { recordsRead: 1, messagesSent: 1, recordsSkipped: 0, errors: 0 } };
   }
-  const { orderName, customerDescription } = getOrderFields(payload);
+  const { orderName, customerDescription, faxCustomerDescription, faxRecipientPhone } = getOrderFields(payload);
 
   logger.info('Received from Priority.', {
     direction: 'Received from Priority',
@@ -108,13 +108,25 @@ export async function handler(job, context) {
   });
 
   const body = mapOrder(payload, credentials, sharedDocumentUrl);
+  const faxBody = faxRecipientPhone
+    ? mapOrder(payload, credentials, sharedDocumentUrl, {
+        customerDescription: faxCustomerDescription,
+        recipientPhone: faxRecipientPhone,
+      })
+    : null;
   const requestSummary = safeRequestSummary(endpoint, body);
-  logger.info('Sent to ITC.', { direction: 'Sent to ITC', messagesPrepared: 1, requestSummary });
+  const faxRequestSummary = faxBody ? safeRequestSummary(endpoint, faxBody) : null;
+  logger.info('Sent to ITC.', {
+    direction: 'Sent to ITC',
+    messagesPrepared: faxBody ? 2 : 1,
+    requestSummary,
+    ...(faxRequestSummary ? { additionalRequestSummary: faxRequestSummary } : {}),
+  });
 
   if (mode === 'dry_run' || mode === 'test') {
     const responseSummary = { skipped: true, reason: `${mode} mode does not call ITC.` };
     logger.info('Received from ITC.', { direction: 'Received from ITC', messagesSent: 0, recordsSkipped: 1, errors: 0, responseSummary });
-    return { success: true, skipped: true, requestSummary, responseSummary, counts: { recordsRead: 1, messagesSent: 0, recordsSkipped: 1, errors: 0 } };
+    return { success: true, skipped: true, requestSummary, ...(faxRequestSummary ? { additionalRequestSummary: faxRequestSummary } : {}), responseSummary, counts: { recordsRead: 1, messagesSent: 0, recordsSkipped: 1, errors: 0 } };
   }
 
   if (mode === 'mock_output') {
@@ -128,6 +140,7 @@ export async function handler(job, context) {
         ? null
         : sanitizeProviderString(mockResponse.id).slice(0, 160),
       requestSummary,
+      ...(faxRequestSummary ? { additionalRequestSummary: faxRequestSummary } : {}),
       responseSummary,
       counts: { recordsRead: 1, messagesSent: 0, recordsSkipped: 0, errors: 0 },
     };
@@ -143,7 +156,18 @@ export async function handler(job, context) {
     fetchImpl,
     beforeSend: beforeProviderDelivery,
   });
+  const faxResult = faxBody
+    ? await sendTemplateMessage(faxBody, credentials, { fetchImpl })
+    : null;
   const responseSummary = safeResponseSummary(result.data);
-  logger.info('Received from ITC.', { direction: 'Received from ITC', httpStatus: result.status, providerMessageId: result.providerMessageId, messagesSent: 1, recordsSkipped: 0, errors: 0, responseSummary });
-  return { success: true, providerMessageId: result.providerMessageId, requestSummary, responseSummary, counts: { recordsRead: 1, messagesSent: 1, recordsSkipped: 0, errors: 0 } };
+  logger.info('Received from ITC.', { direction: 'Received from ITC', httpStatus: result.status, providerMessageId: result.providerMessageId, messagesSent: faxResult ? 2 : 1, recordsSkipped: 0, errors: 0, responseSummary });
+  return {
+    success: true,
+    providerMessageId: result.providerMessageId,
+    ...(faxResult ? { additionalProviderMessageId: faxResult.providerMessageId } : {}),
+    requestSummary,
+    ...(faxRequestSummary ? { additionalRequestSummary: faxRequestSummary } : {}),
+    responseSummary,
+    counts: { recordsRead: 1, messagesSent: faxResult ? 2 : 1, recordsSkipped: 0, errors: 0 },
+  };
 }

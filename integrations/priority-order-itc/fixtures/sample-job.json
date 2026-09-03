@@ -11,7 +11,9 @@
     "ORDERS": {
       "ORDNAME": "SO26000001",
       "ZANA_CUSTDES": "ירדן",
-      "ZANA_PHONENUM": "+972507573753"
+      "ZANA_PHONENUM": "+972507573753",
+      "ZANA_NAME": "ירדן",
+      "ZANA_FAX": "+972507573754"
     }
   },
   "credentials": {
