@@ -65,6 +65,10 @@ scopes, in one chat, commit, or push. The foundational infrastructure exception
 above is the only allowed override. If the request changes scope without that
 explicit exception, stop and instruct the user to open a new chat.
 
+Automation `aut_ea71be6b4ff0780f` is permitted to use `master` because its staging
+deployment pipeline monitors `master`; all other automations remain restricted to
+their automation branches.
+
 ## Git Push Rule
 
 Every Git push must include a version bump matching the changed scope:
