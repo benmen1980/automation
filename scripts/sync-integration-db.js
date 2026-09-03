@@ -48,6 +48,7 @@ function integrationDefinitions(usersBySlug) {
             description: 'שליחת ווצאפ מהזמנת לקוח: יצירת אישור הזמנה דרך Priority Web SDK ושליחת קישור המסמך למערכת ITC.',
             slug: 'priority-quote-whatsapp',
             type: 'webhook',
+            version: '1.2.11',
             codeFolder: 'src/integrations/tuf1/priority-quote-whatsapp',
           },
         ]
