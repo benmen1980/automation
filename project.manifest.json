@@ -138,16 +138,20 @@
   "versioning": {
     "required_for_every_change": true,
     "must_be_bumped_before_commit_or_deployment": true,
+    "user_facing_source": "component_code_manifests_only",
+    "root_package_version_is_product_version": false,
     "version_ownership": {
       "admin": {
         "scope": "platform_admin",
-        "version_location": "package.json",
+        "version_location": "src/platform/manifest.js",
+        "release_log_location": "src/platform/manifest.js",
         "isolated_from_automations": true,
         "bump_on_any_admin_change": true
       },
       "automation": {
         "scope": "automation",
-        "version_location": "automation_manifest_and_runtime_package",
+        "version_location": "integrations/<automation-slug>/src/manifest.js",
+        "release_log_location": "integrations/<automation-slug>/src/manifest.js",
         "isolated_per_automation": true,
         "bump_only_changed_automation": true
       }
@@ -162,6 +166,47 @@
       "reject_cross_scope_bump": true,
       "compare_against": "previous_revision"
     }
+  },
+  "component_versioning": {
+    "authoritative_source": "code_manifest",
+    "admin": {
+      "label": "Admin",
+      "manifest": "src/platform/manifest.js",
+      "release_log_required": true,
+      "ui_must_display": ["version", "release_log"]
+    },
+    "automation": {
+      "manifest_pattern": "integrations/<automation-slug>/src/manifest.js",
+      "release_log_required": true,
+      "ui_must_display": ["version", "release_log"]
+    },
+    "release_log_entry_required_for_every_version_bump": true,
+    "release_log_entry_fields": [
+      "version",
+      "date",
+      "summary",
+      "commit"
+    ],
+    "bump_rules": {
+      "admin_code_or_database_structure": "bump_admin",
+      "automation_code_or_database_structure": "bump_that_automation",
+      "automation_lambda_queue_dlq_iam_or_deployment": "bump_that_automation",
+      "shared_code_affecting_multiple_automations": "bump_each_affected_automation",
+      "shared_platform_code_affecting_admin_and_automations": "bump_admin_and_each_affected_automation"
+    },
+    "database_role": "deployed_version_snapshot_only",
+    "ui_version_sources_forbidden": [
+      "root_package_json_version",
+      "frontend_dashboard_package_json_version",
+      "database_version_without_matching_code_manifest"
+    ],
+    "deployment_identity_must_match": [
+      "code_manifest_version",
+      "pipeline_commit",
+      "deployed_component_artifact",
+      "database_deployment_snapshot",
+      "ui_displayed_version"
+    ]
   },
   "change_control": {
     "known_good_baseline_required": true,
