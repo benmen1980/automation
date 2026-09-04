@@ -162,5 +162,34 @@
       "reject_cross_scope_bump": true,
       "compare_against": "previous_revision"
     }
+  },
+  "change_control": {
+    "known_good_baseline_required": true,
+    "regression_behavior_must_be_preserved": true,
+    "pre_edit_checks": [
+      "confirm_clean_or_documented_worktree",
+      "confirm_current_branch_is_master",
+      "confirm_target_scope_and_permanent_automation_id",
+      "record_known_good_commit_and_deployed_versions"
+    ],
+    "pre_push_checks": [
+      "review_exact_changed_files_and_commit_diff",
+      "confirm_required_scope_version_bump",
+      "confirm_commit_is_on_master",
+      "confirm_remote_revision_matches_local_revision",
+      "confirm_pipeline_source_branch_and_revision"
+    ],
+    "staging_verification": {
+      "unit_tests_are_not_end_to_end_proof": true,
+      "must_confirm_platform_and_automation_versions_match": true,
+      "must_confirm_queue_worker_logs_database_and_external_side_effect": true,
+      "do_not_report_success_when_any_status_is_stale_or_pending": true
+    },
+    "scope_and_safety": {
+      "block_on_scope_or_identifier_ambiguity": true,
+      "preserve_unrelated_worktree_changes": true,
+      "never_print_or_reuse_credentials_from_chat": true,
+      "request_credential_rotation_when_exposed": true
+    }
   }
 }
