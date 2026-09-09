@@ -53,15 +53,17 @@ function getOrderFields(payload) {
   if (!order || typeof order !== 'object' || Array.isArray(order)) {
     throw new Error('Priority webhook payload must include an ORDERS object.');
   }
-  const fax = order.ZANA_FAX && typeof order.ZANA_FAX === 'object'
+  const hasPrimaryRecipient = Boolean(String(order.ZANA_CUSTDES || '').trim() && String(order.ZANA_PHONENUM || '').trim());
+  const hasFaxRecipient = Boolean(String(order.ZANA_NAME || '').trim() && String(order.ZANA_FAX || '').trim());
+  const fax = hasFaxRecipient && order.ZANA_FAX && typeof order.ZANA_FAX === 'object'
     ? requiredText(order.ZANA_FAX, 'ORDERS.ZANA_FAX')
     : String(order.ZANA_FAX || '').trim();
   return {
     orderName: requiredText(order.ORDNAME, 'ORDERS.ORDNAME'),
-    customerDescription: requiredText(order.ZANA_CUSTDES, 'ORDERS.ZANA_CUSTDES'),
-    recipientPhone: normalizeRecipientPhone(order.ZANA_PHONENUM),
-    faxCustomerDescription: fax ? requiredText(order.ZANA_NAME, 'ORDERS.ZANA_NAME') : '',
-    faxRecipientPhone: fax ? normalizeRecipientPhone(fax) : '',
+    customerDescription: hasPrimaryRecipient ? requiredText(order.ZANA_CUSTDES, 'ORDERS.ZANA_CUSTDES') : '',
+    recipientPhone: hasPrimaryRecipient ? normalizeRecipientPhone(order.ZANA_PHONENUM) : '',
+    faxCustomerDescription: hasFaxRecipient ? requiredText(order.ZANA_NAME, 'ORDERS.ZANA_NAME') : '',
+    faxRecipientPhone: hasFaxRecipient ? normalizeRecipientPhone(fax) : '',
   };
 }
 

@@ -54,7 +54,11 @@ export async function handler(job, context) {
     logger.info('Received from ITC.', { direction: 'Received from ITC', httpStatus: result.status, providerMessageId: result.providerMessageId, messagesSent: 1, recordsSkipped: 0, errors: 0, responseSummary });
     return { success: true, providerMessageId: result.providerMessageId, requestSummary, responseSummary, counts: { recordsRead: 1, messagesSent: 1, recordsSkipped: 0, errors: 0 } };
   }
-  const { orderName, customerDescription, faxCustomerDescription, faxRecipientPhone } = getOrderFields(payload);
+  const { orderName, customerDescription, recipientPhone, faxCustomerDescription, faxRecipientPhone } = getOrderFields(payload);
+
+  if (!recipientPhone && !faxRecipientPhone) {
+    return { success: true, skipped: true, responseSummary: { skipped: true, reason: 'No complete recipient name and phone pair.' }, counts: { recordsRead: 1, messagesSent: 0, recordsSkipped: 1, errors: 0 } };
+  }
 
   logger.info('Received from Priority.', {
     direction: 'Received from Priority',
@@ -107,8 +111,11 @@ export async function handler(job, context) {
     responseSummary: safeDocumentUrlSummary(sharedDocumentUrl),
   });
 
-  const body = mapOrder(payload, credentials, sharedDocumentUrl);
-  const faxBody = faxRecipientPhone
+  const body = mapOrder(payload, credentials, sharedDocumentUrl, recipientPhone ? {} : {
+    customerDescription: faxCustomerDescription,
+    recipientPhone: faxRecipientPhone,
+  });
+  const faxBody = recipientPhone && faxRecipientPhone
     ? mapOrder(payload, credentials, sharedDocumentUrl, {
         customerDescription: faxCustomerDescription,
         recipientPhone: faxRecipientPhone,

@@ -172,6 +172,55 @@ test('an empty ZANA_FAX does not send a second ITC request', async () => {
   assert.equal(result.additionalRequestSummary, undefined);
 });
 
+test('each incomplete recipient pair is skipped independently', async () => {
+  const completeOrder = {
+    ...job.payload.ORDERS,
+    ZANA_NAME: 'Second recipient',
+    ZANA_FAX: '0507573754',
+  };
+  for (const field of ['ZANA_CUSTDES', 'ZANA_PHONENUM', 'ZANA_NAME', 'ZANA_FAX']) {
+    for (const empty of [undefined, null, '', '   ']) {
+      const requests = [];
+      let deliveryMarkers = 0;
+      const ctx = context({
+        priorityClient: { generateSalesOrderPrintUrl: async () => 'https://priority.example.test/order.pdf' },
+        archiveDocument: async () => 'https://automation.example.test/order.pdf',
+        beforeProviderDelivery: async () => { deliveryMarkers += 1; },
+        fetchImpl: async (_url, options) => {
+          assert.equal(deliveryMarkers, 1);
+          requests.push(JSON.parse(options.body));
+          return { ok: true, status: 202, text: async () => JSON.stringify({ messageId: 'sent-1' }) };
+        },
+      });
+      const result = await handler({ ...job, mode: 'live', payload: { ORDERS: { ...completeOrder, [field]: empty } } }, ctx);
+      const primarySkipped = ['ZANA_CUSTDES', 'ZANA_PHONENUM'].includes(field);
+      assert.equal(requests.length, 1, field);
+      assert.equal(requests[0].clientName, primarySkipped ? '+972507573754' : '+972507573753');
+      assert.equal(requests[0].variables[0].text, primarySkipped ? 'Second recipient' : 'Customer');
+      assert.equal(result.counts.messagesSent, 1);
+      assert.equal(result.providerMessageId, 'sent-1');
+    }
+  }
+});
+
+test('no complete recipient pairs skip delivery successfully in every mode', async () => {
+  for (const mode of ['live', 'test', 'dry_run', 'mock_output']) {
+    for (const primaryField of ['ZANA_CUSTDES', 'ZANA_PHONENUM']) {
+      for (const secondField of ['ZANA_NAME', 'ZANA_FAX']) {
+        const fail = () => { throw new Error('No external call or delivery marker expected'); };
+        const result = await handler({ ...job, mode, payload: { ORDERS: {
+          ...job.payload.ORDERS, ZANA_NAME: 'Second recipient', ZANA_FAX: '0507573754',
+          [primaryField]: '', [secondField]: '',
+        } } }, context({ priorityClient: { generateSalesOrderPrintUrl: fail }, archiveDocument: fail, fetchImpl: fail, beforeProviderDelivery: fail }));
+        assert.equal(result.success, true);
+        assert.equal(result.skipped, true);
+        assert.equal(result.counts.messagesSent, 0);
+        assert.equal(result.counts.errors, 0);
+      }
+    }
+  }
+});
+
 test('live mode accepts a bearer token copied with its authorization prefix', async () => {
   let authorization;
   const ctx = context({
