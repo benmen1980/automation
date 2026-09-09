@@ -49,11 +49,19 @@ test.each(['update-function-code', 'wait'])('%s failure never publishes', async 
   expect(options.store.publish).not.toHaveBeenCalled();
 });
 
-test.each([{ LastUpdateStatus: 'Failed' }, { CodeSha256: 'another artifact' }, { RevisionId: 'another deployment' }])('unverified Lambda state %j never publishes', async (change) => {
+test.each([{ LastUpdateStatus: 'Failed' }, { CodeSha256: 'another artifact' }])('unverified Lambda state %j never publishes', async (change) => {
   const options = setup();
   Object.assign(options.actual, change);
   await expect(deploy(options)).rejects.toThrow('no longer matches');
   expect(options.store.publish).not.toHaveBeenCalled();
+});
+
+test('uses the completed revision and rejects changes after that verification', async () => {
+  const options = setup();
+  options.actual.RevisionId = 'completed-revision';
+  const result = await deploy(options);
+  options.actual.RevisionId = 'later-revision';
+  await expect(result.verifyDeployment()).rejects.toThrow('no longer matches');
 });
 
 test('an older retry cannot deploy over a newer successful release', async () => {

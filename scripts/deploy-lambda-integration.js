@@ -50,14 +50,17 @@ async function deploy({ env = process.env, runAws = aws, store, syncOnly = false
     assertNewer(current?.pointer, { deploymentId, order });
   }
   const before = runAws(['lambda', 'get-function-configuration', '--function-name', name]);
-  const updated = syncOnly ? before : runAws(['lambda', 'update-function-code', '--function-name', name, '--zip-file', `fileb://${zip}`, '--revision-id', before.RevisionId]);
+  if (!syncOnly) runAws(['lambda', 'update-function-code', '--function-name', name, '--zip-file', `fileb://${zip}`, '--revision-id', before.RevisionId]);
   if (!syncOnly) runAws(['lambda', 'wait', 'function-updated-v2', '--function-name', name]);
+  // Capture the completed revision, not the in-progress update response.
+  let deployedRevision = syncOnly ? before.RevisionId : null;
   const verifyDeployment = async () => {
     const actual = runAws(['lambda', 'get-function-configuration', '--function-name', name]);
     if (actual.LastUpdateStatus !== 'Successful' || actual.State !== 'Active' ||
-        actual.CodeSha256 !== codeSha256 || actual.RevisionId !== updated.RevisionId) {
+        actual.CodeSha256 !== codeSha256 || (deployedRevision && actual.RevisionId !== deployedRevision)) {
       throw new Error('Lambda update is not successful or no longer matches this deployment');
     }
+    deployedRevision = actual.RevisionId;
   };
   await verifyDeployment();
   return store.publish({ automationId: manifest.automation_id, body, deploymentId, order,
