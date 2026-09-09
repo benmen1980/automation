@@ -10,6 +10,7 @@ AUTOMATION_ID="${2:-${AUTOMATION_ID:-}}"
 : "${PIPELINE_ROLE_ARN:?Set PIPELINE_ROLE_ARN.}"
 : "${CODEBUILD_ROLE_ARN:?Set CODEBUILD_ROLE_ARN.}"
 : "${ARTIFACT_BUCKET:?Set ARTIFACT_BUCKET.}"
+: "${AUTOMATION_MANIFEST_BUCKET:?Set the shared deployment manifest bucket for this environment.}"
 
 if [[ ! "${INTEGRATION_NAME}" =~ ^[a-z0-9][a-z0-9-]*$ ]]; then
   echo "Integration name may contain only lowercase letters, numbers, and hyphens." >&2
@@ -28,8 +29,8 @@ fi
 LEGACY_SOURCE_PATH_JSON=""
 LEGACY_SOURCE_PATH_LABEL=""
 if [[ "${INTEGRATION_NAME}" == "priority-order-itc" ]]; then
-  LEGACY_SOURCE_PATH_JSON=', "src/integrations/tuf1/priority-quote-whatsapp/**", "scripts/sync-integration-db.js"'
-  LEGACY_SOURCE_PATH_LABEL=", src/integrations/tuf1/priority-quote-whatsapp/**, scripts/sync-integration-db.js"
+  LEGACY_SOURCE_PATH_JSON=', "src/integrations/tuf1/priority-quote-whatsapp/**"'
+  LEGACY_SOURCE_PATH_LABEL=", src/integrations/tuf1/priority-quote-whatsapp/**"
 fi
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "${TMP_DIR}"' EXIT
@@ -40,12 +41,14 @@ cat >"${TMP_DIR}/codebuild.json" <<JSON
   "serviceRole": "${CODEBUILD_ROLE_ARN}",
   "source": { "type": "CODEPIPELINE", "buildspec": "buildspec-lambda-integration.yml" },
   "artifacts": { "type": "CODEPIPELINE" },
+  "concurrentBuildLimit": 1,
   "environment": {
     "type": "LINUX_CONTAINER",
     "computeType": "BUILD_GENERAL1_SMALL",
     "image": "aws/codebuild/standard:7.0",
     "environmentVariables": [
-      { "name": "INTEGRATION_NAME", "value": "${INTEGRATION_NAME}", "type": "PLAINTEXT" }
+      { "name": "INTEGRATION_NAME", "value": "${INTEGRATION_NAME}", "type": "PLAINTEXT" },
+      { "name": "AUTOMATION_MANIFEST_BUCKET", "value": "${AUTOMATION_MANIFEST_BUCKET}", "type": "PLAINTEXT" }
     ]
   }
 }
@@ -64,7 +67,7 @@ cat >"${TMP_DIR}/pipeline.json" <<JSON
     "roleArn": "${PIPELINE_ROLE_ARN}",
     "artifactStore": { "type": "S3", "location": "${ARTIFACT_BUCKET}" },
     "pipelineType": "V2",
-    "executionMode": "SUPERSEDED",
+    "executionMode": "QUEUED",
     "stages": [
       {
         "name": "Source",
@@ -102,6 +105,8 @@ cat >"${TMP_DIR}/pipeline.json" <<JSON
           "filePaths": { "includes": [
             "integrations/${INTEGRATION_NAME}/**",
             "packages/shared/**",
+            "scripts/deploy-lambda-integration.js",
+            "src/core/deployed-automation-manifest.js",
             "infra/aws/integrations/${INTEGRATION_NAME}/**",
             "buildspec-lambda-integration.yml"${AUTOMATION_SOURCE_PATH_JSON}${LEGACY_SOURCE_PATH_JSON}
           ] }

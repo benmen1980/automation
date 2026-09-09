@@ -13,6 +13,7 @@ const webhookRunner = require('../core/webhook-runner');
 const scheduler = require('../core/scheduler');
 const { deriveAutomationId, deriveUserUid, getIntegrationKeyFromDefinition } = require('../core/identity');
 const { discoverAutomations, findByAutomationId, publicManifest } = require('../core/automation-registry');
+const { displayedManifest } = require('../core/deployed-automation-manifest');
 
 router.use(requireAuth);
 
@@ -51,9 +52,9 @@ function getAutomationManifest(integration) {
   ) || null;
 }
 
-function withIntegrationCodeKey(integration) {
+async function withIntegrationCodeKey(integration) {
   if (!integration) return integration;
-  const manifest = getAutomationManifest(integration);
+  const manifest = await displayedManifest(getAutomationManifest(integration));
   return {
     ...integration,
     ...(manifest?.version ? { version: manifest.version } : {}),
@@ -61,18 +62,20 @@ function withIntegrationCodeKey(integration) {
   };
 }
 
-router.get('/', async (req, res) => {
-  const where = req.query.scope === 'all' && isAdmin(req.user)
-    ? {}
-    : isAdmin(req.user)
-      ? { userId: req.user.id }
-      : integrationAccessWhere(req.user);
-  const integrations = await prisma.integration.findMany({
-    where,
-    orderBy: [{ name: 'asc' }, { codeFolder: 'asc' }],
-    include: WITH_SETTINGS,
-  });
-  res.json({ integrations: integrations.map((integration) => withIntegrationCodeKey(withPublicWebhookUrl(integration, req))) });
+router.get('/', async (req, res, next) => {
+  try {
+    const where = req.query.scope === 'all' && isAdmin(req.user)
+      ? {}
+      : isAdmin(req.user)
+        ? { userId: req.user.id }
+        : integrationAccessWhere(req.user);
+    const integrations = await prisma.integration.findMany({
+      where,
+      orderBy: [{ name: 'asc' }, { codeFolder: 'asc' }],
+      include: WITH_SETTINGS,
+    });
+    res.json({ integrations: await Promise.all(integrations.map((integration) => withIntegrationCodeKey(withPublicWebhookUrl(integration, req)))) });
+  } catch (error) { next(error); }
 });
 
 // docs/product/product-architecture-spec.md 8.3: admin (or self-service user) registers an integration
@@ -134,7 +137,7 @@ router.post('/', async (req, res) => {
         handlerFile: handlerFile || 'handler.js',
       },
     });
-    res.status(201).json({ integration: withIntegrationCodeKey(integration) });
+    res.status(201).json({ integration: await withIntegrationCodeKey(integration) });
   } catch (err) {
     if (err.code === 'P2002') return res.status(409).json({ error: 'An integration with this slug already exists for this user.' });
     res.status(500).json({ error: err.message });
@@ -182,20 +185,26 @@ router.delete('/:id', loadIntegration({ mutate: true }), async (req, res) => {
   }
 });
 
-router.get('/:id', loadIntegration({ include: WITH_SETTINGS }), (req, res) => {
-  res.json({ integration: withIntegrationCodeKey(withPublicWebhookUrl(req.integration, req)) });
+router.get('/:id', loadIntegration({ include: WITH_SETTINGS }), async (req, res, next) => {
+  try {
+    res.json({ integration: await withIntegrationCodeKey(withPublicWebhookUrl(req.integration, req)) });
+  } catch (error) { next(error); }
 });
 
-router.get('/:id/manifest', loadIntegration(), (req, res) => {
-  const manifest = req.integration.automationId ? findByAutomationId(req.integration.automationId) : null;
-  res.json({
-    manifest: manifest ? publicManifest(manifest) : {
-      manifest_schema: 1,
-      automation_id: req.integration.automationId || null,
-      ui: { mode: 'generic', fallback: true, modules: [] },
-      observability: { mode: 'generic', fallback: true, eventSchema: 'automation.log', metrics: [], alerts: [] },
-    },
-  });
+router.get('/:id/manifest', loadIntegration(), async (req, res, next) => {
+  try {
+    const localManifest = req.integration.automationId ? findByAutomationId(req.integration.automationId) : null;
+    const deployed = await displayedManifest(localManifest);
+    const manifest = localManifest && deployed ? { ...localManifest, version: deployed.version } : localManifest;
+    res.json({
+      manifest: manifest ? publicManifest(manifest) : {
+        manifest_schema: 1,
+        automation_id: req.integration.automationId || null,
+        ui: { mode: 'generic', fallback: true, modules: [] },
+        observability: { mode: 'generic', fallback: true, eventSchema: 'automation.log', metrics: [], alerts: [] },
+      },
+    });
+  } catch (error) { next(error); }
 });
 
 router.patch('/:id', loadIntegration({ mutate: true }), async (req, res) => {
@@ -228,7 +237,7 @@ router.patch('/:id', loadIntegration({ mutate: true }), async (req, res) => {
 
   try {
     const integration = await prisma.integration.update({ where: { id: req.integration.id }, data });
-    res.json({ integration: withIntegrationCodeKey(integration) });
+    res.json({ integration: await withIntegrationCodeKey(integration) });
   } catch (err) {
     if (err.code === 'P2002') return res.status(409).json({ error: 'An integration with this slug already exists for this user.' });
     res.status(err.statusCode || 500).json({ error: err.message });
@@ -252,7 +261,7 @@ router.patch('/:id/assignment', requireAdmin, loadIntegration(), async (req, res
       where: { id: req.integration.id },
       data: { assignedUserUid: userUid },
     });
-    res.json({ integration: withIntegrationCodeKey(integration) });
+    res.json({ integration: await withIntegrationCodeKey(integration) });
   } catch (err) {
     res.status(err.statusCode || 500).json({ error: err.message });
   }
