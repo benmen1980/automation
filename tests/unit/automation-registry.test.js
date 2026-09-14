@@ -6,7 +6,7 @@ const { validateManifest } = require('../../scripts/validate-automations');
 describe('standard automation registry and manifests', () => {
   test('discovers the Phase 3 manifests and finds them by permanent identity', () => {
     const manifests = registry.discoverAutomations();
-    expect(manifests.length).toBe(12);
+    expect(manifests.length).toBe(13);
     for (const manifest of manifests) {
       expect(registry.findByAutomationId(manifest.automation_id)).toMatchObject({ automation_id: manifest.automation_id });
     }
