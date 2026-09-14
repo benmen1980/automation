@@ -11,8 +11,18 @@ test('registering delivery preserves legacy visibility and respects existing ass
   const legacy=await prisma.integration.create({data:{userId:owner.id,name:'Legacy',slug:'legacy',type:'webhook',codeFolder:'src/integrations/tuf1/priority-quote-whatsapp'}});
   const reassigned=await prisma.integration.create({data:{userId:owner.id,assignedUserUid:other.userUid,name:'Reassigned',slug:'reassigned',type:'webhook',codeFolder:'src/integrations/tuf1/priority-quote-whatsapp'}});
   await prisma.credential.create({data:{userId:owner.id,integrationId:source.id,key:'ITC_BEARER_TOKEN',type:'secret',isSecret:true,valueReference:'test-reference'}});
+  const sourceLookup=jest.spyOn(prisma.integration,'findFirst').mockResolvedValue({...source,user:owner,webhookSettings:null});
   const log=jest.spyOn(console,'log').mockImplementation(()=>{});
   try {await main();const user=await prisma.user.findUnique({where:{id:owner.id}});const visible=await prisma.integration.findMany({where:integrationAccessWhere(user)});expect(visible.map(i=>i.id)).toEqual(expect.arrayContaining([source.id,legacy.id]));expect(visible).toHaveLength(3);expect(visible.every(i=>canAccessIntegration(user,i))).toBe(true);expect((await prisma.integration.findUnique({where:{id:reassigned.id}})).assignedUserUid).toBe(other.userUid);
     await prisma.integration.update({where:{id:legacy.id},data:{assignedUserUid:null}});await main();expect((await prisma.integration.findUnique({where:{id:legacy.id}})).assignedUserUid).toBeNull();
-  }finally{log.mockRestore();await prisma.$disconnect();}
+  }finally{
+    log.mockRestore();sourceLookup.mockRestore();
+    const where={integration:{userId:owner.id}};
+    await prisma.execution.deleteMany({where});
+    await prisma.credential.deleteMany({where});
+    await prisma.webhookSettings.deleteMany({where});
+    await prisma.integration.deleteMany({where:{userId:owner.id}});
+    await prisma.user.deleteMany({where:{id:{in:[owner.id,other.id]}}});
+    await prisma.$disconnect();
+  }
 });
