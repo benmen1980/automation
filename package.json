@@ -1,6 +1,6 @@
 {
   "name": "user-automation-platform",
-  "version": "1.6.7.27",
+  "version": "1.6.7.28",
   "private": true,
   "workspaces": [
     "apps/*",
