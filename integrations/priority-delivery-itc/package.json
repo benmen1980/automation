@@ -1,6 +1,6 @@
 {
   "name": "@automation/priority-delivery-itc",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "description": "Receives DOCUMENTS_D, checks each contact name/phone pair, and sends up to two ITC messages containing name, customer order number and unchanged date text.",

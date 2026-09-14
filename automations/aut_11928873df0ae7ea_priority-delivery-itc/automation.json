@@ -3,7 +3,7 @@
   "automation_id": "aut_11928873df0ae7ea",
   "slug": "priority-delivery-whatsapp",
   "name": "שליחת וואצפ מתעודת משלוח",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "runtime": {
     "type": "worker",
     "language": "javascript",

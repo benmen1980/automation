@@ -2,7 +2,7 @@ module.exports = {
   "name": "שליחת וואצפ מתעודת משלוח",
   "displayName": "שליחת וואצפ מתעודת משלוח",
   "integrationKey": "int_1a8136b51db455ee",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Receives DOCUMENTS_D, checks each contact name/phone pair, and sends up to two ITC messages containing name, customer order number and unchanged date text.",
   "type": "webhook",
   "direction": "OUTBOUND",
