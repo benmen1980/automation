@@ -1,6 +1,15 @@
 describe('delivery automation queue', () => {
   const previous = process.env;
   afterEach(() => { process.env=previous; jest.resetModules(); jest.dontMock('../../src/core/execution-service'); jest.dontMock('@aws-sdk/client-sqs'); });
+  test('loads the permanent identity from the database for queue routing and secret resolution', async () => {
+    const prisma = require('../../src/db/client');
+    const user = await prisma.user.create({data:{slug:'delivery_queue_test',email:'delivery-queue@example.test',name:'Delivery queue test',passwordHash:'test-only'}});
+    const integration = await prisma.integration.create({data:{userId:user.id,automationId:'aut_11928873df0ae7ea',name:'Delivery',slug:'priority-delivery-whatsapp',type:'webhook',codeFolder:'src/integrations/tuf1/priority-delivery-whatsapp'}});
+    const execution = await prisma.execution.create({data:{userId:user.id,integrationId:integration.id,triggerType:'manual',executionMode:'test'}});
+    const loaded = await require('../../src/core/execution-service').getExecutionForQueue(execution.id);
+    expect(loaded.integration.automationId).toBe(integration.automationId);
+    await prisma.$disconnect();
+  });
   test('routes the delivery automation to its own SQS queue while the platform uses local mode', async () => {
     jest.resetModules();
     process.env={...previous,QUEUE_MODE:'local',SQS_QUEUE_URL_INT_1A8136B51DB455EE:'https://sqs.test/delivery',INTEGRATION_WORKER_STATUS_CALLBACK_BASE_URL:'https://automation.example.test'};

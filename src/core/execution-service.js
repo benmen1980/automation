@@ -83,6 +83,7 @@ async function getExecutionForQueue(executionId) {
       integration: {
         select: {
           id: true,
+          automationId: true,
           userId: true,
           slug: true,
           name: true,
