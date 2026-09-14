@@ -9,7 +9,16 @@ async function main() {
   const source = await prisma.integration.findFirst({where:{codeFolder:'src/integrations/tuf1/priority-quote-whatsapp'},include:{user:true,webhookSettings:true}});
   if (!source) throw new Error('TUF1 source integration was not found.');
   const user = source.user;
-  if (!user.userUid) user.userUid = (await prisma.user.update({where:{id:user.id},data:{userUid:deriveUserUid(user.slug)}})).userUid;
+  if (!user.userUid) {
+    user.userUid = await prisma.$transaction(async (tx) => {
+      const current = await tx.user.findUnique({where:{id:user.id}});
+      if (current.userUid) return current.userUid;
+      const userUid = deriveUserUid(current.slug);
+      await tx.integration.updateMany({where:{userId:user.id,assignedUserUid:null},data:{assignedUserUid:userUid}});
+      await tx.user.update({where:{id:user.id},data:{userUid}});
+      return userUid;
+    });
+  }
   const data={userId:user.id,assignedUserUid:user.userUid,name:definition.displayName,description:definition.description,slug:'priority-delivery-whatsapp',codeFolder:'src/integrations/tuf1/priority-delivery-whatsapp',type:'webhook',status:'active',version:definition.version,manualRunEnabled:true};
   const integration=await prisma.integration.upsert({where:{automationId:'aut_11928873df0ae7ea'},create:{...data,automationId:'aut_11928873df0ae7ea'},update:data});
   const saved = await prisma.credential.findUnique({where:{integrationId_key:{integrationId:integration.id,key:'ITC_BEARER_TOKEN'}}});
@@ -33,4 +42,5 @@ async function main() {
   await prisma.webhookSettings.upsert({where:{integrationId:integration.id},create:{integrationId:integration.id,webhookUrl,secretTokenReference:tokenRef,allowedMethod:'POST',active:true},update:{webhookUrl,secretTokenReference:tokenRef,allowedMethod:'POST',active:true}});
   console.log(JSON.stringify({automationId:integration.automationId,integrationId:integration.id,assignedUser:user.slug,webhookUrl,version:integration.version,credentialsConfigured:true}));
 }
-main().catch(error=>{console.error(error.message);process.exitCode=1;}).finally(()=>prisma.$disconnect());
+if (require.main === module) main().catch(error=>{console.error(error.message);process.exitCode=1;}).finally(()=>prisma.$disconnect());
+module.exports = { main };
