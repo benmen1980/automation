@@ -14,6 +14,7 @@ const prisma = require('../db/client');
 
 const INDEPENDENT_LOCAL_WORKERS = new Map([
   ['int_7f9a2c8e4b1d6f03', 'priority-order-itc'],
+  ['int_1a8136b51db455ee', 'priority-delivery-itc'],
 ]);
 
 function parseJson(value, fallback = {}) {

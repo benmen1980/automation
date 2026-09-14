@@ -1,0 +1,64 @@
+{
+  "manifest_schema": 1,
+  "automation_id": "aut_11928873df0ae7ea",
+  "slug": "priority-delivery-whatsapp",
+  "name": "שליחת וואצפ מתעודת משלוח",
+  "version": "1.0.0",
+  "runtime": {
+    "type": "worker",
+    "language": "javascript",
+    "entrypoint": "integrations/priority-delivery-itc/src/handler.js",
+    "definition": "src/integrations/tuf1/priority-delivery-whatsapp/integration.js"
+  },
+  "connections": {
+    "legacy": {
+      "credential_keys": [
+        "ITC_TEMPLATE_MESSAGE_URL",
+        "ITC_BEARER_TOKEN",
+        "ITC_CHANNEL_ID"
+      ]
+    },
+    "worker_adapter": {
+      "package": "integrations/priority-delivery-itc"
+    }
+  },
+  "config": {
+    "schema": "legacy integration.js credentials"
+  },
+  "ui": {
+    "mode": "generic",
+    "fallback": true,
+    "modules": [],
+    "reference": "generic dashboard integration settings"
+  },
+  "observability": {
+    "scope": "automation_id",
+    "eventSchema": "automation.log",
+    "metrics": [
+      "execution.duration_ms",
+      "execution.status",
+      "execution.errors"
+    ],
+    "alerts": [
+      "execution.failed"
+    ],
+    "reference": "integration.js logging and worker manifest metadata"
+  },
+  "tests": {
+    "references": [
+      "integrations/priority-delivery-itc/test/handler.test.js",
+      "tests/unit/priority-delivery-queue.test.js"
+    ]
+  },
+  "deployment": {
+    "mode": "existing deployment configuration"
+  },
+  "compatibility": {
+    "legacy": {
+      "slug": "priority-delivery-whatsapp",
+      "user_slug": "tuf1",
+      "integration_key": "int_1a8136b51db455ee",
+      "code_folder": "src/integrations/tuf1/priority-delivery-whatsapp"
+    }
+  }
+}

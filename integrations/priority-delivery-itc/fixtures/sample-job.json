@@ -1,0 +1,23 @@
+{
+  "id": "delivery-fixture",
+  "integrationId": "delivery-fixture",
+  "integrationKey": "int_1a8136b51db455ee",
+  "automationId": "aut_11928873df0ae7ea",
+  "mode": "dry_run",
+  "payload": {
+    "DOCUMENTS_D": {
+      "ORDNAME": "1597873",
+      "CURDATE": "27.07.2026",
+      "YARD_CUSTDES": "ירדן",
+      "YARD_PHONENUM": "+972502009253",
+      "YARD_NAME": "",
+      "YARD_FAX": ""
+    }
+  },
+  "settings": {
+    "credentials": {
+      "ITC_TEMPLATE_MESSAGE_URL": "https://sv1.effective-oc.com/api/v2/msg/sendMsg/tempMsg/6a4b8dc15c44e81728f3d095",
+      "ITC_CHANNEL_ID": "whatsapp:+97246960480"
+    }
+  }
+}

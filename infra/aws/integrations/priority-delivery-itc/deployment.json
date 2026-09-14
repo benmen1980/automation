@@ -1,0 +1,38 @@
+{
+  "integration": "priority-delivery-itc",
+  "integrationKey": "int_1a8136b51db455ee",
+  "runtime": "lambda",
+  "lambdaName": "priority-delivery-itc",
+  "pipelineName": "integration-priority-delivery-itc",
+  "sourcePaths": [
+    "integrations/priority-delivery-itc/**",
+    "packages/shared/**",
+    "buildspec-lambda-integration.yml",
+    "src/integrations/tuf1/priority-delivery-whatsapp/**",
+    "scripts/sync-integration-db.js",
+    "automations/aut_11928873df0ae7ea_priority-delivery-itc/**"
+  ],
+  "apiPipelineExcludedPaths": [
+    "integrations/**"
+  ],
+  "queue": {
+    "name": "priority-delivery-itc-queue",
+    "apiEnvironmentVariable": "SQS_QUEUE_URL_INT_1A8136B51DB455EE",
+    "maxReceiveCount": 3,
+    "visibilityTimeoutSeconds": 180,
+    "batchSize": 1,
+    "reportBatchItemFailures": true
+  },
+  "deadLetterQueue": {
+    "name": "priority-delivery-itc-dlq"
+  },
+  "cloudWatchLogGroup": "/aws/lambda/priority-delivery-itc",
+  "logRetentionDays": 30,
+  "lambdaTimeoutSeconds": 60,
+  "workerStatusCallbackRequired": true,
+  "credentialReferencesRequired": true,
+  "finalizationTable": "priority-delivery-itc-finalization",
+  "idempotency": "Durable in-flight marker before ITC delivery; ambiguous results are not resent automatically.",
+  "scheduleRequired": false,
+  "apiMustNotRestart": true
+}

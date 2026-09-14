@@ -25,7 +25,7 @@ function main() {
     String(rawScope || '').toUpperCase() === 'AUTOMATION' ? AUTOMATION_SCOPE : rawScope;
   const automationId = argument('--automation-id') || process.env.CODEX_AUTOMATION_ID;
   const branch = argument('--branch') || process.env.CODEX_BRANCH || execFileSync('git', ['branch', '--show-current'], { encoding: 'utf8' }).trim();
-  const allowAutomationId = argument('--allow-automation-id');
+  const allowAutomationId = argument('--allow-automation-id') || process.env.CODEX_ALLOW_AUTOMATION_ID;
   const foundationalInfrastructure = argument('--foundational-infra') === 'true' || process.env.CODEX_FOUNDATIONAL_INFRA === 'true';
   const result = validateWorkspaceScope({ scope, automationId, branch, changedFiles: changedFiles(), allowAutomationId, foundationalInfrastructure });
   console.log(`Workspace scope valid: ${result.scope}${result.automationId ? ` ${result.automationId}` : ''}; ${result.changedFiles.length} changed path(s) checked.`);

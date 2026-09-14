@@ -787,6 +787,12 @@ export default function IntegrationPage() {
         setItcTestError(`Add non-empty ITC values for: ${missingFields.join(', ')}.`);
         return;
       }
+    } else if (isPriorityDeliveryItc) {
+      const document = payload.DOCUMENTS_D;
+      if (!document || typeof document !== 'object' || Array.isArray(document)) {
+        setItcTestError('Add a DOCUMENTS_D object containing the delivery fields.');
+        return;
+      }
     } else {
       const order = payload.ORDERS;
       const requiredOrderFields = ['ORDNAME', 'ZANA_CUSTDES', 'ZANA_PHONENUM'];
@@ -855,10 +861,11 @@ export default function IntegrationPage() {
   const credentialBuckets = useMemo(() => splitCredentialFields(credentialFields), [credentialFields]);
   const usesItc = credentialBuckets.messaging.some((field) => String(field.key || '').toUpperCase().startsWith('ITC_'));
   const isPriorityQuoteItc = definition?.integrationKey === 'int_7f9a2c8e4b1d6f03';
+  const isPriorityDeliveryItc = definition?.integrationKey === 'int_1a8136b51db455ee';
   const itcTestModes = isPriorityQuoteItc ? ['live'] : allowedModes;
   const messagingSectionTitle = definition?.uiux?.credentialSectionTitle || (usesItc ? 'ITC settings' : 'WhatsApp settings');
   const messagingSectionDescription = usesItc
-    ? 'ITC template endpoint, sending channel, and securely masked bearer token. Variable 3 is generated from Priority and is not a static setting.'
+    ? (isPriorityDeliveryItc ? 'ITC template endpoint, channel and bearer token. Messages contain contact name, order number and unchanged date text.' : 'ITC template endpoint, sending channel, and securely masked bearer token. Variable 3 is generated from Priority and is not a static setting.')
     : 'WhatsApp credentials and connector test.';
   const showMessagingSection = credentialBuckets.messaging.length > 0 || messagingOptions.length > 0;
   const showPrioritySection = credentialBuckets.priority.length > 0 || priorityOptions.length > 0;
@@ -1095,7 +1102,7 @@ export default function IntegrationPage() {
                 <div>
                   <h3 className="text-sm font-semibold text-[#0b5869]">Test ITC message flow</h3>
                   <p className="mt-1 text-xs leading-5 text-slate-600">
-                    Paste the ITC request JSON. The live test posts this JSON directly to ITC without running Priority first.
+                    {isPriorityDeliveryItc ? 'Paste the DOCUMENTS_D webhook JSON. Each complete name/phone pair prepares one ITC message.' : 'Paste the ITC request JSON. The live test posts this JSON directly to ITC without running Priority first.'}
                   </p>
                 </div>
                 {!canManage && <ReadOnlyNotice>Your role can view settings, but cannot start an ITC flow test.</ReadOnlyNotice>}
@@ -1129,7 +1136,7 @@ export default function IntegrationPage() {
                     spellCheck={false}
                     className="mt-1 w-full rounded-md border border-slate-300 bg-white px-3 py-2 font-mono text-sm outline-none focus:border-[#028baa] focus:ring-2 focus:ring-[#97dbf3]/40"
                   />
-                  <p className="mt-1 text-xs text-slate-500">Expected ITC fields: clientName, msgType, channelId, and variables.</p>
+                  <p className="mt-1 text-xs text-slate-500">{isPriorityDeliveryItc ? 'DOCUMENTS_D: ORDNAME, CURDATE, YARD_CUSTDES, YARD_PHONENUM, YARD_NAME, YARD_FAX.' : 'Expected ITC fields: clientName, msgType, channelId, and variables.'}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   <label htmlFor="itc-test-mode" className="sr-only">ITC test mode</label>

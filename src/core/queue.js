@@ -209,6 +209,12 @@ async function waitForExecution(executionId, { timeoutMs = LOCAL_WORKER_TIMEOUT_
 }
 
 async function enqueueExecution(executionId, { wait = false } = {}) {
+  if (process.env.SQS_QUEUE_URL_INT_1A8136B51DB455EE) {
+    const execution = await executionService.getExecutionForQueue(executionId);
+    if (execution?.integration?.automationId === 'aut_11928873df0ae7ea') {
+      return publishToSqs(executionId);
+    }
+  }
   if (QUEUE_MODE === 'local') {
     const running = runLocalWorker(executionId).catch(async (err) => {
       await executionService.markFailed(executionId, err.message).catch(() => {});

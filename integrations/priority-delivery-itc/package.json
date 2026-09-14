@@ -1,0 +1,17 @@
+{
+  "name": "@automation/priority-delivery-itc",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Receives DOCUMENTS_D, checks each contact name/phone pair, and sends up to two ITC messages containing name, customer order number and unchanged date text.",
+  "scripts": {
+    "dev": "node ../../scripts/invoke-integration.mjs priority-delivery-itc --fixture fixtures/sample-job.json",
+    "invoke": "node ../../scripts/invoke-integration.mjs priority-delivery-itc",
+    "test": "node --test test/*.test.js"
+  },
+  "dependencies": {
+    "@automation/shared": "file:../../packages/shared",
+    "@aws-sdk/client-dynamodb": "3.1075.0",
+    "@aws-sdk/client-secrets-manager": "^3.600.0"
+  }
+}
