@@ -306,6 +306,19 @@ function ActivityDetailsModal({ item, logs, loading, onClose }) {
           <p className="mt-1 leading-5">{cause}</p>
         </div>
 
+          {isExecution && item.execution.triggerType === 'webhook' && (
+            <div className="mt-4">
+              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Received webhook JSON</h4>
+              {item.execution.inputPayload != null ? (
+                <pre className="max-h-80 overflow-auto rounded-md border border-slate-200 bg-slate-50 p-3 text-xs leading-5 text-slate-700" dir="ltr">
+                  {JSON.stringify(parseMetadata(item.execution.inputPayload), null, 2)}
+                </pre>
+              ) : (
+                <p className="text-sm text-slate-500">No webhook payload was saved for this execution.</p>
+              )}
+            </div>
+          )}
+
         <div className="mt-4">
           <div className="mb-2 flex items-center justify-between">
             <h4 className="text-xs font-semibold uppercase tracking-wide text-slate-500">Complete log for this row</h4>
