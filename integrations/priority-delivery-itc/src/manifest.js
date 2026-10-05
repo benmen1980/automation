@@ -2,8 +2,8 @@ export default {
   "name": "priority-delivery-itc",
   "displayName": "שליחת וואצפ מתעודת משלוח",
   "integrationKey": "int_1a8136b51db455ee",
-  "version": "1.0.1",
-  "description": "Receives DOCUMENTS_D, checks each contact name/phone pair, and sends up to two ITC messages containing name, customer order number and unchanged date text.",
+  "version": "1.0.2",
+  "description": "Receives DOCUMENTS_D, checks each contact name/phone pair, and sends up to two ITC messages containing name, customer order number and date text formatted as DD/MM/YY.",
   "type": "worker",
   "direction": "OUTBOUND",
   "runtime": "lambda",
@@ -52,7 +52,7 @@ export default {
       "dry_run": "Checks both contact conditions and previews requests without sending.",
       "test": "Validates DOCUMENTS_D and ITC mapping without sending.",
       "mock_output": "Returns simulated ITC responses without external calls.",
-      "live": "Sends eligible ITC messages with name, order number and unchanged CURDATE text."
+      "live": "Sends eligible ITC messages with name, order number and CURDATE formatted as DD/MM/YY."
     }
   },
   "credentials": [
@@ -145,7 +145,7 @@ export default {
   "testPayloads": [
     {
       "name": "תעודת משלוח",
-      "description": "Two contact pairs and date text passed unchanged.",
+      "description": "Two contact pairs and date text formatted as DD/MM/YY.",
       "payload": {
         "DOCUMENTS_D": {
           "ORDNAME": "1597873",

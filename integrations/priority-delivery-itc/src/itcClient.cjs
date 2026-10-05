@@ -50,6 +50,11 @@ function requiredText(value, fieldName) {
 
 function rawDateText(value) {
   if (typeof value !== 'string' || !value.trim()) throw new Error('DOCUMENTS_D.CURDATE must contain date text.');
+  const text = value.trim();
+  const isoDate = text.match(/^(\d{4})-(\d{2})-(\d{2})(?:T.*)?$/);
+  if (isoDate) return `${isoDate[3]}/${isoDate[2]}/${isoDate[1].slice(-2)}`;
+  const displayDate = text.match(/^(\d{2})[/.](\d{2})[/.](\d{4}|\d{2})$/);
+  if (displayDate) return `${displayDate[1]}/${displayDate[2]}/${displayDate[3].slice(-2)}`;
   return value;
 }
 

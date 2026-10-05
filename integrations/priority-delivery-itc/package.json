@@ -1,9 +1,9 @@
 {
   "name": "@automation/priority-delivery-itc",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "private": true,
   "type": "module",
-  "description": "Receives DOCUMENTS_D, checks each contact name/phone pair, and sends up to two ITC messages containing name, customer order number and unchanged date text.",
+  "description": "Receives DOCUMENTS_D, checks each contact name/phone pair, and sends up to two ITC messages containing name, customer order number and date text formatted as DD/MM/YY.",
   "scripts": {
     "dev": "node ../../scripts/invoke-integration.mjs priority-delivery-itc --fixture fixtures/sample-job.json",
     "invoke": "node ../../scripts/invoke-integration.mjs priority-delivery-itc",

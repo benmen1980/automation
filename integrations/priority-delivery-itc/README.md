@@ -5,7 +5,7 @@ Automation `aut_11928873df0ae7ea`, integration key `int_1a8136b51db455ee`, assig
 POST `/webhooks/int_1a8136b51db455ee` with `Content-Type: application/json` and the same `Priority-BPM-Token` configured for the source automation.
 
 The payload contains `DOCUMENTS_D`: `ORDNAME`, `CURDATE`, `YARD_CUSTDES`, `YARD_PHONENUM`, `YARD_NAME`, `YARD_FAX`.
-Each non-empty name/phone pair prepares one message, first contact then second. Variables are contact name, order number, and the exact CURDATE string. No date conversion, document generation, Web SDK call, or document URL is used. Missing pairs are skipped; a first-request failure prevents the second call, matching the source.
+Each non-empty name/phone pair prepares one message, first contact then second. Variables are contact name, order number, and CURDATE formatted as `DD/MM/YY` (for example, `2026-10-05T00:00:00` becomes `05/10/26`), without timezone conversion. Unrecognized date text is preserved. No document generation, Web SDK call, or document URL is used. Missing pairs are skipped; a first-request failure prevents the second call, matching the source.
 
 Template: https://sv1.effective-oc.com/api/v2/msg/sendMsg/tempMsg/6a4b8dc15c44e81728f3d095
 
