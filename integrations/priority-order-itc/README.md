@@ -1,5 +1,28 @@
 # Priority Customer Order to ITC worker
 
+## Error email notifications
+
+The automation's **Error notification email addresses** field accepts comma-separated
+addresses. Saving trims whitespace and removes duplicates; clearing and saving disables
+notifications. The server validates the address-list format and normalizes recipients
+again before sending. Only this automation's `ERROR_NOTIFICATION_EMAILS` setting is used.
+
+The integration definition supplies the shared failure-notification adapter. SES sends
+in eu-west-1 from `roy@simplyct.co.il`, also the feedback address. Each failed attempt
+can send at most one English notification with its run ID, attempt, stage, error,
+mode, UTC timestamps, retry information and all persisted logs across the same run's
+attempts. Alert sending and its result are logged; SES acceptance is not inbox delivery.
+
+Lambda wraps each record with shared execution telemetry before resolving settings.
+Logs are flushed before failure notification, and returned terminal/ambiguous failures
+also report an error without rerunning ITC. Local runs use the existing platform hooks.
+Crash notifications rely on the shared watchdog: only persisted logs are available,
+not memory-only entries lost during a crash. Notification failures never retry business
+work. See `docs/developer/execution-alerts.md` for transport and delivery limitations.
+
+SES production access is pending further AWS review; until approved only verified
+recipients can receive mail. No recipient is configured by default.
+
 Independent Lambda worker for automation `int_7f9a2c8e4b1d6f03`. It consumes the automation's SQS jobs, runs Priority `WWWSHOWORDER` for `ORDERS.ORDNAME`, copies the generated sales-order confirmation to the automation server, maps the server URL to ITC variable 3, and logs to `/aws/lambda/priority-order-itc`.
 
 This package is also the canonical implementation for local runs. The local queue launches it in a separate child-worker process; the API-side Priority connector performs login/settings checks only and does not contain or execute the `WWWSHOWORDER` flow.

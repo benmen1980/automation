@@ -1,7 +1,7 @@
 export default {
   name: 'priority-order-itc',
   displayName: 'Priority Customer Order to ITC',
-  version: '1.5.5',
+  version: '1.5.8',
   type: 'worker',
   runtime: 'lambda',
   direction: 'OUTBOUND',
@@ -43,6 +43,13 @@ export default {
     apiMustNotRestart: true,
   },
   credentials: [
+    {
+      key: 'ERROR_NOTIFICATION_EMAILS',
+      label: 'Error notification email addresses',
+      type: 'text',
+      required: false,
+      helper: 'Comma-separated recipients for SES error notifications. Empty disables notifications.',
+    },
     {
       key: 'ITC_TEMPLATE_MESSAGE_URL',
       label: 'ITC Template Message URL',

@@ -1,8 +1,11 @@
+const failureNotification = require('./failure-notification');
+
 module.exports = {
+  failureNotification,
   name: 'Priority Order Notification via ITC',
   displayName: 'Priority Order Notification via ITC',
   integrationKey: 'int_7f9a2c8e4b1d6f03',
-  version: '1.2.13',
+  version: '1.2.14',
   description: 'Receives a Priority customer-order webhook, generates its sales-order confirmation with Priority Web SDK, saves a server copy, and sends the server URL in an ITC WhatsApp template message.',
   type: 'webhook',
   direction: 'OUTBOUND',
@@ -33,6 +36,7 @@ module.exports = {
       'Stored finalization state',
       'Updated dashboard execution status',
       'Execution finished',
+      'Error notification email: started, accepted, failed or skipped',
     ],
   },
 
@@ -52,6 +56,14 @@ module.exports = {
   },
 
   credentials: [
+    {
+      key: failureNotification.recipientsKey,
+      label: 'Error notification email addresses',
+      type: 'text',
+      required: false,
+      helper: 'Comma-separated email addresses. Leave empty to disable error notifications.',
+      validation: { pattern: failureNotification.recipientsPattern },
+    },
     {
       key: 'ITC_TEMPLATE_MESSAGE_URL',
       label: 'ITC Template Message URL',

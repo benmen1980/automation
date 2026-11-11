@@ -1,4 +1,4 @@
-import { createLogger, normalizeError, reportExecutionStatus, resolveConfig } from '@automation/shared';
+import { createLogger, normalizeError, reportExecutionStatus, resolveConfig, withExecutionTelemetry } from '@automation/shared';
 import { createFinalizationStore } from './finalizationStore.js';
 import { handler as runIntegration } from './handler.js';
 
@@ -32,7 +32,7 @@ function normalizeCredentialReferences(job) {
 }
 
 async function processJob(job, recordId, runtime = {}) {
-  const jobId = job.id || job.executionId || recordId;
+  const jobId = job.executionId || job.id || recordId;
   const logger = createLogger({ service: 'priority-order-itc', jobId });
   const details = lifecycleDetails(job);
   const startedAt = new Date().toISOString();
@@ -352,7 +352,7 @@ async function processJob(job, recordId, runtime = {}) {
   }
 }
 
-async function handleEvent(event, runtimeFactory = () => ({})) {
+async function handleEvent(event, runtimeFactory = () => ({}), context = {}) {
   const isSqsEvent = Array.isArray(event?.Records);
   const records = isSqsEvent ? event.Records : [{ body: JSON.stringify(event), messageId: event?.id || 'direct' }];
   const results = [];
@@ -361,10 +361,33 @@ async function handleEvent(event, runtimeFactory = () => ({})) {
   for (const record of records) {
     try {
       const job = typeof record.body === 'string' ? JSON.parse(record.body) : record.body;
-      results.push(await processJob(job, record.messageId, {
-        ...runtimeFactory(job, record),
-        attemptNumber: Number(record.attributes?.ApproximateReceiveCount || 1),
-      }));
+      const runtime = runtimeFactory(job, record);
+      const attemptNumber = Number(record.attributes?.ApproximateReceiveCount || 1);
+      const run = () => processJob(job, record.messageId, { ...runtime, attemptNumber });
+      if (!job.statusCallbackUrl) {
+        results.push(await run());
+        continue;
+      }
+      // Flush this attempt's logs before reporting errors, including failures
+      // returned by the finalization safety branches instead of thrown errors.
+      let returnedFailure;
+      const result = await withExecutionTelemetry(job, {
+        attempt: attemptNumber,
+        timeoutMs: context.getRemainingTimeInMillis?.() ?? 60000,
+        ...runtime.telemetryOptions,
+      }, async () => {
+        const outcome = await run();
+        if (outcome?.success === false) {
+          returnedFailure = new Error(outcome.message || 'The execution has a recorded terminal failure.');
+          returnedFailure.outcome = outcome;
+          throw returnedFailure;
+        }
+        return outcome;
+      }).catch((error) => {
+        if (error === returnedFailure) return error.outcome;
+        throw error;
+      });
+      results.push(result);
     } catch (error) {
       results.push({
         success: false,
@@ -382,8 +405,8 @@ async function handleEvent(event, runtimeFactory = () => ({})) {
   return isSqsEvent ? { batchItemFailures, results } : { success: true, results };
 }
 
-export async function handler(event) {
-  return handleEvent(event);
+export async function handler(event, context) {
+  return handleEvent(event, undefined, context);
 }
 
 export const _diagnostics = { handleEvent, processJob, shouldRetry };

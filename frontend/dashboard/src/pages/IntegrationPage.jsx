@@ -8,6 +8,45 @@ import { useAuth } from '../context/AuthContext.jsx';
 import AutomationModules from '../components/AutomationModules.jsx';
 
 const FALLBACK_EXECUTION_MODES = ['dummy', 'test', 'dry_run', 'mock_output', 'mock_input', 'live'];
+
+function PriorityOrderErrorEmails({ field, onSave, disabled }) {
+  const [value, setValue] = useState(field?.value || '');
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  useEffect(() => { setValue(field?.value || ''); }, [field?.value]);
+  async function save(event) {
+    event.preventDefault();
+    setMessage('');
+    setError('');
+    const addresses = value.trim() ? value.split(',').map((item) => item.trim().toLowerCase()) : [];
+    if (addresses.some((item) => !/^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(item))) {
+      setError('Enter valid email addresses separated by commas.');
+      return;
+    }
+    const normalized = [...new Set(addresses)].join(', ');
+    setSaving(true);
+    try {
+      await onSave({ ERROR_NOTIFICATION_EMAILS: normalized });
+      setValue(normalized);
+      setMessage(normalized ? 'Error notification recipients saved.' : 'Error email notifications disabled.');
+    } catch (err) {
+      setError(err.message || 'Could not save notification recipients.');
+    } finally {
+      setSaving(false);
+    }
+  }
+  return (
+    <form onSubmit={save} className="rounded-lg border border-slate-200 bg-white p-4 space-y-3">
+      <label htmlFor="priority-order-error-emails" className="block text-sm font-semibold text-slate-800">Error notification email addresses</label>
+      <input id="priority-order-error-emails" type="text" value={value} onChange={(event) => setValue(event.target.value)} disabled={disabled || saving} placeholder="ops@example.com, support@example.com" className="w-full rounded-md border border-slate-300 p-2 text-sm" />
+      <p className="text-xs text-slate-500">Separate addresses with commas. Error emails include the saved execution log. Clear this field and save to disable notifications.</p>
+      <button type="submit" disabled={disabled || saving} className="rounded-md bg-[#306cb4] px-4 py-2 text-sm text-white disabled:opacity-50">{saving ? 'Saving...' : 'Save notification recipients'}</button>
+      {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+      {message && <p role="status" className="text-sm text-emerald-700">{message}</p>}
+    </form>
+  );
+}
 const DEFAULT_TIMEZONE = 'Asia/Jerusalem';
 const EXECUTION_MODE_LABELS = {
   dummy: 'Dummy data only',
@@ -858,7 +897,11 @@ export default function IntegrationPage() {
     ...sectionConnectors(definition, 'itc'),
   ].filter((connector, index, all) => all.indexOf(connector) === index);
   const priorityOptions = sectionConnectors(definition, 'priority');
-  const credentialBuckets = useMemo(() => splitCredentialFields(credentialFields), [credentialFields]);
+  const credentialBuckets = useMemo(() => splitCredentialFields(
+    definition?.integrationKey === 'int_7f9a2c8e4b1d6f03'
+      ? credentialFields.filter((field) => field.key !== 'ERROR_NOTIFICATION_EMAILS')
+      : credentialFields
+  ), [credentialFields, definition?.integrationKey]);
   const usesItc = credentialBuckets.messaging.some((field) => String(field.key || '').toUpperCase().startsWith('ITC_'));
   const isPriorityQuoteItc = definition?.integrationKey === 'int_7f9a2c8e4b1d6f03';
   const isPriorityDeliveryItc = definition?.integrationKey === 'int_1a8136b51db455ee';
@@ -947,6 +990,9 @@ export default function IntegrationPage() {
 
       <div className="space-y-6">
         <AutomationModules manifest={manifest} />
+        {isPriorityQuoteItc && (
+          <PriorityOrderErrorEmails field={credentialFields.find((field) => field.key === 'ERROR_NOTIFICATION_EMAILS')} onSave={handleSaveCredentials} disabled={!canManage} />
+        )}
         <CollapsibleCard
           title="Webhook settings"
           description="Webhook configuration, webhook credentials, and workflow test."
