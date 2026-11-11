@@ -1,6 +1,8 @@
 const crypto = require('crypto');
 const express = require('express');
 const executionService = require('../core/execution-service');
+const telemetry = require('../core/execution-telemetry');
+const { notifyExecutionFailure } = require('../core/execution-alerts');
 const {
   priorityDocumentPath,
   storePriorityDocument,
@@ -24,7 +26,22 @@ function requireWorkerAuth(req, res, next) {
   next();
 }
 
-router.post('/integration-executions/:executionId/status', requireWorkerAuth, async (req, res) => {
+router.post('/integration-executions/:executionId/telemetry', requireWorkerAuth, async (req, res, next) => {
+  try {
+    const { integrationId, attempt, phase, timeoutMs, entries, errorMessage } = req.body || {};
+    if (!Number.isInteger(attempt) || attempt < 1) return res.status(400).json({ error: 'Positive attempt required.' });
+    const execution = await executionService.getExecutionById(req.params.executionId);
+    if (!execution || execution.integrationId !== integrationId) return res.status(404).json({ error: 'Execution not found.' });
+    if (phase === 'start') await telemetry.startAttempt(execution, attempt, timeoutMs);
+    else if (phase === 'logs') await telemetry.appendLogs(execution, attempt, entries);
+    else if (phase === 'finish') await telemetry.finishAttempt(execution, attempt, errorMessage ? new Error(errorMessage) : null);
+    else return res.status(400).json({ error: 'Unsupported telemetry phase.' });
+    return res.json({ accepted: true });
+  } catch (err) { return next(err); }
+});
+
+router.post('/integration-executions/:executionId/status', requireWorkerAuth, async (req, res, next) => {
+  try {
   const { executionId } = req.params;
   const { integrationId, status, outputPayload, errorMessage } = req.body || {};
   if (!integrationId) return res.status(400).json({ error: 'integrationId is required.' });
@@ -48,11 +65,17 @@ router.post('/integration-executions/:executionId/status', requireWorkerAuth, as
   }
   if (status === 'retrying') {
     const execution = await executionService.markRetrying(executionId, integrationId, errorMessage);
+    if (!req.body.telemetryManaged) await notifyExecutionFailure(executionId, new Error(errorMessage || 'Worker retry requested.'), { stage: 'worker', attempt: existing.retryCount + 1 });
     return res.json({ accepted: true, status: execution.status });
   }
 
   const execution = await executionService.markFailed(executionId, errorMessage || 'Independent integration worker failed.');
+  if (!req.body.telemetryManaged) await notifyExecutionFailure(executionId, new Error(errorMessage || 'Worker failed.'), { stage: 'worker', attempt: existing.retryCount + 1 });
   return res.json({ accepted: true, status: execution.status });
+  } catch (err) {
+    if (!req.body?.telemetryManaged) await notifyExecutionFailure(req.params.executionId, err, { stage: 'status-update', attempt: req.body?.attempt });
+    return next(err);
+  }
 });
 
 function absoluteDocumentUrl(req, publicPath) {

@@ -1,3 +1,4 @@
+import { executionTelemetry } from './executionTelemetry.js';
 const REDACTED = '***REDACTED***';
 const SENSITIVE_KEY_PATTERN = /(password|secret|token|api[-_]?key|api_key|authorization|auth|credential|connection[-_]?string|private[-_]?key)/i;
 
@@ -21,7 +22,6 @@ function safeMeta(metadata = {}) {
     if (SENSITIVE_KEY_PATTERN.test(_key)) return REDACTED;
     if (typeof value === 'string') {
       const sanitized = sanitizeString(value);
-      if (sanitized.length > 160) return `${sanitized.slice(0, 157)}...`;
       return sanitized;
     }
     return value;
@@ -38,6 +38,8 @@ export function createLogger({ service = 'integration', jobId = 'local' } = {}) 
       message: sanitizeString(message),
       metadata: safeMeta(metadata),
     };
+    const telemetry = executionTelemetry.getStore();
+    if (telemetry && telemetry.jobId === jobId) telemetry.capture(entry);
     console.log(JSON.stringify(entry));
   };
 

@@ -208,7 +208,7 @@ async function waitForExecution(executionId, { timeoutMs = LOCAL_WORKER_TIMEOUT_
   throw new Error(`Timed out waiting for execution ${executionId}.`);
 }
 
-async function enqueueExecution(executionId, { wait = false } = {}) {
+async function dispatchExecution(executionId, { wait = false } = {}) {
   if (process.env.SQS_QUEUE_URL_INT_1A8136B51DB455EE) {
     const execution = await executionService.getExecutionForQueue(executionId);
     if (execution?.integration?.automationId === 'aut_11928873df0ae7ea') {
@@ -218,6 +218,7 @@ async function enqueueExecution(executionId, { wait = false } = {}) {
   if (QUEUE_MODE === 'local') {
     const running = runLocalWorker(executionId).catch(async (err) => {
       await executionService.markFailed(executionId, err.message).catch(() => {});
+      await require('./execution-alerts').notifyExecutionFailure(executionId, err, { stage: 'local-worker' });
       throw err;
     });
 
@@ -236,6 +237,14 @@ async function enqueueExecution(executionId, { wait = false } = {}) {
   }
 
   throw new Error(`Unknown QUEUE_MODE: ${QUEUE_MODE}`);
+}
+
+async function enqueueExecution(executionId, options) {
+  try { return await dispatchExecution(executionId, options); }
+  catch (err) {
+    await require('./execution-alerts').notifyExecutionFailure(executionId, err, { stage: 'queue' });
+    throw err;
+  }
 }
 
 module.exports = {

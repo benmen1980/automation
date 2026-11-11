@@ -6,6 +6,7 @@ const PORT = process.env.PORT || 3000;
 
 async function main() {
   await scheduler.start();
+  require('./core/execution-telemetry').startWatchdog();
   app.listen(PORT, () => {
     // eslint-disable-next-line no-console
     console.log(`Automation platform listening on http://localhost:${PORT}`);

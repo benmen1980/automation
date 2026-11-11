@@ -9,6 +9,7 @@ const integrationLoader = require('./integration-loader');
 const { createLogger } = require('./logger');
 const { getConnectors } = require('../connectors');
 const { summarizePayload } = require('../utils/payload-summary');
+const { notifyExecutionFailure } = require('./execution-alerts');
 
 function parseJson(value, fallback) {
   if (!value) return fallback;
@@ -127,12 +128,13 @@ async function runExecutionJob(executionId) {
       },
       executionId: execution.id,
     };
-    await executionService.markFailed(execution.id, err.message);
+    await executionService.markFailed(execution.id, err.message).catch(() => {});
     await logger.error('Execution failed.', failureDetails, {
       eventType: 'automation.execution.failed',
       attempt: execution.retryCount + 1,
       durationMs: execution.startedAt ? Date.now() - new Date(execution.startedAt).getTime() : null,
-    });
+    }).catch(() => {});
+    await notifyExecutionFailure(execution.id, err, { attempt: execution.retryCount + 1, stage: 'runner' });
   }
 
   return executionService.getExecutionById(execution.id);

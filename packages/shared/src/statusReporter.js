@@ -1,4 +1,5 @@
 import { readSecretByReference } from './configLoader.js';
+import { executionTelemetry } from './executionTelemetry.js';
 
 const ALLOWED_STATUSES = new Set(['running', 'retrying', 'success', 'failed']);
 
@@ -25,6 +26,7 @@ export async function reportExecutionStatus(job, status, details = {}, {
       integrationId: job.integrationId,
       status,
       ...details,
+      ...(executionTelemetry.getStore() ? { telemetryManaged: true, attempt: executionTelemetry.getStore().attempt } : {}),
     }),
   });
 

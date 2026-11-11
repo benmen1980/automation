@@ -59,6 +59,8 @@ async function markFailed(executionId, errorMessage) {
     },
   });
   try {
+    const integration = await prisma.integration.findUnique({ where: { id: execution.integrationId } });
+    if (integration && require('./integration-loader').loadDefinition(integration).failureNotification) return execution;
     const config = await sendgrid.getConfig();
     if (config.configured && config.recipients) {
       await sendgrid.send({
