@@ -17,6 +17,7 @@ describe('tuf1 Priority order to ITC integration boundary', () => {
       dlqRequired: true,
     });
     expect(integrationDefinition.credentials.map((field) => field.key)).toEqual([
+      'ERROR_NOTIFICATION_EMAILS',
       'ITC_TEMPLATE_MESSAGE_URL',
       'ITC_BEARER_TOKEN',
       'ITC_CHANNEL_ID',
