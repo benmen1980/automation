@@ -209,6 +209,12 @@ model Execution {
   logs              Log[]
 }
 
+// Shared SES request cooldown/rate reservations, not automation membership.
+model NotificationLease {
+  id        String   @id
+  expiresAt DateTime
+}
+
 model Log {
   id            String        @id @default(cuid())
   userId        String

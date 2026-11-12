@@ -60,6 +60,7 @@ async function request(path, { method = 'GET', body, params } = {}) {
     const message = (data && data.error) || `Request failed with status ${res.status}`;
     const err = new Error(message);
     err.status = res.status;
+    if (Array.isArray(data?.invalid)) err.invalid = data.invalid;
     throw err;
   }
   return data;
@@ -84,6 +85,12 @@ export const api = {
       list: (id) => request(`/api/integrations/${id}/credentials`),
       reveal: (id, key) => request(`/api/integrations/${id}/credentials/${encodeURIComponent(key)}/value`),
       save: (id, values) => request(`/api/integrations/${id}/credentials`, { method: 'POST', body: { values } }),
+    },
+    // Inert until the notification router and a scoped automation UI are enabled.
+    notifications: {
+      list: (id) => request(`/api/integrations/${encodeURIComponent(id)}/notifications`),
+      save: (id, recipients) => request(`/api/integrations/${encodeURIComponent(id)}/notifications`, { method: 'PUT', body: { recipients } }),
+      test: (id) => request(`/api/integrations/${encodeURIComponent(id)}/notifications/test`, { method: 'POST' }),
     },
     webhookToken: (id) => request(`/api/integrations/${id}/webhook-token`),
     webhookSettings: (id, payload) => request(`/api/integrations/${id}/webhook-settings`, { method: 'POST', body: payload }),
