@@ -45,6 +45,7 @@ async function saveConfig({ apiKey, domain, fromEmail, recipients }) {
 }
 
 async function send({ subject, text, to }) {
+  require('./deployment-safety').assertEmailSendingAllowed();
   const config = await getConfig();
   const apiKey = await secrets.getSecret(SYSTEM_SECRET_ID, API_KEY);
   const recipients = to || parseRecipients(config.recipients);

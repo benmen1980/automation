@@ -1,8 +1,14 @@
 module.exports = {
   name: 'platform-admin',
   displayName: 'Admin',
-  version: '1.6.7.36',
+  version: '1.6.7.37',
   releaseLog: [
+    {
+      version: '1.6.7.37',
+      date: '2026-11-12',
+      summary: 'Deploy with schema updates, integration synchronization, outbound email and background jobs disabled by an explicit release policy.',
+      commit: 'HEAD',
+    },
     {
       version: '1.6.7.36',
       date: '2026-11-12',

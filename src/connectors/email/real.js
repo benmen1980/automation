@@ -7,6 +7,7 @@
  */
 module.exports = {
   async send({ to, subject, body }, credentials) {
+    require('../../core/deployment-safety').assertEmailSendingAllowed();
     const { EMAIL_API_URL, EMAIL_API_KEY, EMAIL_FROM } = credentials;
     if (!EMAIL_API_URL || !EMAIL_API_KEY) {
       throw new Error('email connector requires EMAIL_API_URL and EMAIL_API_KEY credentials.');

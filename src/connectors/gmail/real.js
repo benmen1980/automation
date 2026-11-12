@@ -357,6 +357,7 @@ module.exports = {
   },
 
   async sendEmail({ to, subject, text, attachments = [] }, credentials) {
+    require('../../core/deployment-safety').assertEmailSendingAllowed();
     const recipients = normalizeRecipients(to);
     if (recipients.length === 0) throw new Error('Gmail send requires at least one recipient.');
 

@@ -14,11 +14,12 @@ function RecipientsForm({ integrationId, api, canEdit }) {
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(true);
+  const [sendingEnabled, setSendingEnabled] = useState(false);
   useEffect(() => {
     let active = true;
     setBusy(true); setResult(null); setError(''); setValue(''); setRecipients([]);
     api.list(integrationId).then((data) => {
-      if (active) { setRecipients(data.recipients); setValue(data.recipients.map((item) => item.email).join(', ')); }
+      if (active) { setSendingEnabled(data.emailSendingEnabled === true); setRecipients(data.recipients); setValue(data.recipients.map((item) => item.email).join(', ')); }
     }).catch(() => { if (active) setError('לא ניתן לטעון את הנמענים כרגע.'); })
       .finally(() => { if (active) setBusy(false); });
     return () => { active = false; };
@@ -37,12 +38,13 @@ function RecipientsForm({ integrationId, api, canEdit }) {
   }
 
   return <section dir="rtl" aria-label="נמעני מייל" className="rounded-lg border bg-white p-4 space-y-3">
+    {!busy && !sendingEnabled && <p role="status">שליחת מיילים, בקשות אימות ושינוי רשימת התפוצה מושבתים בפריסה זו.</p>}
     <label className="block">כתובות מייל מופרדות בפסיק
       <input className="block w-full border rounded p-2" dir="ltr" value={value}
-        disabled={!canEdit || busy} onChange={(event) => setValue(event.target.value)} />
+        disabled={!canEdit || busy || !sendingEnabled} onChange={(event) => setValue(event.target.value)} />
     </label>
-    <button type="button" disabled={!canEdit || busy} onClick={() => act(false)}>שמירה</button>{' '}
-    <button type="button" disabled={!canEdit || busy} onClick={() => act(true)}>שליחת מייל ניסיון</button>
+    <button type="button" disabled={!canEdit || busy || !sendingEnabled} onClick={() => act(false)}>שמירה</button>{' '}
+    <button type="button" disabled={!canEdit || busy || !sendingEnabled} onClick={() => act(true)}>שליחת מייל ניסיון</button>
     <p className="text-sm">מייל הניסיון משתמש ברשימה השמורה. קבלת הבקשה ב־SES אינה אישור מסירה.</p>
     <ul>{recipients.map((item) => <li key={item.email}
       className={item.status === 'verified' ? 'text-green-700' : item.status === 'pending' ? 'text-red-700' : 'text-slate-600'}>

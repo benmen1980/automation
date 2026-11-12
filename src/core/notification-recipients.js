@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const { SESv2Client, GetEmailIdentityCommand, GetAccountCommand, SendEmailCommand } = require('@aws-sdk/client-sesv2');
 const { SESClient, VerifyEmailIdentityCommand } = require('@aws-sdk/client-ses');
 const { sanitizeString } = require('../utils/sanitize-logs');
+const safety = require('./deployment-safety');
 
 const REGION = 'eu-west-1';
 const RECIPIENTS_KEY = 'ERROR_NOTIFICATION_EMAILS';
@@ -68,6 +69,7 @@ function createNotificationService({ db = require('../db/client'),
   }
 
   async function save(integration, value) {
+    safety.assertEmailSendingAllowed();
     const recipients = normalizeRecipients(value);
     const data = { valueReference: JSON.stringify(recipients.join(', ')), type: 'text', isSecret: false };
     await db.credential.upsert({ where: { integrationId_key: { integrationId: integration.id, key: RECIPIENTS_KEY } },
@@ -134,6 +136,7 @@ function createNotificationService({ db = require('../db/client'),
   }
 
   async function test(integration) {
+    safety.assertEmailSendingAllowed();
     return send(integration, { subject: `מייל ניסיון — ${integration.name}`,
       text: `זהו מייל ניסיון ממערכת AUTOMATION עבור האוטומציה ${integration.name}.` });
   }
@@ -141,6 +144,7 @@ function createNotificationService({ db = require('../db/client'),
   // Caller supplies the SAME event ID and attempt at every reporting layer.
   // Startup failures can supply eventId without an execution row.
   async function notifyFailure(integration, error, context = {}) {
+    if (!safety.emailSendingEnabled()) return { status: 'disabled' };
     try {
       if (!(context.executionId || context.eventId) || !Number.isInteger(context.attempt) || context.attempt < 1) throw new Error('Event identity and positive attempt required.');
       const identity = context.executionId || `${integration.id}:${context.eventId}`;

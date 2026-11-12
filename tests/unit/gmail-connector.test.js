@@ -1,3 +1,4 @@
+jest.mock('../../src/core/deployment-safety', () => ({ emailSendingEnabled: () => true, assertEmailSendingAllowed: jest.fn() }));
 const { EventEmitter } = require('events');
 const https = require('https');
 const fs = require('fs');

@@ -1,3 +1,4 @@
+jest.mock('../../src/core/deployment-safety', () => ({ emailSendingEnabled: () => true, assertEmailSendingAllowed: jest.fn() }));
 jest.mock('../../src/db/client', () => ({
   execution: { findUnique: jest.fn() }, credential: { findUnique: jest.fn() },
   notificationLease: { updateMany: jest.fn(), create: jest.fn() },

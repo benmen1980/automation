@@ -1,3 +1,4 @@
+jest.mock('../../src/core/deployment-safety', () => ({ emailSendingEnabled: () => true, assertEmailSendingAllowed: jest.fn() }));
 const { createNotificationService, normalizeRecipients } = require('../../src/core/notification-recipients');
 
 const integration = { id: 'int-a', userId: 'owner', name: 'בדיקה' };
