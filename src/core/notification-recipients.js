@@ -17,7 +17,7 @@ function normalizeRecipients(value) {
   return [...new Set(addresses)];
 }
 
-// Not instantiated or connected to any automation until explicitly wired in.
+// Shared by the integration API and execution-failure reporting boundary.
 function createNotificationService({ db = require('../db/client'),
   ses = new SESv2Client({ region: REGION, maxAttempts: 1 }),
   verification = new SESClient({ region: REGION, maxAttempts: 1 }),

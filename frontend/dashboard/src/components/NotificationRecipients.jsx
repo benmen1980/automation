@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 const labels = { verified: 'מאומתת', pending: 'ממתינה לאימות', unknown: 'לא ניתן לבדוק כרגע' };
 const outcomes = { accepted: 'SES קיבל את בקשת השליחה', skipped: 'דולג', failed: 'השליחה נכשלה', unknown: 'תוצאת השליחה אינה ידועה' };
 
-// Unmounted shared component. The automation supplies its scoped API on opt-in.
+// Shared log controls; API requests and saved membership are integration-scoped.
 export default function NotificationRecipients({ integrationId, api, canEdit = false }) {
   return <RecipientsForm key={integrationId} integrationId={integrationId} api={api} canEdit={canEdit} />;
 }

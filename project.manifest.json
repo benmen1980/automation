@@ -71,6 +71,7 @@
     "chat": {
       "admin_with_one_automation_allowed": true,
       "multiple_automations_in_one_chat": false,
+      "platform_common_template_rollout_across_automations_allowed": true,
       "automation_isolation_preserved": true
     },
     "code": "one_package_per_automation",
@@ -83,6 +84,21 @@
     "deployment": "one_pipeline_per_automation"
   },
   "shared_platform": {
+    "automation_template": {
+      "owner_scope": "PLATFORM/ADMIN",
+      "fixed_for_all_automations": true,
+      "automation_chat_may_change_template": false,
+      "required_common_components": ["log"],
+      "log_includes": ["email_sending_controls", "mailing_list_management"],
+      "recipient_storage_and_permissions": "isolated_per_automation",
+      "common_changes_apply_to": "all_existing_and_future_automations",
+      "separate_automation_chats_required_for_common_rollout": false,
+      "uniform_adapter_changes_allowed_in_platform_rollout": true,
+      "automation_business_logic_changes_allowed_in_platform_rollout": false,
+      "ownership_takes_precedence_over_directory": true,
+      "validator_for_cross_directory_rollout": "PLATFORM/ADMIN --foundational-infra true",
+      "validation": ["platform", "affected_automation_adapters"]
+    },
     "database_contains": [
       "users",
       "automation_registry",
@@ -191,8 +207,8 @@
       "admin_code_or_database_structure": "bump_admin",
       "automation_code_or_database_structure": "bump_that_automation",
       "automation_lambda_queue_dlq_iam_or_deployment": "bump_that_automation",
-      "shared_code_affecting_multiple_automations": "bump_each_affected_automation",
-      "shared_platform_code_affecting_admin_and_automations": "bump_admin_and_each_affected_automation"
+      "shared_code_affecting_multiple_automations": "bump_admin_for_common_template_and_bump_automation_only_if_its_owned_code_or_independent_artifact_changes",
+      "shared_platform_code_affecting_admin_and_automations": "bump_admin_and_only_automations_with_changed_owned_code_or_independent_artifacts"
     },
     "database_role": "deployed_version_snapshot_only",
     "ui_version_sources_forbidden": [

@@ -1,3 +1,4 @@
+jest.mock('../../src/core/execution-alerts', () => ({ notifyExecutionFailure: jest.fn(async () => ({ status: 'processed' })) }));
 const {
   createTrackedLogger,
   INDEPENDENT_LOCAL_WORKERS,
@@ -63,6 +64,7 @@ describe('independent local integration worker support', () => {
     };
     const execution = {
       id: 'execution-1',
+      retryCount: 0,
       userId: 'user-1',
       integrationId: 'integration-1',
       triggerType: 'manual',
@@ -100,6 +102,9 @@ describe('independent local integration worker support', () => {
     ).resolves.toMatchObject({ status: 'failed' });
 
     expect(executionStore.markSuccess).not.toHaveBeenCalled();
+    expect(require('../../src/core/execution-alerts').notifyExecutionFailure).toHaveBeenCalledWith(
+      'execution-1', providerError, { attempt: 1, stage: 'local-worker' }
+    );
     expect(executionStore.markFailed).toHaveBeenCalledWith(
       'execution-1',
       providerError.message

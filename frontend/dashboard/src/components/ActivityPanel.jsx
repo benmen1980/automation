@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api/client.js';
 import Badge from './Badge.jsx';
+import NotificationRecipients from './NotificationRecipients.jsx';
 
 const LEVEL_COLORS = {
   debug: 'bg-slate-100 text-slate-500',
@@ -339,7 +340,7 @@ function ActivityDetailsModal({ item, logs, loading, onClose }) {
   );
 }
 
-export default function ActivityPanel({ integrationId, executions, onRefresh, selectedExecutionId }) {
+export default function ActivityPanel({ integrationId, executions, onRefresh, selectedExecutionId, canManage = false }) {
   const [logs, setLogs] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -419,6 +420,7 @@ export default function ActivityPanel({ integrationId, executions, onRefresh, se
 
   return (
     <div className="space-y-4">
+      <NotificationRecipients integrationId={integrationId} api={api.integrations.notifications} canEdit={canManage} />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs leading-5 text-slate-500">
           Click any row to see the cause and the complete log for that run or webhook attempt.

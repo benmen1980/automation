@@ -4,7 +4,6 @@
  * in the whole run-a-handler machinery.
  */
 const prisma = require('../db/client');
-const sendgrid = require('./sendgrid');
 
 async function createExecution({ userId, integrationId, triggerType, executionMode, inputPayload, sourceExecutionId }) {
   return prisma.execution.create({
@@ -58,19 +57,7 @@ async function markFailed(executionId, errorMessage) {
       finishedAt: new Date(),
     },
   });
-  try {
-    const integration = await prisma.integration.findUnique({ where: { id: execution.integrationId } });
-    if (integration && require('./integration-loader').loadDefinition(integration).failureNotification) return execution;
-    const config = await sendgrid.getConfig();
-    if (config.configured && config.recipients) {
-      await sendgrid.send({
-        subject: `Automation failed: ${executionId}`,
-        text: `Execution ${executionId} failed.\n\n${String(errorMessage).slice(0, 4000)}`,
-      });
-    }
-  } catch (notificationError) {
-    console.error('[sendgrid] Failed to send execution error notification:', notificationError.message);
-  }
+  // Execution boundaries report through the shared, deduplicated SES service.
   return execution;
 }
 

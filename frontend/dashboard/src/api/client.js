@@ -86,7 +86,7 @@ export const api = {
       reveal: (id, key) => request(`/api/integrations/${id}/credentials/${encodeURIComponent(key)}/value`),
       save: (id, values) => request(`/api/integrations/${id}/credentials`, { method: 'POST', body: { values } }),
     },
-    // Inert until the notification router and a scoped automation UI are enabled.
+    // Common log controls, scoped by the server's integration permissions.
     notifications: {
       list: (id) => request(`/api/integrations/${encodeURIComponent(id)}/notifications`),
       save: (id, recipients) => request(`/api/integrations/${encodeURIComponent(id)}/notifications`, { method: 'PUT', body: { recipients } }),

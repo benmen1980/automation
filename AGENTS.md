@@ -28,13 +28,51 @@ For every request:
 
 At the beginning of every new chat, classify the first user request into exactly one scope:
 
-* `PLATFORM/ADMIN` — platform, the Admin panel, shared infrastructure, migration, or repository-wide work. Shared dashboard code that implements an automation’s UI is not automatically platform/admin scope.
-* `AUTOMATION:<integration_id>` — work for one specific integration only.
+* `PLATFORM/ADMIN` — platform, the Admin panel, shared infrastructure, migration, and the fixed template and common components used by all automations. A common component remains platform scope even when displayed inside each automation.
+* `AUTOMATION:<integration_id>` — business logic, connections, mappings, and configuration specific to one integration, within the fixed platform-owned template.
 * `PLATFORM/ADMIN + AUTOMATION:<integration_id>` — one Admin/platform scope and one automation may be handled in the same chat when the request explicitly uses the combined workflow.
 
 The assistant must state the selected scope before taking project actions. The scope is immutable for the chat.
 
 An `AUTOMATION:<integration_id>` chat must refuse requests to modify or discuss another integration, platform code, Admin code, shared infrastructure, deployment configuration, or repository-wide behavior. A `PLATFORM/ADMIN` chat must refuse automation-specific implementation work unless it is the explicitly requested one-automation combined workflow. Work for a different scope requires a new chat.
+
+### Fixed automation template and common components
+
+Every automation uses a fixed platform-owned template. An automation-specific
+chat may use the template's supported extension points and edit that automation's
+own settings, but must not change, replace, remove, or fork the template or its
+common components. Root ownership rules apply even when a common component or
+its mounting code is located in an automation directory.
+
+The log component is mandatory in every automation. Email sending controls and
+mailing-list management belong inside this common log component. Their UI,
+behavior, SES integration, and generic error-notification mechanism are
+`PLATFORM/ADMIN`; the saved recipient list and access permissions remain isolated
+per automation. Common ownership never permits sharing recipients across
+automations or changing their business logic.
+
+A requested change to the common template or its components may be implemented
+and applied to all existing and future automations in one `PLATFORM/ADMIN` chat.
+Do not require separate automation chats merely because a common change affects
+multiple automations. This includes the minimal uniform mounting/adaptation code
+needed to apply the template in automation-owned files, but excludes changes to
+automation-specific workflows, mappings, and external-service business behavior.
+Declare the common-template rollout before making such cross-directory edits.
+
+For a common-template rollout that touches automation-owned paths, use the
+existing validator's `--foundational-infra true` option with `PLATFORM/ADMIN`.
+This option accommodates the path-based validator; it does not authorize
+unrelated cross-scope changes. Review the exact diff and run platform validation
+plus focused validation for affected automation adapters. A change confined to
+shared files uses the ordinary platform validator. This ownership rule takes
+precedence over directory-based scope descriptions in automation instructions.
+
+Common-template changes require a platform version bump. Merely displaying the
+updated shared component does not require bumping every automation version.
+If an automation-owned adapter or independently released artifact changes, bump
+that affected automation's version as well within the same platform rollout.
+Authorization for code changes does not itself authorize push, deployment,
+AWS changes, database migration application, or sending emails.
 
 Exception — foundational infrastructure work: when the user explicitly identifies
 the request as a foundational, repository-wide infrastructure change (for example
@@ -46,7 +84,7 @@ the same work, and run both platform validation and automation validation before
 completion. This exception permits cross-scope commits and pushes when they are
 required to deliver the infrastructure change.
 
-Automation-specific forms, modules, API wiring, dashboard pages, and components under `frontend/dashboard` belong to the matching automation scope. `frontend/dashboard/src/pages/AdminPage.jsx` and genuinely shared platform/dashboard infrastructure remain `PLATFORM/ADMIN`.
+Automation-specific forms, modules, API wiring, and business UI under `frontend/dashboard` belong to the matching automation scope. The fixed template, common log/email components, their shared API wiring, `frontend/dashboard/src/pages/AdminPage.jsx`, and shared platform/dashboard infrastructure remain `PLATFORM/ADMIN`. Classify by ownership and purpose, not by where the component is displayed or by the number of automations affected.
 
 Before editing, committing, or pushing, run the applicable project scope validator:
 
@@ -61,9 +99,9 @@ npm run validate:workspace-scope -- --scope AUTOMATION --automation-id <integrat
 ```
 
 By default, never combine Admin/platform and automation work, or two automation
-scopes, in one chat, commit, or push. The foundational infrastructure exception
-above is the only allowed override. If the request changes scope without that
-explicit exception, stop and instruct the user to open a new chat.
+scopes, in one chat, commit, or push. The common-template rollout rule and the
+foundational infrastructure exception above are the allowed cross-directory
+cases. Other changes of scope require a new chat.
 
 All platform and automation work is developed locally and committed and pushed
 to the single `master` branch. A push to `master` is the staging deployment

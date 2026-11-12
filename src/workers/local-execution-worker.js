@@ -172,6 +172,9 @@ async function runIndependentLocalWorker(execution, workerName, overrides = {}) 
       // The execution is already finalized as failed; a final log write must not
       // replace the provider error or leave the dashboard status in "running".
     }
+    await require('../core/execution-alerts').notifyExecutionFailure(execution.id, error, {
+      attempt: execution.retryCount + 1, stage: 'local-worker',
+    });
   }
 
   return executionStore.getExecutionById(execution.id);

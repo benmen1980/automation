@@ -12,6 +12,7 @@ const executionRoutes = require('./routes/execution-routes');
 const logRoutes = require('./routes/log-routes');
 const testRoutes = require('./routes/test-routes');
 const workerRoutes = require('./routes/worker-routes');
+const { createNotificationRouter } = require('./routes/notification-routes');
 const { sanitizeString } = require('./utils/sanitize-logs');
 const { DOCUMENT_DIRECTORY } = require('./core/priority-document-store');
 
@@ -35,6 +36,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/internal', workerRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/integrations', integrationRoutes);
+app.use('/api/integrations', createNotificationRouter());
 app.use('/api/integrations', testRoutes); // adds /:id/test, /:id/dry-run, /:id/test-connector
 app.use('/api', executionRoutes); // defines /integrations/:id/executions, /integrations/:id/run, /executions/:id[/replay]
 app.use('/api', logRoutes); // defines /integrations/:id/logs, /executions/:id/logs
