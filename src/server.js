@@ -1,15 +1,13 @@
 require('dotenv').config();
 const app = require('./app');
 const scheduler = require('./core/scheduler');
-const { backgroundJobsEnabled } = require('./core/deployment-safety');
+const { schedulerEnabled, watchdogEnabled } = require('./core/deployment-safety');
 
 const PORT = process.env.PORT || 3000;
 
 async function main() {
-  if (backgroundJobsEnabled()) {
-    await scheduler.start();
-    require('./core/execution-telemetry').startWatchdog();
-  }
+  if (schedulerEnabled()) await scheduler.start();
+  if (watchdogEnabled()) require('./core/execution-telemetry').startWatchdog();
   app.listen(PORT, () => {
     // eslint-disable-next-line no-console
     console.log(`Automation platform listening on http://localhost:${PORT}`);

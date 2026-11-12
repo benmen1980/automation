@@ -15,11 +15,12 @@ function RecipientsForm({ integrationId, api, canEdit }) {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(true);
   const [sendingEnabled, setSendingEnabled] = useState(false);
+  const [managementEnabled, setManagementEnabled] = useState(false);
   useEffect(() => {
     let active = true;
     setBusy(true); setResult(null); setError(''); setValue(''); setRecipients([]);
     api.list(integrationId).then((data) => {
-      if (active) { setSendingEnabled(data.emailSendingEnabled === true); setRecipients(data.recipients); setValue(data.recipients.map((item) => item.email).join(', ')); }
+      if (active) { setSendingEnabled(data.emailSendingEnabled === true); setManagementEnabled(data.recipientManagementEnabled === true); setRecipients(data.recipients); setValue(data.recipients.map((item) => item.email).join(', ')); }
     }).catch(() => { if (active) setError('לא ניתן לטעון את הנמענים כרגע.'); })
       .finally(() => { if (active) setBusy(false); });
     return () => { active = false; };
@@ -38,12 +39,13 @@ function RecipientsForm({ integrationId, api, canEdit }) {
   }
 
   return <section dir="rtl" aria-label="נמעני מייל" className="rounded-lg border bg-white p-4 space-y-3">
-    {!busy && !sendingEnabled && <p role="status">שליחת מיילים, בקשות אימות ושינוי רשימת התפוצה מושבתים בפריסה זו.</p>}
+    {!busy && !sendingEnabled && <p role="status">שליחת מיילי ניסיון והתראות מושבתת בפריסה זו.</p>}
+    {!busy && !managementEnabled && <p role="status">שינוי רשימת התפוצה מושבת בפריסה זו.</p>}
     <label className="block">כתובות מייל מופרדות בפסיק
       <input className="block w-full border rounded p-2" dir="ltr" value={value}
-        disabled={!canEdit || busy || !sendingEnabled} onChange={(event) => setValue(event.target.value)} />
+        disabled={!canEdit || busy || !managementEnabled} onChange={(event) => setValue(event.target.value)} />
     </label>
-    <button type="button" disabled={!canEdit || busy || !sendingEnabled} onClick={() => act(false)}>שמירה</button>{' '}
+    <button type="button" disabled={!canEdit || busy || !managementEnabled} onClick={() => act(false)}>שמירה</button>{' '}
     <button type="button" disabled={!canEdit || busy || !sendingEnabled} onClick={() => act(true)}>שליחת מייל ניסיון</button>
     <p className="text-sm">מייל הניסיון משתמש ברשימה השמורה. קבלת הבקשה ב־SES אינה אישור מסירה.</p>
     <ul>{recipients.map((item) => <li key={item.email}
@@ -52,6 +54,7 @@ function RecipientsForm({ integrationId, api, canEdit }) {
       {item.verificationRequest === 'accepted' && ' — נשלחה בקשת אימות'}
       {item.verificationRequest === 'cooldown' && ' — בקשת אימות נוספת מוגבלת זמנית'}
       {item.verificationRequest === 'failed' && ' — לא ניתן לשלוח בקשת אימות כרגע'}
+      {item.verificationRequest === 'disabled' && ' — שליחת בקשות אימות מושבתת'}
     </li>)}</ul>
     {result && <div role="status">
       {result.noVerifiedRecipients && <p>אין נמענים מאומתים. לא בוצעה שליחה.</p>}

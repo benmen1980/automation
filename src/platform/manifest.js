@@ -1,8 +1,14 @@
 module.exports = {
   name: 'platform-admin',
   displayName: 'Admin',
-  version: '1.6.7.37',
+  version: '1.6.7.38',
   releaseLog: [
+    {
+      version: '1.6.7.38',
+      date: '2026-11-12',
+      summary: 'Separate recipient management, notification email, verification email, other outbound mail, scheduler and watchdog switches; retain disabled defaults. Add the targeted PostgreSQL notification lease migration.',
+      commit: 'HEAD',
+    },
     {
       version: '1.6.7.37',
       date: '2026-11-12',

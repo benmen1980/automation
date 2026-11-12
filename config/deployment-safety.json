@@ -1,5 +1,9 @@
 {
   "databaseUpdatesEnabled": false,
+  "recipientManagementEnabled": false,
+  "notificationEmailSendingEnabled": false,
+  "verificationEmailsEnabled": false,
   "emailSendingEnabled": false,
-  "backgroundJobsEnabled": false
+  "schedulerEnabled": false,
+  "watchdogEnabled": false
 }

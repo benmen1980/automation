@@ -36,7 +36,7 @@ async function collectExecutionLogs(executionId, { integrationId, through = new 
 // This boundary NEVER throws into business execution or retries a send with an
 // ambiguous SES outcome. The durable claim is deliberately retained on failure.
 async function notifyExecutionFailure(executionId, error, { attempt, stage = 'execution' } = {}) {
-  if (!require('./deployment-safety').emailSendingEnabled()) return { status: 'disabled' };
+  if (!require('./deployment-safety').notificationEmailSendingEnabled()) return { status: 'disabled' };
   let execution;
   try {
     execution = await prisma.execution.findUnique({ where: { id: executionId }, include: { integration: true } });

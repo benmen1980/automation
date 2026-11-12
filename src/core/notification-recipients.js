@@ -69,7 +69,7 @@ function createNotificationService({ db = require('../db/client'),
   }
 
   async function save(integration, value) {
-    safety.assertEmailSendingAllowed();
+    safety.assertRecipientManagementAllowed();
     const recipients = normalizeRecipients(value);
     const data = { valueReference: JSON.stringify(recipients.join(', ')), type: 'text', isSecret: false };
     await db.credential.upsert({ where: { integrationId_key: { integrationId: integration.id, key: RECIPIENTS_KEY } },
@@ -79,7 +79,8 @@ function createNotificationService({ db = require('../db/client'),
       const item = await inspect(email);
       if (item.status === 'pending') {
         try {
-          if (!await lease(`ses:${REGION}:verify:${hash(email)}`, COOLDOWN_MS)) item.verificationRequest = 'cooldown';
+          if (!safety.verificationEmailsEnabled()) item.verificationRequest = 'disabled';
+          else if (!await lease(`ses:${REGION}:verify:${hash(email)}`, COOLDOWN_MS)) item.verificationRequest = 'cooldown';
           else {
             // All application instances share the same AWS account/region lane.
             if (!await reserveRate(`ses:${REGION}:verify-rate`, 1000)) throw new Error('Verification rate limit reached.');
@@ -136,7 +137,7 @@ function createNotificationService({ db = require('../db/client'),
   }
 
   async function test(integration) {
-    safety.assertEmailSendingAllowed();
+    safety.assertNotificationEmailSendingAllowed();
     return send(integration, { subject: `מייל ניסיון — ${integration.name}`,
       text: `זהו מייל ניסיון ממערכת AUTOMATION עבור האוטומציה ${integration.name}.` });
   }
@@ -144,7 +145,7 @@ function createNotificationService({ db = require('../db/client'),
   // Caller supplies the SAME event ID and attempt at every reporting layer.
   // Startup failures can supply eventId without an execution row.
   async function notifyFailure(integration, error, context = {}) {
-    if (!safety.emailSendingEnabled()) return { status: 'disabled' };
+    if (!safety.notificationEmailSendingEnabled()) return { status: 'disabled' };
     try {
       if (!(context.executionId || context.eventId) || !Number.isInteger(context.attempt) || context.attempt < 1) throw new Error('Event identity and positive attempt required.');
       const identity = context.executionId || `${integration.id}:${context.eventId}`;

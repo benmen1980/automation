@@ -1,4 +1,4 @@
-jest.mock('../../src/core/deployment-safety', () => ({ emailSendingEnabled: () => true, assertEmailSendingAllowed: jest.fn() }));
+jest.mock('../../src/core/deployment-safety', () => ({ notificationEmailSendingEnabled: () => true, assertNotificationEmailSendingAllowed: jest.fn(), assertRecipientManagementAllowed: jest.fn(), verificationEmailsEnabled: jest.fn(() => true) }));
 const { createNotificationService, normalizeRecipients } = require('../../src/core/notification-recipients');
 
 const integration = { id: 'int-a', userId: 'owner', name: 'בדיקה' };
@@ -35,6 +35,16 @@ beforeEach(() => {
 });
 const stored = (id, emails) => settings.set(id, { valueReference: JSON.stringify(emails), isSecret: false });
 const sends = () => ses.send.mock.calls.filter(([command]) => command.constructor.name === 'SendEmailCommand');
+
+test('recipient management can save pending addresses without verification emails or send requests', async () => {
+  require('../../src/core/deployment-safety').verificationEmailsEnabled.mockReturnValueOnce(false);
+  ses.send.mockResolvedValue({ VerificationStatus: 'PENDING' });
+  expect((await service.save(integration, 'a@example.com')).recipients[0]).toMatchObject({ status: 'pending', verificationRequest: 'disabled' });
+  expect(settings.has('int-a')).toBe(true);
+  expect(verification.send).not.toHaveBeenCalled();
+  expect(db.notificationLease.create).not.toHaveBeenCalled();
+  expect(sends()).toHaveLength(0);
+});
 
 test('normalizes, deduplicates, rejects invalid input before persistence or SES', async () => {
   expect(normalizeRecipients(' A@EXAMPLE.COM, a@example.com , b@example.com ')).toEqual(['a@example.com', 'b@example.com']);

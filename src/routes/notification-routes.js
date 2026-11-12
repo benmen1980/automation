@@ -2,7 +2,7 @@ const express = require('express');
 const { requireAuth } = require('../middleware/auth-middleware');
 const { loadIntegration } = require('../middleware/load-integration');
 const { createNotificationService } = require('../core/notification-recipients');
-const { emailSendingEnabled } = require('../core/deployment-safety');
+const { notificationEmailSendingEnabled, recipientManagementEnabled } = require('../core/deployment-safety');
 
 // Common template endpoint: existing integration permissions scope every request.
 function createNotificationRouter({ service = createNotificationService() } = {}) {
@@ -16,7 +16,7 @@ function createNotificationRouter({ service = createNotificationService() } = {}
     }
   };
   router.get('/:id/notifications', loadIntegration(),
-    handle(async (req) => ({ recipients: await service.refresh(req.integration), emailSendingEnabled: emailSendingEnabled() })));
+    handle(async (req) => ({ recipients: await service.refresh(req.integration), emailSendingEnabled: notificationEmailSendingEnabled(), recipientManagementEnabled: recipientManagementEnabled() })));
   router.put('/:id/notifications', loadIntegration({ mutate: true }),
     handle((req) => service.save(req.integration, req.body?.recipients)));
   router.post('/:id/notifications/test', loadIntegration({ mutate: true }),
