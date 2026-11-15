@@ -1,8 +1,14 @@
 module.exports = {
   name: 'platform-admin',
   displayName: 'Admin',
-  version: '1.6.7.38',
+  version: '1.6.7.39',
   releaseLog: [
+    {
+      version: '1.6.7.39',
+      date: '2026-11-15',
+      summary: 'Enable shared mailing-list management for all automations in staging while keeping outbound email and verification requests disabled.',
+      commit: 'HEAD',
+    },
     {
       version: '1.6.7.38',
       date: '2026-11-12',

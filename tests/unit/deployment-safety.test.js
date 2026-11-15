@@ -16,6 +16,7 @@ test.each([
   const policy = require('../../config/deployment-safety.json');
   const original = { ...policy };
   try {
+    for (const name of Object.keys(policy)) policy[name] = false;
     policy[key] = true;
     for (const name of ['recipientManagementEnabled', 'notificationEmailSendingEnabled', 'verificationEmailsEnabled', 'emailSendingEnabled', 'schedulerEnabled', 'watchdogEnabled']) {
       expect(safety[name]()).toBe(name === accessor);
@@ -26,7 +27,7 @@ test.each([
 test('this release disables database deployment changes, outbound email and background jobs', () => {
   expect(require('../../config/deployment-safety.json')).toEqual({
     databaseUpdatesEnabled: false, emailSendingEnabled: false,
-    recipientManagementEnabled: false, notificationEmailSendingEnabled: false,
+    recipientManagementEnabled: true, notificationEmailSendingEnabled: false,
     verificationEmailsEnabled: false, schedulerEnabled: false, watchdogEnabled: false,
   });
   expect(safety.emailSendingEnabled()).toBe(false);
@@ -34,12 +35,22 @@ test('this release disables database deployment changes, outbound email and back
   expect(safety.watchdogEnabled()).toBe(false);
 });
 
-test('notification save/test/failure cannot write data, request verification or send mail', async () => {
+test('this release saves recipients without verification or mail; test and failure sends stay disabled', async () => {
   const unexpected = jest.fn(() => { throw new Error('Unexpected side effect'); });
-  const db = { credential: { upsert: unexpected, findUnique: unexpected }, log: { create: unexpected } };
-  const service = require('../../src/core/notification-recipients').createNotificationService({ db, ses: { send: unexpected }, verification: { send: unexpected } });
+  const upsert = jest.fn();
+  const db = { credential: { upsert, findUnique: unexpected }, log: { create: unexpected } };
+  const inspect = jest.fn(async (command) => {
+    expect(command.constructor.name).toBe('GetEmailIdentityCommand');
+    return { VerificationStatus: 'PENDING' };
+  });
+  const service = require('../../src/core/notification-recipients').createNotificationService({ db, ses: { send: inspect }, verification: { send: unexpected } });
   const integration = { id: 'a', name: 'test' };
-  await expect(service.save(integration, 'a@example.com')).rejects.toMatchObject({ code: 'RECIPIENT_MANAGEMENT_DISABLED' });
+  await expect(service.save(integration, ' A@example.com, a@example.com ')).resolves.toEqual({ recipients: [{ email: 'a@example.com', status: 'pending', verificationRequest: 'disabled' }] });
+  expect(upsert).toHaveBeenCalledWith(expect.objectContaining({
+    where: { integrationId_key: { integrationId: 'a', key: 'ERROR_NOTIFICATION_EMAILS' } },
+    update: expect.objectContaining({ valueReference: JSON.stringify('a@example.com') }),
+  }));
+  expect(inspect).toHaveBeenCalledTimes(1);
   await expect(service.test(integration)).rejects.toMatchObject({ code: 'EMAIL_SENDING_DISABLED' });
   expect(await service.notifyFailure(integration, new Error('failure'), { executionId: 'run', attempt: 1 })).toEqual({ status: 'disabled' });
   expect(await require('../../src/core/execution-alerts').notifyExecutionFailure('run', new Error('failure'))).toEqual({ status: 'disabled' });

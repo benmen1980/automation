@@ -1,6 +1,6 @@
 {
   "databaseUpdatesEnabled": false,
-  "recipientManagementEnabled": false,
+  "recipientManagementEnabled": true,
   "notificationEmailSendingEnabled": false,
   "verificationEmailsEnabled": false,
   "emailSendingEnabled": false,
