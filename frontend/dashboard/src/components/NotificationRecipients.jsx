@@ -45,8 +45,10 @@ function RecipientsForm({ integrationId, api, canEdit }) {
       <input className="block w-full border rounded p-2" dir="ltr" value={value}
         disabled={!canEdit || busy || !managementEnabled} onChange={(event) => setValue(event.target.value)} />
     </label>
-    <button type="button" disabled={!canEdit || busy || !managementEnabled} onClick={() => act(false)}>שמירה</button>{' '}
-    <button type="button" disabled={!canEdit || busy || !sendingEnabled} onClick={() => act(true)}>שליחת מייל ניסיון</button>
+    <div className="flex flex-wrap gap-3">
+      <button type="button" className="brand-primary-button focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700" disabled={!canEdit || busy || !managementEnabled} onClick={() => act(false)}>שמירה</button>
+      <button type="button" className="rounded-full border border-blue-700 bg-white px-4 py-3 font-bold text-blue-700 enabled:hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-700 disabled:cursor-not-allowed disabled:opacity-50" disabled={!canEdit || busy || !sendingEnabled} onClick={() => act(true)}>שליחת מייל ניסיון</button>
+    </div>
     <p className="text-sm">מייל הניסיון משתמש ברשימה השמורה. קבלת הבקשה ב־SES אינה אישור מסירה.</p>
     <ul>{recipients.map((item) => <li key={item.email}
       className={item.status === 'verified' ? 'text-green-700' : item.status === 'pending' ? 'text-red-700' : 'text-slate-600'}>

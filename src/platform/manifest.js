@@ -1,8 +1,14 @@
 module.exports = {
   name: 'platform-admin',
   displayName: 'Admin',
-  version: '1.6.7.40',
+  version: '1.6.7.41',
   releaseLog: [
+    {
+      version: '1.6.7.41',
+      date: '2026-11-15',
+      summary: 'Style shared mailing-list save and test-email buttons with clear spacing, disabled states and keyboard focus.',
+      commit: 'HEAD',
+    },
     {
       version: '1.6.7.40',
       date: '2026-11-15',
