@@ -1,8 +1,14 @@
 module.exports = {
   name: 'platform-admin',
   displayName: 'Admin',
-  version: '1.6.7.39',
+  version: '1.6.7.40',
   releaseLog: [
+    {
+      version: '1.6.7.40',
+      date: '2026-11-15',
+      summary: 'Enable shared notification test emails, error alerts and recipient verification requests.',
+      commit: 'HEAD',
+    },
     {
       version: '1.6.7.39',
       date: '2026-11-15',

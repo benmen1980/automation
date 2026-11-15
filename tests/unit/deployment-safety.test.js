@@ -24,18 +24,25 @@ test.each([
   } finally { Object.assign(policy, original); }
 });
 
-test('this release disables database deployment changes, outbound email and background jobs', () => {
+test('this release enables notification capabilities while keeping other deployment switches disabled', () => {
   expect(require('../../config/deployment-safety.json')).toEqual({
     databaseUpdatesEnabled: false, emailSendingEnabled: false,
-    recipientManagementEnabled: true, notificationEmailSendingEnabled: false,
-    verificationEmailsEnabled: false, schedulerEnabled: false, watchdogEnabled: false,
+    recipientManagementEnabled: true, notificationEmailSendingEnabled: true,
+    verificationEmailsEnabled: true, schedulerEnabled: false, watchdogEnabled: false,
   });
+  expect(() => safety.assertNotificationEmailSendingAllowed()).not.toThrow();
+  expect(safety.verificationEmailsEnabled()).toBe(true);
   expect(safety.emailSendingEnabled()).toBe(false);
   expect(safety.schedulerEnabled()).toBe(false);
   expect(safety.watchdogEnabled()).toBe(false);
 });
 
-test('this release saves recipients without verification or mail; test and failure sends stay disabled', async () => {
+test('disabled notification switches still block verification and mail while allowing recipient saves', async () => {
+  const policy = require('../../config/deployment-safety.json');
+  const original = { ...policy };
+  policy.notificationEmailSendingEnabled = false;
+  policy.verificationEmailsEnabled = false;
+  try {
   const unexpected = jest.fn(() => { throw new Error('Unexpected side effect'); });
   const upsert = jest.fn();
   const db = { credential: { upsert, findUnique: unexpected }, log: { create: unexpected } };
@@ -55,6 +62,7 @@ test('this release saves recipients without verification or mail; test and failu
   expect(await service.notifyFailure(integration, new Error('failure'), { executionId: 'run', attempt: 1 })).toEqual({ status: 'disabled' });
   expect(await require('../../src/core/execution-alerts').notifyExecutionFailure('run', new Error('failure'))).toEqual({ status: 'disabled' });
   expect(unexpected).not.toHaveBeenCalled();
+  } finally { Object.assign(policy, original); }
 });
 
 test('all platform outbound email providers reject before credentials or network access', async () => {
