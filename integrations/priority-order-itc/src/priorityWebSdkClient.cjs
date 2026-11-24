@@ -2,7 +2,7 @@ const priority = require('priority-web-sdk');
 const { sanitizeProviderString } = require('./itcClient.cjs');
 
 const DEFAULT_ORDER_SORT_OPTION = 'By Order Number';
-const PRINT_FORMAT_CODE = -109;
+const PRINT_FORMAT_CODE = -115;
 const PRINT_AS_PDF = 1;
 const MAX_PROCEDURE_STEPS = 12;
 const DEFAULT_PRIORITY_TIMEOUT_MS = 30000;

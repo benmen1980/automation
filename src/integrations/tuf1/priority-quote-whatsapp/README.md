@@ -76,7 +76,7 @@ The **Check ITC settings** action validates the saved endpoint, token presence, 
 - `dry_run`: validates and maps the payload with a mock confirmation URL; does not call Priority or ITC.
 - `test`: behaves like dry run for safe dashboard testing.
 - `mock_output`: uses a mock Priority confirmation URL and mock accepted ITC response; no external system is called.
-- `live`: logs in to Priority, runs `procStart('WWWSHOWORDER', 'P', null)`, follows the returned procedure screens, supplies `ORDNAME` as field 1, selects field 2 through Priority's own Sort choice list, requests print format code `-109`, validates the generated HTTPS URL, saves it on the automation server, and then sends the server URL in the real ITC POST. Any ITC HTTP `2xx` is treated as accepted.
+- `live`: logs in to Priority, runs `procStart('WWWSHOWORDER', 'P', null)`, follows the returned procedure screens, supplies `ORDNAME` as field 1, selects field 2 through Priority's own Sort choice list, requests print format code `-115`, validates the generated HTTPS URL, saves it on the automation server, and then sends the server URL in the real ITC POST. Any ITC HTTP `2xx` is treated as accepted.
 
 ## Logs and failures
 

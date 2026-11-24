@@ -254,7 +254,7 @@ test('Priority client runs WWWSHOWORDER with ORDNAME and the configured sort opt
     calls.push(['inputFields', ...args]);
     return {
       type: 'documentOptions',
-      formats: [{ format: -109, title: 'W/Extended Part Desc.', selected: 1 }],
+      formats: [{ format: -115, title: 'W/Extended Part Desc.', selected: 1 }],
       proc: { documentOptions, cancel },
     };
   };
@@ -318,7 +318,7 @@ test('Priority client runs WWWSHOWORDER with ORDNAME and the configured sort opt
   assert.deepEqual(calls.find(([name]) => name === 'documentOptions'), [
     'documentOptions',
     1,
-    -109,
+    -115,
     1,
   ]);
   assert.equal(calls.some(([name]) => name === 'cancel'), true);

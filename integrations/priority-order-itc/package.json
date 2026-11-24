@@ -1,6 +1,6 @@
 {
   "name": "@automation/priority-order-itc",
-  "version": "1.5.8",
+  "version": "1.5.9",
   "private": true,
   "type": "module",
   "description": "Independent Priority customer-order to ITC template-message Lambda worker.",

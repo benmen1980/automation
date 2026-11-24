@@ -5,7 +5,7 @@ module.exports = {
   name: 'Priority Order Notification via ITC',
   displayName: 'Priority Order Notification via ITC',
   integrationKey: 'int_7f9a2c8e4b1d6f03',
-  version: '1.2.15',
+  version: '1.2.16',
   description: 'Receives a Priority customer-order webhook, generates its sales-order confirmation with Priority Web SDK, saves a server copy, and sends the server URL in an ITC WhatsApp template message.',
   type: 'webhook',
   direction: 'OUTBOUND',
@@ -51,7 +51,7 @@ module.exports = {
       dry_run: 'Validates and maps the Priority order, uses a mock sales-order confirmation URL, and shows a redacted ITC request without calling Priority or ITC.',
       test: 'Validates the ITC request body without calling Priority or sending an ITC message.',
       mock_output: 'Uses a mock Priority confirmation URL and a mock accepted ITC response. No external system is called.',
-      live: 'Logs in with Priority Web SDK, runs WWWSHOWORDER for ORDERS.ORDNAME with print format -109, saves the document on the automation server, then sends the server URL as ITC variable 3 in a real message.',
+      live: 'Logs in with Priority Web SDK, runs WWWSHOWORDER for ORDERS.ORDNAME with print format -115, saves the document on the automation server, then sends the server URL as ITC variable 3 in a real message.',
     },
   },
 

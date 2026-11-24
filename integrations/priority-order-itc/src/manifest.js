@@ -1,7 +1,7 @@
 export default {
   name: 'priority-order-itc',
   displayName: 'Priority Customer Order to ITC',
-  version: '1.5.8',
+  version: '1.5.9',
   type: 'worker',
   runtime: 'lambda',
   direction: 'OUTBOUND',
@@ -21,7 +21,7 @@ export default {
       dry_run: 'Validates and maps the order with a mock Priority confirmation URL and does not call Priority or ITC.',
       test: 'Uses fixture input and prepares a sanitized ITC request with a mock Priority confirmation URL.',
       mock_output: 'Uses mock Priority and ITC output without making an external request.',
-      live: 'Runs Priority WWWSHOWORDER for ORDERS.ORDNAME with print format -109, saves the document on the automation server, and posts the server URL to ITC as variable 3.',
+      live: 'Runs Priority WWWSHOWORDER for ORDERS.ORDNAME with print format -115, saves the document on the automation server, and posts the server URL to ITC as variable 3.',
     },
   },
   deployment: {
